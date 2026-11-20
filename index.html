@@ -4,26 +4,75 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>N-TURF Pronostics</title>
-<meta name="description" content="N-TURF : pronostics hippiques gratuits et transparents, Quinté+ et course par course.">
+<meta name="description" content="N-TURF : pronostics hippiques transparents, Quinté+ et course par course.">
 <meta name="theme-color" content="#0e2040">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="icon" href="/icon-192.png">
 <link rel="apple-touch-icon" href="/icon-192.png">
-<style>
-body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#0e2040;color:#f5f8ff;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;text-align:center;padding:24px;box-sizing:border-box}
-main{max-width:520px}
-img{width:120px;height:120px;border-radius:24px;border:3px solid #f0be3c}
-h1{color:#f0be3c;font-size:44px;letter-spacing:.05em;margin:22px 0 6px}
-p{font-size:18px;line-height:1.5;color:#c9d4ea}
-.small{font-size:14px;color:#8fa0bf;margin-top:36px}
-</style>
+<link rel="stylesheet" href="/style.css">
 </head>
-<body>
+<body data-page="accueil">
+
+<div class="ticker" id="ticker" hidden><span id="tickerText"></span></div>
+
 <main>
-<img src="/icon-192.png" alt="Logo N-TURF">
-<h1>N-TURF</h1>
-<p>Pronostics hippiques gratuits et transparents.<br>Le site arrive très bientôt.</p>
-<p class="small">Jeu responsable · Interdit aux mineurs · Joueurs Info Service 09 74 75 13 13</p>
+  <h1>N-TURF</h1>
+  <p class="lead">Pronostics hippiques, Quinté+ et course par course.</p>
+
+  <section class="card">
+    <h2>Notre travail</h2>
+    <p>N-TURF existe depuis de nombreuses années. Il a réuni une grande communauté de turfistes jusqu'en 2012. Il revient aujourd'hui avec les mêmes principes : un travail sérieux chaque jour et une transparence totale sur les résultats et les mises, qu'on gagne ou qu'on perde.</p>
+    <p>Chaque jour, nos approches (TCR, ALGO, PERSO) étudient le Quinté+ et les autres réunions. Elles donnent une synthèse, des tickets chiffrés et des outils pour construire votre propre jeu.</p>
+  </section>
+
+  <section class="card">
+    <h2>Quinté+ du jour</h2>
+    <p id="qCourse" class="lead"></p>
+    <p class="lead">Les 3 premiers de notre synthèse :</p>
+    <div class="top3" id="top3"></div>
+    <p id="qEmpty" class="empty">La synthèse du jour arrive.</p>
+    <p class="lock">🔒 La synthèse complète, les tickets et les outils sont réservés aux membres inscrits.</p>
+    <p style="text-align:center"><a class="btn" href="/inscription.html">S'inscrire gratuitement</a></p>
+  </section>
+
+  <section class="card">
+    <h2>Arrivées du jour</h2>
+    <div id="arrivees"><p class="empty">Les arrivées apparaîtront ici après chaque course.</p></div>
+  </section>
+
+  <section class="card">
+    <h2>En vous inscrivant</h2>
+    <div class="grid">
+      <div class="tile"><b>Pronostics</b><small>La synthèse complète de chaque course</small></div>
+      <div class="tile"><b>Tickets</b><small>Mise, gagné et net affichés</small></div>
+      <div class="tile"><b>Outils</b><small>Répartition, champ libre, réducteur</small></div>
+      <div class="tile"><b>Gestion</b><small>Votre suivi personnel des jeux simples</small></div>
+      <div class="tile"><b>Chat</b><small>Échanger entre membres</small></div>
+      <div class="tile"><b>Concours</b><small>Gratuits, entre membres</small></div>
+    </div>
+  </section>
 </main>
+
+<script src="/site.js"></script>
+<script>
+fetch('/jour.json',{cache:'no-store'}).then(function(r){return r.json()}).then(function(d){
+  var esc=function(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})};
+  if(d.bandeau && d.bandeau.length){
+    document.getElementById('tickerText').innerHTML=d.bandeau.map(esc).join(' &nbsp;<b>•</b>&nbsp; ');
+    document.getElementById('ticker').hidden=false;
+  }
+  if(d.quinte && d.quinte.top3 && d.quinte.top3.length){
+    document.getElementById('qEmpty').hidden=true;
+    document.getElementById('qCourse').textContent=d.quinte.course||'';
+    document.getElementById('top3').innerHTML=d.quinte.top3.slice(0,3).map(function(n){return '<div>'+esc(n)+'</div>'}).join('');
+  }
+  if(d.arrivees && d.arrivees.length){
+    document.getElementById('arrivees').innerHTML=d.arrivees.map(function(a){
+      return '<div class="arr"><div class="t">'+esc(a.hippodrome)+' · '+esc(a.course)+'</div>'+
+        '<div class="n">'+esc(a.arrivee)+'</div>'+(a.rapports?'<div class="r">'+esc(a.rapports)+'</div>':'')+'</div>';
+    }).join('');
+  }
+}).catch(function(){});
+</script>
 </body>
 </html>
