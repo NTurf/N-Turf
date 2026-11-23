@@ -17,7 +17,7 @@
   var f = document.createElement('footer');
   f.innerHTML =
     '<p>Jeu responsable · Interdit aux mineurs<br>Joueurs Info Service : 09 74 75 13 13</p>' +
-    '<p><a href="/plan.html">Plan du site</a>·<a href="/confidentialite.html">Confidentialité</a></p>' +
+    '<p><a href="/contact.html">Contactez-nous</a>·<a href="/plan.html">Plan du site</a>·<a href="/confidentialite.html">Confidentialité</a></p>' +
     '<p>© N-TURF</p>';
   document.body.appendChild(f);
 
