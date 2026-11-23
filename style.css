@@ -505,3 +505,5 @@ table.saisie th{color:var(--navy);font-weight:700}
 .devise b{display:block;font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:16px;letter-spacing:.06em;text-transform:uppercase;color:var(--navy)}
 .devise span{display:block;font-size:12.5px;color:#A87C06;font-weight:700}
 @media (max-width:480px){.devise b{font-size:13.5px;letter-spacing:.03em}.devise span{font-size:11.5px}}
+.maxime{margin:18px 4px 8px;text-align:center;font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:800;font-style:italic;color:var(--navy);line-height:1.2}
+.maxime span{display:block;margin-top:6px;font-family:'Barlow',sans-serif;font-size:13px;font-style:normal;font-weight:700;color:#A87C06}
