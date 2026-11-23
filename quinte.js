@@ -50,6 +50,29 @@ var NT = (function(){
       approches: {}
     };
     Object.keys(d.rapports).forEach(function(k){ if (d.rapports[k] === null) delete d.rapports[k]; });
+    // Page Score : pour chaque place, combien de fois chaque case des lignes A-D a donné cette place
+    var sc = wb.Sheets['Score'];
+    if (sc) {
+      d.score = [];
+      for (var p = 0; p < 5; p++){
+        var pl = {};
+        ['A','B','C','D'].forEach(function(L, li){ var r = 2 + 5*p + li, a = []; for (var k = 0; k < 8; k++){ var v = val(sc, COLS[1+k] + r); a.push(typeof v === 'number' ? v : 0); } pl[L] = a; });
+        d.score.push(pl);
+      }
+    }
+    function txts(ligne, de, a){ var out = []; for (var i = COLS.indexOf(de); i <= COLS.indexOf(a); i++){ var v = val(s, COLS[i]+ligne); if (v !== null && v !== '') out.push(String(v).trim()); } return out; }
+    d.citations = {
+      une: rangee(s, 13, 'B', 'Z'),
+      doublons: rangee(s, 15, 'B', 'Z'),
+      plus: txts(16, 'B', 'Z').map(function(t){ var m = t.match(/^(\d+)\s*\((\d+)x\)/); return m ? { n: parseInt(m[1],10), fois: parseInt(m[2],10) } : null; }).filter(Boolean).sort(function(a,b){ return b.fois - a.fois; })
+    };
+    d.communs = {
+      ab: rangee(s, 17, 'B', 'L'), abR4: rangee(s, 17, 'N', 'Z'),
+      cd: rangee(s, 18, 'B', 'L'), cdR4: rangee(s, 18, 'N', 'Z'),
+      tierce: rangee(s, 21, 'B', 'Z')
+    };
+    d.cotes = [];
+    for (var i = 1; i < 26; i++){ var nn = num(s, COLS[i]+'23'), cv = val(s, COLS[i]+'24'); if (nn !== null && typeof cv === 'number') d.cotes.push({ n: nn, cote: cv }); }
     [['TCR','Page TCR'],['ALGO','Page ALGO'],['PERSO','Page PERSO']].forEach(function(x){
       var a = lireApproche(wb, x[1]); if (a && a.selection.length) d.approches[x[0]] = a;
     });
@@ -65,31 +88,81 @@ var NT = (function(){
   }
   function euros(v){ return typeof v === 'number' ? v.toFixed(2).replace('.', ',') + ' €' : esc(v); }
 
-  function afficher(q){
-    if (!q) return '<p class="empty">Le Quinté du jour arrive.</p>';
-    var arr = q.arrivee || [];
-    var h = '<p class="lead">Quinté+ du '+esc(q.date)+(q.discipline?' · '+esc(q.discipline):'')+(q.partants?' · '+esc(q.partants)+' partants':'')+'</p>';
-    if (arr.length){
-      h += '<div class="arrivee"><b>Arrivée</b> '+arr.map(function(n){return '<span class="ch hit">'+esc(n)+'</span>';}).join('')+'</div>';
+  var TEINTES = [['#f3d57a','#f7e3a6','#fbf0d1'],['#a9d8b0','#c9e6cd','#e4f2e6'],['#a9c4ef','#c9d9f5','#e4ecfa'],['#f1b0b3','#f6cdcf','#fae6e7'],['#cdbbf0','#ded2f5','#efe9fa']];
+  // Pour chaque place, les 3 cases des lignes A-D qui l'ont donnée le plus souvent (une case = une seule couleur)
+  function meilleuresCases(q){
+    var pris = {}, couleurs = {}, parPlace = [];
+    if (!q.score) return { couleurs: couleurs, parPlace: parPlace };
+    for (var p = 0; p < 5; p++){
+      var cases = [];
+      ['A','B','C','D'].forEach(function(L){ (q.lignes[L] || []).forEach(function(n, k){ cases.push({ L: L, k: k, n: n, v: q.score[p][L][k] || 0 }); }); });
+      cases.sort(function(a, b){ return b.v - a.v; });
+      var libres = cases.filter(function(c){ return !pris[c.L + c.k]; }), top = libres.slice(0, 3);
+      top.forEach(function(c, r){ pris[c.L + c.k] = 1; couleurs[c.L + c.k] = TEINTES[p][r]; });
+      var seuil = top.length ? top[top.length-1].v : 0, chev = [];
+      libres.forEach(function(c){ if ((c.v >= seuil || chev.length < 3) && chev.indexOf(c.n) < 0) chev.push(c.n); });
+      parPlace.push(chev);
     }
-    var rows = [['Ligne A', q.lignes.A], ['Ligne B', q.lignes.B], ['Ligne C', q.lignes.C], ['Ligne D', q.lignes.D],
-                ['Pondéré', q.pondere], ['Synthèse', q.synthese, 'syn'], ['Perso', q.perso]];
-    h += '<h3>Tableau de saisie</h3><table class="saisie">';
-    rows.forEach(function(r){
+    return { couleurs: couleurs, parPlace: parPlace };
+  }
+  function ligneNums(titre, a){ return '<tr><th>'+titre+'</th><td>'+(a && a.length ? a.map(function(n){ return '<span class="nb">'+esc(n)+'</span>'; }).join('') : '<span class="empty">aucun</span>')+'</td></tr>'; }
+
+  function afficher(q, live){
+    if (!q) return '<p class="empty">Le Quinté du jour arrive.</p>';
+    live = live && live.trouve ? live : null;
+    var arr = q.arrivee || [], etat = '', raps = Object.keys(q.rapports || {}).map(function(k){ return { nom: k, euros: q.rapports[k] }; });
+    if (live && live.arrivee.length && (live.definitive || !arr.length)) { arr = live.arrivee.slice(0,5); etat = live.definitive ? '' : 'provisoire'; if (live.rapports.length) raps = live.rapports; }
+    var noms = {}; if (live) live.partants.forEach(function(p){ noms[p.n] = p; });
+    var heure = live && live.heure ? new Date(live.heure).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit',timeZone:'Europe/Paris'}) : '';
+    var h = '<p class="lead">Quinté+ du '+esc(q.date)+(live && live.libelle ? ' · '+esc(live.libelle) : '')+(heure?' · '+heure:'')+(q.partants?' · '+esc(q.partants)+' partants':'')+'</p>';
+    if (arr.length){
+      h += '<div class="arrivee"><b>Arrivée'+(etat?' <span class="prov">(provisoire)</span>':'')+'</b> '+arr.map(function(n){return '<span class="ch hit">'+esc(n)+'</span>';}).join('')+'</div>';
+    }
+    var mc = meilleuresCases(q);
+    h += '<h3>Lignes et classements</h3><table class="saisie">';
+    ['A','B','C','D'].forEach(function(L){
+      var a = q.lignes[L] || []; if (!a.length) return;
+      h += '<tr class="lig"><th>Ligne '+L+'</th>'+a.map(function(n, k){
+        var hit = arr.indexOf(n) >= 0, col = mc.couleurs[L + k];
+        return '<td class="'+(hit?'arr':'')+(col?' col':'')+'"'+(col ? ' style="background:'+col+'"' : '')+'>'+esc(n)+'</td>';
+      }).join('')+'</tr>';
+    });
+    [['Classement pondéré', q.pondere], ['Synthèse', q.synthese, 'syn'], ['Pronos Perso', q.perso]].forEach(function(r){
       if (!r[1] || !r[1].length) return;
-      h += '<tr class="'+(r[2]||'')+'"><th>'+r[0]+'</th>'+r[1].map(function(n){ return '<td'+(arr.indexOf(n)>=0?' class="hit"':'')+'>'+esc(n)+'</td>'; }).join('')+'</tr>';
+      h += '<tr class="'+(r[2]||'bas')+'"><th>'+r[0]+'</th>'+r[1].map(function(n){ return '<td'+(arr.indexOf(n)>=0?' class="hit"':'')+'>'+esc(n)+'</td>'; }).join('')+'</tr>';
     });
     h += '</table>';
+    if (mc.parPlace.length){
+      h += '<p class="note2">Les cases en couleur sont les 3 qui donnent le plus souvent chaque place (la plus foncée = la meilleure) :</p><p class="legende">'+
+        ['1er','2e','3e','4e','5e'].map(function(t, p){ return TEINTES[p].map(function(c){ return '<i style="background:'+c+'"></i>'; }).join('')+' le '+t; }).join(' &nbsp; ')+'</p>';
+      h += '<p class="note2">Les chevaux par place, du meilleur au moins bon (3 au moins) :</p><table class="parplace">'+mc.parPlace.map(function(a, p){ return '<tr><th>'+['1er','2e','3e','4e','5e'][p]+'</th><td>'+a.map(function(n){ return '<b'+(arr.indexOf(n)>=0?' class="hit"':'')+'>'+esc(n)+'</b>'; }).join(' ')+'</td></tr>'; }).join('')+'</table>';
+    }
     Object.keys(q.approches || {}).forEach(function(k){
       var a = q.approches[k];
       h += '<h3>'+k+'</h3><div class="sel">'+a.selection.map(function(n,i){ return chip(n, arr, i===0?'piv':''); }).join('')+'</div>';
     });
-    var rk = Object.keys(q.rapports || {});
-    if (rk.length){
-      h += '<h3>Rapports (pour 1 €)</h3><table class="rap">'+rk.map(function(k){ return '<tr><td>'+esc(k)+'</td><td>'+euros(q.rapports[k])+'</td></tr>'; }).join('')+'</table>';
+    if (q.citations){
+      var c = q.citations;
+      h += '<h3>Citations</h3><table class="infos">'+ligneNums('Cités 1 fois', c.une)+ligneNums('Doublons (2 fois)', c.doublons)+'</table>';
+      if (c.plus.length) h += '<p class="sub">3 fois ou plus</p><table class="infos fois"><tr><th>Cheval</th>'+c.plus.map(function(x){ return '<td><b>'+x.n+'</b></td>'; }).join('')+'</tr><tr><th>Fois</th>'+c.plus.map(function(x){ return '<td>'+x.fois+'x</td>'; }).join('')+'</tr></table>';
+    }
+    if (q.communs){
+      var m = q.communs;
+      h += '<h3>Lignes en commun</h3><table class="infos">'+ligneNums('A et B (les 2)', m.ab)+ligneNums('A et B · Rang+4', m.abR4)+ligneNums('C et D (les 2)', m.cd)+ligneNums('C et D · Rang+4', m.cdR4)+ligneNums('Tiercé champ réduit', m.tierce)+'</table>';
+    }
+    if (q.cotes && q.cotes.length){
+      h += '<h3>Cotes du matin</h3><table class="rap cotes">'+q.cotes.map(function(c){ var p = noms[c.n]; return '<tr'+(p && p.np ? ' class="np"' : '')+'><td><b>'+c.n+'</b> '+(p ? esc(p.nom)+(p.np?' (NP)':'') : '')+'</td><td>'+esc(c.cote)+'</td></tr>'; }).join('')+'</table>';
+    }
+    if (raps.length){
+      h += '<h3>Rapports (pour 1 €)</h3><table class="rap">'+raps.map(function(r){ return '<tr><td>'+esc(r.nom)+'</td><td>'+euros(r.euros)+'</td></tr>'; }).join('')+'</table>';
     }
     return h;
   }
+  function chargerQuinte(q, fin){
+    if (!q || !q.date) return fin(null);
+    fetch('/api/pmu/quinte?date='+encodeURIComponent(q.date)).then(function(r){ return r.json(); }).then(fin).catch(function(){ fin(null); });
+  }
+
   // ===== Course par course (feuille « Saisie Journaux ») =====
   function nums(v){
     if (v === null || v === undefined || v === '') return [];
@@ -200,5 +273,5 @@ var NT = (function(){
       };
     });
   }
-  return { lire: lire, afficher: afficher, lireCpc: lireCpc, afficherCpc: afficherCpc, brancherOnglets: brancherOnglets, chargerLive: chargerLive };
+  return { lire: lire, afficher: afficher, chargerQuinte: chargerQuinte, lireCpc: lireCpc, afficherCpc: afficherCpc, brancherOnglets: brancherOnglets, chargerLive: chargerLive };
 })();

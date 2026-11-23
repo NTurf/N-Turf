@@ -86,7 +86,16 @@ fetch('/api/public',{cache:'no-store'}).then(function(r){return r.json()}).then(
       }).catch(function(){});
     });
   }
-  direct(); setInterval(direct,60000);
+  function directQ(){
+    if(!q || !q.date || (q.arrivee && q.arrivee.length)) return;
+    fetch('/api/pmu/quinte?date='+encodeURIComponent(q.date)).then(function(r){return r.json()}).then(function(x){
+      if(!x.trouve || !x.arrivee.length) return;
+      h='<div class="arr"><div class="t">Quinté+ du '+esc(q.date)+(x.definitive?'':' <span class="prov">(provisoire)</span>')+'</div><div class="n">'+x.arrivee.slice(0,5).map(esc).join(' - ')+'</div></div>';
+      document.getElementById('top3').innerHTML=q.top3.map(function(n){return '<div'+(x.arrivee.slice(0,5).indexOf(n)>=0?' class="hit"':'')+'>'+esc(n)+'</div>'}).join('');
+      montrer();
+    }).catch(function(){});
+  }
+  direct(); directQ(); setInterval(function(){ direct(); directQ(); },60000);
 }).catch(function(){});
 </script>
 </body>

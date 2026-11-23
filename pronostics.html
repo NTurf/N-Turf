@@ -28,7 +28,10 @@ fetch('/api/membres/quinte', {credentials:'same-origin'})
   .then(function(x){
     if (!x.ok) { document.getElementById('refus').hidden = false; return; }
     document.getElementById('zone').hidden = false;
-    document.getElementById('rendu').innerHTML = NT.afficher(x.d.quinte);
+    var q = x.d.quinte, elQ = document.getElementById('rendu');
+    elQ.innerHTML = NT.afficher(q);
+    function majQ(){ NT.chargerQuinte(q, function(l){ if (l) elQ.innerHTML = NT.afficher(q, l); }); }
+    majQ(); setInterval(majQ, 60000);
     return fetch('/api/membres/cpc', {credentials:'same-origin'}).then(function(r){ return r.json(); }).then(function(d){
       var el = document.getElementById('renduC'), cpc = d.cpc;
       function dessiner(live){
