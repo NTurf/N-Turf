@@ -278,7 +278,7 @@ var NT = (function(){
             else { if (p.poids) inf.push(String(p.poids).replace('.', ',')+' kg'); if (p.corde) inf.push('corde '+p.corde); }
             if (p.oeil) inf.push(esc(p.oeil));
             if (p.entr) inf.push('entr. '+esc(p.entr));
-            return '<div class="pt'+(p.np?' np':'')+'"><div class="l1"><span class="pn">'+esc(p.n)+'</span><span class="pnom">'+esc(p.nom)+(x.repNums.indexOf(p.n)>=0?' <span class="rbs">★</span>':'')+(p.np?' (NP)':'')+(p.age?' <small>'+esc(p.sexe)+p.age+'</small>':'')+'</span>'+(p.cote?'<span class="pc2"><small>cote </small>'+String(p.cote).replace('.', ',')+'</span>':'')+'</div>'+
+            return '<div class="pt'+(p.np?' np':'')+(c.choix.indexOf(p.n)>=0?' coeur':'')+'"><div class="l1"><span class="pn">'+esc(p.n)+'</span><span class="pnom">'+(c.choix.indexOf(p.n)>=0?'<span class="pcoeur">❤</span> ':'')+(c.notes.indexOf(p.n)>=0?'<span class="pnote">★</span> ':'')+esc(p.nom)+(x.repNums.indexOf(p.n)>=0?' <span class="rbs">★</span>':'')+(p.np?' (NP)':'')+(p.age?' <small>'+esc(p.sexe)+p.age+'</small>':'')+'</span>'+(p.cote?'<span class="pc2"><small>cote </small>'+String(p.cote).replace('.', ',')+'</span>':'')+'</div>'+
               '<div class="l2">'+inf.join(' · ')+'</div>'+(p.musique?'<div class="l2 mus">'+esc(p.musique)+'</div>':'')+'</div>';
           }).join('')+'</div></details>';
         }
