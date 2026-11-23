@@ -49,9 +49,10 @@ function onglet(q){
   document.getElementById('sQ').hidden = !q; document.getElementById('sC').hidden = q;
   document.getElementById('oQ').className = q ? 'on' : ''; document.getElementById('oC').className = q ? '' : 'on';
 }
-document.getElementById('oQ').onclick = function(e){ e.preventDefault(); onglet(true); };
-document.getElementById('oC').onclick = function(e){ e.preventDefault(); onglet(false); };
+document.getElementById('oQ').onclick = function(e){ e.preventDefault(); location.hash = 'quinte'; };
+document.getElementById('oC').onclick = function(e){ e.preventDefault(); location.hash = 'cpc'; };
 if (location.hash === '#cpc') onglet(false);
+window.addEventListener('hashchange', function(){ onglet(location.hash !== '#cpc'); });
 </script>
 </body>
 </html>

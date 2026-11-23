@@ -13,7 +13,6 @@
 </head>
 <body data-page="accueil">
 
-<div class="ticker" id="ticker" hidden><span id="tickerText"></span></div>
 
 <main>
   <h1>N-TURF</h1>
@@ -63,10 +62,6 @@
 <script>
 fetch('/api/public',{cache:'no-store'}).then(function(r){return r.json()}).then(function(d){
   var esc=function(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})};
-  if(d.bandeau && d.bandeau.length){
-    document.getElementById('tickerText').innerHTML=d.bandeau.map(esc).join(' &nbsp;<b>•</b>&nbsp; ');
-    document.getElementById('ticker').hidden=false;
-  }
   var q=d.quinte;
   if(q && q.top3 && q.top3.length){
     document.getElementById('qEmpty').hidden=true;
