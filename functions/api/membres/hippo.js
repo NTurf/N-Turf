@@ -5,5 +5,5 @@ export async function onRequestGet({ request, env }) {
   await initDb(env.DB);
   const u = await currentUser(env.DB, request);
   if (!u) return json({ erreur: 'Connectez-vous pour voir cette page.' }, 401);
-  return json({ hippo: await lireContenu(env.DB, 'hippo') });
+  return json({ quinte: await lireContenu(env.DB, 'hippo_quinte'), pick5: await lireContenu(env.DB, 'hippo_pick5') });
 }

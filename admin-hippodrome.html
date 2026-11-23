@@ -15,7 +15,9 @@
 <div id="refus" class="note" hidden>Cette page est réservée à l'administrateur.</div>
 <div id="zone" hidden>
 <section class="card">
-<p style="color:var(--soft)">Choisis les pages d'Hippodrome (images), dans l'ordre où tu veux les montrer. Elles sont publiées telles quelles, juste allégées pour s'afficher vite sur téléphone. La publication remplace les pages de la veille.</p>
+<p style="color:var(--soft)">Choisis les pages d'Hippodrome (images), dans l'ordre où tu veux les montrer. Elles sont publiées telles quelles, juste allégées pour s'afficher vite sur téléphone. Chaque publication remplace les pages précédentes de la même rubrique (Quinté+ ou Super Pick 5).</p>
+<div class="pills"><button type="button" class="pill on" data-g="quinte">Quinté+</button><button type="button" class="pill" data-g="pick5">Super Pick 5</button></div>
+<p class="note2" id="gInfo">Tu publies les pages du <b>Quinté+</b>. Les pages du Super Pick 5 ne sont pas touchées.</p>
 <label class="lab" style="flex-direction:column;align-items:stretch">Titre (facultatif)<input id="titre" placeholder="ex. Quinté+ et Super Pick 5 du 23/11" style="width:100%"></label>
 <input type="file" id="fichiers" accept="image/*" multiple style="width:100%;padding:12px;background:var(--navy2);border:1px dashed var(--gold);border-radius:10px;color:var(--txt)">
 <p class="msg" id="msg"></p>
@@ -27,7 +29,7 @@
 </main>
 <script src="/site.js"></script>
 <script>
-var IMGS = [];
+var IMGS = [], G = 'quinte', NOMS = { quinte: 'Quinté+', pick5: 'Super Pick 5' };
 function $(i){ return document.getElementById(i); }
 function alleger(file){
   return new Promise(function(ok, ko){
@@ -60,6 +62,14 @@ function dessiner(){
 NTURF_MOI.then(function(m){
   if (!(m.connecte && m.publier)) { $('refus').hidden = false; return; }
   $('zone').hidden = false;
+  document.querySelectorAll('.pill[data-g]').forEach(function(b){
+    b.onclick = function(){
+      G = b.getAttribute('data-g');
+      document.querySelectorAll('.pill[data-g]').forEach(function(x){ x.classList.toggle('on', x === b); });
+      $('gInfo').innerHTML = 'Tu publies les pages du <b>' + NOMS[G] + '</b>. Les pages ' + (G === 'quinte' ? 'du Super Pick 5' : 'du Quinté+') + ' ne sont pas touchées.';
+      IMGS = []; dessiner(); $('msg').textContent = ''; $('msg2').textContent = '';
+    };
+  });
   $('fichiers').onchange = function(){
     var f = [].slice.call(this.files).sort(function(a, b){ return a.name.localeCompare(b.name, 'fr', {numeric:true}); });
     $('msg').className = 'msg'; $('msg').textContent = 'Préparation des images…';
@@ -73,11 +83,11 @@ NTURF_MOI.then(function(m){
     var v = Date.now().toString(36);
     IMGS.reduce(function(p, d, i){ return p.then(function(){
       m2.textContent = 'Envoi de la page ' + (i+1) + ' sur ' + IMGS.length + '…';
-      return fetch('/api/admin/hippo-image', { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({ i: i, data: d }) })
+      return fetch('/api/admin/hippo-image', { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({ g: G, i: i, data: d }) })
         .then(function(r){ if (!r.ok) return r.json().then(function(x){ throw new Error(x.erreur || 'Erreur'); }); });
     }); }, Promise.resolve())
-    .then(function(){ return fetch('/api/admin/contenu', { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({ cle: 'hippo', data: { titre: $('titre').value.trim(), n: IMGS.length, v: v } }) }); })
-    .then(function(){ m2.className = 'msg ok'; m2.innerHTML = 'Publié ! <a href="/hippodrome.html">Voir la page des membres</a>'; b.disabled = false; })
+    .then(function(){ return fetch('/api/admin/contenu', { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({ cle: 'hippo_' + G, data: { titre: $('titre').value.trim(), n: IMGS.length, v: v } }) }); })
+    .then(function(){ m2.className = 'msg ok'; m2.innerHTML = 'Publié dans ' + NOMS[G] + ' ! <a href="/hippodrome.html#' + G + '">Voir la page des membres</a>'; b.disabled = false; })
     .catch(function(e){ m2.className = 'msg err'; m2.textContent = e.message || 'Connexion impossible, réessaie.'; b.disabled = false; });
   };
 });

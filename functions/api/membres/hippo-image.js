@@ -6,8 +6,10 @@ export async function onRequestGet({ request, env }) {
   await initDb(env.DB);
   const u = await currentUser(env.DB, request);
   if (!u) return json({ erreur: 'Connectez-vous pour voir cette page.' }, 401);
-  const i = parseInt(new URL(request.url).searchParams.get('i'), 10);
-  const r = await env.DB.prepare('SELECT data FROM contenu WHERE cle = ?').bind('hippo-img-' + i).first();
+  const q = new URL(request.url).searchParams;
+  const g = ['quinte', 'pick5'].includes(q.get('g')) ? q.get('g') : 'quinte';
+  const i = parseInt(q.get('i'), 10);
+  const r = await env.DB.prepare('SELECT data FROM contenu WHERE cle = ?').bind('hippo-img-' + g + '-' + i).first();
   if (!r) return new Response('Introuvable', { status: 404 });
   const url = JSON.parse(r.data).data || '';
   const bin = Uint8Array.from(atob(url.split(',')[1] || ''), (c) => c.charCodeAt(0));
