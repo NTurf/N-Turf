@@ -23,8 +23,14 @@
 <div id="lb" hidden><img alt=""></div>
 <script src="/site.js"></script>
 <script>
+var vv = function(h){ return h && h.v ? parseInt(h.v, 36) || 0 : 0; };
 fetch('/api/membres/etudes', {credentials:'same-origin'})
   .then(function(r){ return r.ok ? r.json() : Promise.reject(); })
+  .then(function(d){
+    // études déposées par Claude (dépôt) : on garde la plus récente des deux sources
+    return fetch('/etudes-img/jour.json?t=' + Date.now(), {credentials:'same-origin'}).then(function(r){ return r.ok ? r.json() : {}; }).catch(function(){ return {}; })
+      .then(function(c){ Object.keys(c || {}).forEach(function(g){ if (vv(c[g]) > vv(d[g])) { c[g].depot = 1; d[g] = c[g]; } }); return d; });
+  })
   .then(function(d){
     document.getElementById('zone').hidden = false;
     var el = document.getElementById('pages'), lb = document.getElementById('lb');
@@ -33,7 +39,7 @@ fetch('/api/membres/etudes', {credentials:'same-origin'})
       var h = d[g];
       document.getElementById('titre').textContent = h && h.titre || '';
       if (!h || !h.n) { el.innerHTML = '<p class="empty">L'étude du jour arrive.</p>'; return; }
-      var t = ''; for (var i = 0; i < h.n; i++) t += '<img class="hpage" loading="lazy" src="/api/membres/hippo-image?g='+g+'&i='+i+'&v='+encodeURIComponent(h.v||'')+'" alt="Page '+(i+1)+'">';
+      var t = ''; for (var i = 0; i < h.n; i++) t += '<img class="hpage" loading="lazy" src="'+(h.depot ? '/etudes-img/'+g+'-'+(i+1)+'.jpg?v='+encodeURIComponent(h.v) : '/api/membres/hippo-image?g='+g+'&i='+i+'&v='+encodeURIComponent(h.v||''))+'" alt="Étude '+(i+1)+'">';
       el.innerHTML = t;
       el.querySelectorAll('img').forEach(function(im){ im.onclick = function(){ lb.querySelector('img').src = im.src; lb.hidden = false; }; });
     }
