@@ -71,16 +71,28 @@ export function dateParam(u) {
 export async function detailCourse(db, d, R, c) {
   const C = c.numOrdre;
   const parts = await cache(db, `part-${d}-R${R}C${C}`, 1800, () => get(`${BASE}/${d}/R${R}/C${C}/participants`));
+  const FER = { DEFERRE_ANTERIEURS_POSTERIEURS: 'D4', DEFERRE_ANTERIEURS: 'DA', DEFERRE_POSTERIEURS: 'DP', PROTEGE_ANTERIEURS_POSTERIEURS: 'P4', PROTEGE_ANTERIEURS: 'PA', PROTEGE_POSTERIEURS: 'PP', PROTEGE_ANTERIEURS_DEFERRE_POSTERIEURS: 'PA DP', DEFERRE_ANTERIEURS_PROTEGE_POSTERIEURS: 'DA PP' };
+  const OEIL = { OEILLERES_CLASSIQUE: 'Œillères', OEILLERES_AUSTRALIENNES: 'Œill. australiennes' };
+  const dist = c.distance || 0;
   const partants = ((parts && parts.participants) || []).map((p) => ({
     n: p.numPmu, nom: p.nom, musique: p.musique || '', np: p.statut === 'NON_PARTANT',
+    age: p.age || null, sexe: p.sexe ? String(p.sexe).charAt(0) : '',
+    monte: (p.driver || p.jockey || '').trim(), entr: (p.entraineur || '').trim(),
+    fer: p.deferre ? (FER[p.deferre] || String(p.deferre).replace(/_/g, ' ').toLowerCase()) : '',
+    recul: p.handicapDistance && dist && p.handicapDistance > dist ? p.handicapDistance - dist : 0,
+    poids: p.handicapPoids ? p.handicapPoids / 10 : (p.poidsConditionMonte ? p.poidsConditionMonte / 10 : null),
+    corde: p.placeCorde || null, oeil: OEIL[p.oeilleres] || '',
+    cote: p.dernierRapportDirect && p.dernierRapportDirect.rapport ? p.dernierRapportDirect.rapport : (p.dernierRapportReference && p.dernierRapportReference.rapport ? p.dernierRapportReference.rapport : null),
   })).sort((a, b) => a.n - b.n);
   const arrivee = Array.isArray(c.ordreArrivee) ? c.ordreArrivee.map((x) => Array.isArray(x) ? x[0] : x) : [];
   let rapports = [];
   if (arrivee.length) {
     const cle = `rap-${d}-R${R}C${C}`;
-    const rap = await cache(db, cle, 60, () => get(`${BASE}/${d}/R${R}/C${C}/rapports-definitifs`));
-    rapports = lireRapports(rap);
+    try {
+      const rap = await cache(db, cle, 60, () => get(`${BASE}/${d}/R${R}/C${C}/rapports-definitifs`));
+      rapports = lireRapports(rap);
+    } catch (e) { rapports = []; } // rapports pas encore publiés : on garde l'arrivée
     if (rapports.length) await db.prepare('UPDATE pmu_cache SET expire = ? WHERE cle = ?').bind(Date.now() + 86400000, cle).run();
   }
-  return { num: C, libelle: c.libelle || '', heure: c.heureDepart || null, discipline: c.discipline || '', partants, arrivee, definitive: rapports.length > 0, rapports };
+  return { num: C, libelle: c.libelle || '', heure: c.heureDepart || null, discipline: c.discipline || '', distance: dist || null, specialite: c.specialite || '', partants, arrivee, definitive: rapports.length > 0, rapports };
 }

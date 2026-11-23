@@ -226,6 +226,7 @@ var NT = (function(){
     return { date: date, reunions: reunions, reperes: reperes, archive: archive };
   }
   function cle(n){ return String(n||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase().replace(/[^A-Z0-9]/g,''); }
+  var SEL = {};
   function afficherCpc(d, onglet, live){
     if (!d || !d.reunions || !d.reunions.length) return '<p class="empty">La synthèse arrive.</p>';
     live = live || {};
@@ -248,14 +249,17 @@ var NT = (function(){
         return { c: c, lc: lc, arr: arr, etat: etat, raps: raps, parts: parts, repNums: repNums };
       });
       h += '<div class="reu" data-r="'+i+'"'+(i===(onglet||0)?'':' hidden')+'>';
-      h += '<div class="cbtn">'+infos.map(function(x, j){ return '<a href="#c'+i+'-'+j+'" class="'+(x.arr.length?'couru':'')+'">'+esc(x.c.course.replace('C',''))+'</a>'; }).join('')+'</div>';
+      // Une seule course affichée à la fois : celle choisie, sinon la prochaine à courir
+      var sel = SEL[i];
+      if (sel === undefined || sel >= infos.length) { sel = 0; for (var q = 0; q < infos.length; q++) { if (!infos[q].arr.length) { sel = q; break; } sel = q; } }
+      h += '<div class="cbtn">'+infos.map(function(x, j){ return '<a href="#" data-r="'+i+'" data-c="'+j+'" class="'+(x.arr.length?'couru':'')+(j===sel?' on':'')+'">'+esc(x.c.course.replace('C',''))+'</a>'; }).join('')+'</div>';
       infos.forEach(function(x, j){
         var c = x.c, top = x.arr;
         function marques(n){ return (c.choix.indexOf(n)>=0?'<i class="cc">❤</i>':'') + (c.notes.indexOf(n)>=0?'<i class="st">★</i>':'') + (x.repNums.indexOf(n)>=0?'<i class="rb">★</i>':''); }
         var heure = x.lc && x.lc.heure ? new Date(x.lc.heure).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit',timeZone:'Europe/Paris'}) : '';
         var DISC = {ATTELE:'Trot attelé', MONTE:'Trot monté', PLAT:'Plat', HAIE:'Haies', STEEPLECHASE:'Steeple-chase', CROSS:'Cross'};
         var disc = x.lc && DISC[x.lc.discipline] ? DISC[x.lc.discipline] : re.discipline;
-        h += '<div class="crs" id="c'+i+'-'+j+'"><h3>'+esc(c.course)+' <small>'+esc([heure, disc].filter(Boolean).join(' · '))+'</small></h3>';
+        h += '<div class="crs" id="c'+i+'-'+j+'"'+(j===sel?'':' hidden')+'><h3>'+esc(c.course)+' <small>'+esc([heure, disc].filter(Boolean).join(' · '))+'</small></h3>';
         if (!c.synthese.length) h += '<p class="empty">La synthèse arrive.</p>';
         else h += '<div class="sel">'+c.synthese.map(function(n, k){
           return '<span class="ch '+(k < 3 ? 'piv' : '')+(top.indexOf(n)>=0?' hit':'')+'">'+esc(n)+marques(n)+'</span>';
@@ -264,9 +268,20 @@ var NT = (function(){
         if (hors.length) h += '<p class="sub">Hors synthèse : '+hors.map(function(n){ return '<span class="ch bleu'+(top.indexOf(n)>=0?' hit':'')+'">'+esc(n)+marques(n)+'</span>'; }).join('')+'</p>';
         if (top.length) h += '<div class="arrivee"><b>Arrivée'+(x.etat?' <span class="prov">(provisoire)</span>':'')+'</b> '+top.map(function(n){ return '<span class="ch'+(c.synthese.indexOf(n)>=0||hors.indexOf(n)>=0?' hit':'')+'">'+esc(n)+'</span>'; }).join('')+'</div>';
         if (x.raps.length) h += '<table class="rap">'+x.raps.map(function(r){ return '<tr><td>'+esc(r.nom)+'</td><td>'+euros(r.euros)+'</td></tr>'; }).join('')+'</table>';
-        if (x.parts.length) h += '<details class="parts"><summary>Partants ('+x.parts.filter(function(p){return !p.np;}).length+')</summary><table>'+x.parts.map(function(p){
-          return '<tr class="'+(p.np?'np':'')+'"><td>'+esc(p.n)+(x.repNums.indexOf(p.n)>=0?' <span class="rbs">★</span>':'')+'</td><td>'+esc(p.nom)+(p.np?' (NP)':'')+'</td><td class="mus">'+esc(p.musique)+'</td></tr>';
-        }).join('')+'</table></details>';
+        if (x.parts.length) {
+          var trot = /ATTELE|MONTE/.test((x.lc && x.lc.discipline) || '') || /trot/i.test(re.discipline || '');
+          var dist = x.lc && x.lc.distance ? ' · ' + x.lc.distance + ' m' : '';
+          h += '<details class="parts" open><summary>Partants ('+x.parts.filter(function(p){return !p.np;}).length+')'+dist+'</summary><div class="plist">'+x.parts.map(function(p){
+            var inf = [];
+            if (p.monte) inf.push('<b>'+esc(p.monte)+'</b>');
+            if (trot) { inf.push(p.fer ? '<span class="fer">'+esc(p.fer)+'</span>' : 'Ferré'); if (p.recul) inf.push('<span class="rec">+'+p.recul+' m</span>'); }
+            else { if (p.poids) inf.push(String(p.poids).replace('.', ',')+' kg'); if (p.corde) inf.push('corde '+p.corde); }
+            if (p.oeil) inf.push(esc(p.oeil));
+            if (p.entr) inf.push('entr. '+esc(p.entr));
+            return '<div class="pt'+(p.np?' np':'')+'"><div class="l1"><span class="pn">'+esc(p.n)+'</span><span class="pnom">'+esc(p.nom)+(x.repNums.indexOf(p.n)>=0?' <span class="rbs">★</span>':'')+(p.np?' (NP)':'')+(p.age?' <small>'+esc(p.sexe)+p.age+'</small>':'')+'</span>'+(p.cote?'<span class="pc2"><small>cote </small>'+String(p.cote).replace('.', ',')+'</span>':'')+'</div>'+
+              '<div class="l2">'+inf.join(' · ')+'</div>'+(p.musique?'<div class="l2 mus">'+esc(p.musique)+'</div>':'')+'</div>';
+          }).join('')+'</div></details>';
+        }
         h += '</div>';
       });
       h += '</div>';
@@ -284,6 +299,16 @@ var NT = (function(){
     });
   }
   function brancherOnglets(root){
+    root.querySelectorAll('.cbtn a').forEach(function(a){
+      a.onclick = function(e){
+        e.preventDefault();
+        var r = a.getAttribute('data-r'), j = parseInt(a.getAttribute('data-c'), 10);
+        SEL[r] = j;
+        var reu = a.closest('.reu');
+        reu.querySelectorAll('.cbtn a').forEach(function(x){ x.classList.toggle('on', x === a); });
+        reu.querySelectorAll('.crs').forEach(function(x){ x.hidden = x.id !== 'c'+r+'-'+j; });
+      };
+    });
     root.querySelectorAll('nav.inner a').forEach(function(a){
       a.onclick = function(e){
         e.preventDefault();
