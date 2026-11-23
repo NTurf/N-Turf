@@ -25,16 +25,18 @@
 <script>
 
 function jourFr(k){ return new Date(Date.now() + k*86400000).toLocaleDateString('fr-FR', {timeZone:'Europe/Paris', day:'2-digit', month:'2-digit', year:'numeric'}); }
-var TJ = 0;
+var TJ = 0, TJauto = true;
 function trot(el, h){
   var img = '';
   if (h && h.n) for (var i = 0; i < h.n; i++) img += '<img class="hpage" loading="lazy" src="'+(h.depot ? '/etudes-img/ettrot-'+(i+1)+'.jpg?v='+encodeURIComponent(h.v) : '/api/membres/hippo-image?g=ettrot&i='+i+'&v='+encodeURIComponent(h.v||''))+'" alt="">';
   el.innerHTML = img + '<div class="pills" style="margin:6px 0 10px"><button type="button" class="pill'+(TJ===0?' on':'')+'" data-j="0">Aujourd\'hui ('+jourFr(0)+')</button><button type="button" class="pill'+(TJ===1?' on':'')+'" data-j="1">Demain ('+jourFr(1)+')</button></div>' +
     '<p class="note2">Formule du membre, calculée automatiquement sur toutes les courses de trot : |limite − gains| ÷ limite × dernière place × cote. Plus la note est petite, mieux c\'est. Deux classements : la limite des conditions (le recul s\'il y en a un) et le recul fictif. Les cotes sont celles du PMU (cote du jour), ajoutées dès qu\'elles sont ouvertes.</p><div id="trotZone"><p class="empty">Calcul en cours…</p></div>';
-  el.querySelectorAll('[data-j]').forEach(function(b){ b.onclick = function(){ TJ = +b.getAttribute('data-j'); trot(el, h); }; });
+  el.querySelectorAll('[data-j]').forEach(function(b){ b.onclick = function(){ TJauto = false; TJ = +b.getAttribute('data-j'); trot(el, h); }; });
   fetch('/api/membres/trot?date=' + encodeURIComponent(jourFr(TJ)), {credentials:'same-origin'}).then(function(r){ return r.json(); }).then(function(d){
     var z = document.getElementById('trotZone');
     if (d.erreur) { z.innerHTML = '<p class="empty">' + d.erreur + '</p>'; return; }
+    // le soir, quand toutes les courses du jour sont courues, on passe tout seul à demain
+    if (TJauto && TJ === 0 && d.reunions && d.reunions.length && d.reunions.every(function(r){ return r.courses.every(function(c){ return c.arrivee && c.arrivee.length; }); })) { TJauto = false; TJ = 1; trot(el, h); return; }
     if (!d.reunions || !d.reunions.length) { z.innerHTML = '<p class="empty">Pas de course de trot en France ce jour-là.</p>'; return; }
     var E = function(x){ return String(x).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); };
     var fmt = function(n){ return n ? Number(n).toLocaleString('fr-FR') + ' €' : '–'; };
