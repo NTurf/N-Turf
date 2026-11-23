@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tickets – N-TURF</title>
+<meta name="theme-color" content="#0e2040">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icon-192.png">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body data-page="membres">
+<main>
+<h1>Tickets</h1>
+<div id="refus" class="note" hidden>🔒 Réservé aux membres. <a href="/inscription.html">S'inscrire gratuitement</a> ou <a href="/inscription.html#connexion">se connecter</a>.</div>
+<section class="card" id="zone" hidden><div id="rendu"><p class="empty">Chargement…</p></div>
+<p class="note2">Chaque jour, on vous donne nos tickets avec la mise, et après l'arrivée ce qu'ils ont rapporté, qu'on gagne ou qu'on perde. Jeu responsable · Interdit aux mineurs.</p></section>
+</main>
+<script src="/site.js"></script>
+<script src="/tickets.js"></script>
+<script>
+fetch('/api/membres/tickets', {credentials:'same-origin'})
+  .then(function(r){ return r.ok ? r.json() : Promise.reject(); })
+  .then(function(d){
+    document.getElementById('zone').hidden = false;
+    var T = d.tickets, Q = d.quinte, el = document.getElementById('rendu'), LIVE = null;
+    function ctx(){
+      var raps = Object.keys((Q && Q.rapports) || {}).map(function(k){ return { nom: k, euros: Q.rapports[k] }; });
+      var arr = (Q && Q.arrivee) || [], part = Q && Q.partants || 0;
+      if (LIVE && LIVE.trouve) {
+        if (!arr.length && LIVE.arrivee.length) arr = LIVE.arrivee;
+        raps = (LIVE.rapports || []).concat(raps);
+        if (LIVE.partants.length) part = LIVE.partants.filter(function(p){ return !p.np; }).length;
+      }
+      return { arrivee: arr, rapports: raps, partants: part };
+    }
+    function dessiner(){ el.innerHTML = NTT.rendu(T && Q && T.date === Q.date ? T : (T || null), ctx()); }
+    dessiner();
+    function maj(){ if (!Q || !Q.date) return; fetch('/api/pmu/quinte?date=' + encodeURIComponent(Q.date)).then(function(r){ return r.json(); }).then(function(l){ LIVE = l; dessiner(); }).catch(function(){}); }
+    maj(); setInterval(maj, 60000);
+  }).catch(function(){ document.getElementById('refus').hidden = false; });
+</script>
+</body>
+</html>

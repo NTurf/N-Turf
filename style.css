@@ -159,3 +159,20 @@ table.infos.fois td{text-align:center}
 table.cotes tr.np td{text-decoration:line-through;color:var(--mute)}
 table.cotes td:last-child{color:var(--txt)}
 table.saisie tr.lig td.arr{color:#d8343f;font-weight:900;box-shadow:inset 0 0 0 3px #d8343f}
+
+.frm{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.frm label{display:flex;flex-direction:column;font-size:13px;color:var(--soft);gap:3px}
+.frm input,.frm select{padding:8px;border-radius:8px;border:1px solid var(--line);background:var(--navy2);color:var(--txt);font-size:15px}
+@media (max-width:480px){.frm{grid-template-columns:1fr}}
+.trow{display:flex;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px}
+.trow .mono{font-weight:800;color:var(--gold);letter-spacing:.03em}
+.trow input{padding:4px;border-radius:6px;border:1px solid var(--line);background:var(--navy2);color:var(--txt)}
+.tact{display:flex;flex-direction:column;gap:4px}
+.tact button{background:var(--navy2);border:1px solid var(--line);color:var(--txt);border-radius:6px;padding:3px 8px;cursor:pointer}
+.tkt{border:1px solid var(--line);border-radius:12px;padding:10px;margin:8px 0;background:var(--navy2)}
+.tkt.gagnant{border:2px solid var(--green)}
+.tkh{display:flex;justify-content:space-between;gap:8px;margin-bottom:4px}
+.tkh b{color:var(--gold)}
+.tkh span{color:var(--soft);font-size:13px;text-align:right}
+.tkb{display:flex;justify-content:space-between;font-size:14px;padding:2px 0}
+.assoc{font-size:12px;color:var(--soft);margin:2px 0}

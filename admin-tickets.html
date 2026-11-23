@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tickets (administration) – N-TURF</title>
+<meta name="theme-color" content="#0e2040">
+<meta name="robots" content="noindex">
+<link rel="icon" href="/icon-192.png">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body data-page="admin">
+<main>
+<h1>Tickets du jour</h1>
+<div id="refus" class="note" hidden>Cette page est réservée à l'administrateur.</div>
+<div id="zone" hidden>
+<p class="lead" id="etat"></p>
+
+<section class="card">
+<h2>Ajouter un ticket</h2>
+<div class="frm">
+<label>Auteur<select id="fAut"><option>Choix Bruno</option><option>TCR</option><option>ALGO</option><option>PERSO</option></select></label>
+<label>Pari<select id="fPari"></select></label>
+<label>Formule<select id="fForm"></select></label>
+<label id="lCh">Chevaux<input id="fCh" inputmode="numeric" placeholder="ex. 9 12 13 14 6 1"></label>
+<label>Mise par combinaison (€)<input id="fMise" inputmode="decimal"></label>
+<label>Associés (facultatif)<input id="fAss" inputmode="numeric" placeholder="ex. 3 7 11"></label>
+</div>
+<p class="note2" id="fCout"></p>
+<p><button type="button" class="btn" id="fAjout">Ajouter au brouillon</button></p>
+<details><summary class="sub">Ou coller une liste de tickets en texte</summary>
+<p class="note2">Une ligne par ticket : <b>pari | auteur | chevaux | formule | mise</b>. Exemples :<br>Quinté+ | TCR | 9 12 13 14 6 1<br>Tiercé | Choix Bruno | 9 12 | champ<br>Multi | ALGO | 14 9 12 13 1 8 | combiné | 0,50</p>
+<textarea id="fTxt" rows="5" style="width:100%;background:var(--navy2);color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:8px"></textarea>
+<p><button type="button" class="btn ghost" id="fColler">Ajouter ces tickets</button></p>
+<p class="msg" id="fMsg"></p>
+</details>
+</section>
+
+<section class="card">
+<h2>Brouillon</h2>
+<div id="liste"></div>
+<p style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn ghost" id="bSave">Enregistrer le brouillon</button><button type="button" class="btn" id="bPub">Publier aux membres</button><button type="button" class="btn ghost" id="bVide">Tout effacer</button></p>
+<p class="msg" id="bMsg"></p>
+</section>
+
+<section class="card">
+<h2>Ce que verront les membres</h2>
+<div id="apercu"></div>
+</section>
+</div>
+</main>
+<script src="/site.js"></script>
+<script src="/tickets.js"></script>
+<script>
+var B = { date: '', tickets: [] }, Q = null, LIVE = null;
+function $(i){ return document.getElementById(i); }
+function partants(){ if (LIVE && LIVE.partants && LIVE.partants.length) return LIVE.partants.filter(function(p){ return !p.np; }).length; return Q && Q.partants || 0; }
+function ctx(){
+  var raps = Object.keys((Q && Q.rapports) || {}).map(function(k){ return { nom: k, euros: Q.rapports[k] }; });
+  var arr = (Q && Q.arrivee) || [];
+  if (LIVE && LIVE.arrivee && LIVE.arrivee.length) { if (!arr.length) arr = LIVE.arrivee; raps = (LIVE.rapports || []).concat(raps); }
+  return { arrivee: arr, rapports: raps, partants: partants() };
+}
+function remplirSelects(){
+  $('fPari').innerHTML = Object.keys(NTT.PARIS).map(function(k){ return '<option>'+k+'</option>'; }).join('');
+  $('fPari').value = 'Quinté+';
+  $('fForm').innerHTML = Object.keys(NTT.FORMULES).map(function(k){ return '<option value="'+k+'">'+NTT.FORMULES[k]+'</option>'; }).join('');
+  $('fMise').value = String(NTT.PARIS['Quinté+'].mise).replace('.', ',');
+}
+function lireForm(){
+  var f = $('fForm').value, ch = NTT.nums($('fCh').value);
+  return { id: Date.now().toString(36), auteur: $('fAut').value, pari: $('fPari').value, formule: f,
+    chevaux: f === 'champ' ? [] : ch, bases: f === 'champ' ? ch : [],
+    mise: parseFloat($('fMise').value.replace(',', '.')) || 0, associes: NTT.nums($('fAss').value) };
+}
+function majCout(){
+  var t = lireForm(), nb = NTT.combinaisons(t, partants());
+  $('lCh').firstChild.textContent = t.formule === 'champ' ? 'Bases (le reste = X, tous les partants)' : 'Chevaux';
+  $('fCout').textContent = nb + ' combinaison' + (nb>1?'s':'') + ' × ' + NTT.eur(t.mise) + ' = ' + NTT.eur(nb * t.mise) + (t.formule === 'champ' ? ' (' + partants() + ' partants)' : '');
+}
+function dessiner(){
+  $('liste').innerHTML = B.tickets.length ? B.tickets.map(function(t, i){
+    var ch = t.formule === 'champ' ? t.bases.join(' ') + ' X' : t.chevaux.join(' ');
+    return '<div class="trow"><div><b>'+NTT.esc(t.auteur)+'</b> · '+NTT.esc(t.pari)+' · '+NTT.esc(NTT.FORMULES[t.formule])+'<br><span class="mono">'+NTT.esc(ch)+'</span> — '+NTT.eur(NTT.cout(t, partants()))+
+      '<br><label class="note2">Gagné saisi à la main (vide = calcul auto) <input class="gm" data-i="'+i+'" inputmode="decimal" value="'+(t.gainManuel===undefined||t.gainManuel===null?'':String(t.gainManuel).replace('.', ','))+'" style="width:90px"></label></div>'+
+      '<div class="tact"><button data-a="h" data-i="'+i+'">▲</button><button data-a="b" data-i="'+i+'">▼</button><button data-a="s" data-i="'+i+'">✕</button></div></div>';
+  }).join('') : '<p class="empty">Aucun ticket pour l\'instant.</p>';
+  $('liste').querySelectorAll('.tact button').forEach(function(b){
+    b.onclick = function(){
+      var i = parseInt(b.getAttribute('data-i'),10), a = b.getAttribute('data-a'), T = B.tickets;
+      if (a === 's') T.splice(i,1);
+      if (a === 'h' && i > 0) { var x = T[i]; T[i] = T[i-1]; T[i-1] = x; }
+      if (a === 'b' && i < T.length-1) { var y = T[i]; T[i] = T[i+1]; T[i+1] = y; }
+      dessiner();
+    };
+  });
+  $('liste').querySelectorAll('.gm').forEach(function(x){
+    x.onchange = function(){ var v = this.value.trim().replace(',', '.'); B.tickets[parseInt(this.getAttribute('data-i'),10)].gainManuel = v === '' ? null : (parseFloat(v) || 0); dessiner(); };
+  });
+  $('apercu').innerHTML = NTT.rendu(B, ctx());
+}
+function envoyer(cle, msg){
+  B.date = Q && Q.date || B.date;
+  return fetch('/api/admin/contenu', { method: 'POST', headers: {'content-type':'application/json'}, body: JSON.stringify({ cle: cle, data: B }) })
+    .then(function(r){ return r.json().then(function(d){ return {ok:r.ok, d:d}; }); })
+    .then(function(x){ $('bMsg').className = 'msg ' + (x.ok ? 'ok' : 'err'); $('bMsg').textContent = x.ok ? msg : (x.d.erreur || 'Erreur.'); return x.ok; })
+    .catch(function(){ $('bMsg').className = 'msg err'; $('bMsg').textContent = 'Connexion impossible, réessaie.'; });
+}
+NTURF_MOI.then(function(m){
+  if (!(m.connecte && m.role === 'admin')) { $('refus').hidden = false; return; }
+  $('zone').hidden = false; remplirSelects();
+  Promise.all([
+    fetch('/api/admin/contenu?cle=tickets_brouillon').then(function(r){ return r.json(); }),
+    fetch('/api/membres/quinte').then(function(r){ return r.json(); })
+  ]).then(function(x){
+    Q = x[1].quinte;
+    var br = x[0].data;
+    if (br && br.tickets && (!Q || br.date === Q.date)) B = br;
+    $('etat').textContent = Q ? 'Quinté+ du ' + Q.date + (Q.partants ? ' · ' + Q.partants + ' partants' : '') : 'Publie d\'abord ton fichier N-Turf du jour.';
+    majCout(); dessiner();
+    if (Q && Q.date) fetch('/api/pmu/quinte?date=' + encodeURIComponent(Q.date)).then(function(r){ return r.json(); }).then(function(l){ if (l && l.trouve) { LIVE = l; majCout(); dessiner(); } }).catch(function(){});
+  });
+  ['fPari','fForm','fCh','fMise'].forEach(function(id){ $(id).addEventListener('input', majCout); $(id).addEventListener('change', majCout); });
+  $('fPari').addEventListener('change', function(){ $('fMise').value = String(NTT.PARIS[this.value].mise).replace('.', ','); majCout(); });
+  $('fAjout').onclick = function(){
+    var t = lireForm();
+    if (!NTT.combinaisons(t, partants())) { $('fCout').textContent = 'Ce ticket ne fait aucune combinaison : vérifie les chevaux et la formule.'; return; }
+    B.tickets.push(t); $('fCh').value = ''; $('fAss').value = ''; majCout(); dessiner();
+  };
+  $('fColler').onclick = function(){
+    var r = NTT.lireTexte($('fTxt').value);
+    B.tickets = B.tickets.concat(r.tickets); dessiner();
+    $('fMsg').className = 'msg ' + (r.erreurs.length ? 'err' : 'ok');
+    $('fMsg').textContent = r.tickets.length + ' ticket(s) ajouté(s).' + (r.erreurs.length ? ' ' + r.erreurs.join(' · ') : '');
+    if (!r.erreurs.length) $('fTxt').value = '';
+  };
+  $('bSave').onclick = function(){ envoyer('tickets_brouillon', 'Brouillon enregistré. Rien n\'est encore visible des membres.'); };
+  $('bPub').onclick = function(){
+    if (!B.tickets.length) return;
+    envoyer('tickets_brouillon', '').then(function(ok){ if (ok) envoyer('tickets', 'Publié ! Les membres voient maintenant ces tickets.'); });
+  };
+  $('bVide').onclick = function(){ if (B.tickets.length) { B.tickets = []; dessiner(); $('bMsg').className = 'msg'; $('bMsg').textContent = 'Brouillon vidé (pense à l\'enregistrer).'; } };
+});
+</script>
+</body>
+</html>
