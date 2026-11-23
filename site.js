@@ -80,6 +80,8 @@
     .catch(function(){ return {connecte:false}; })
     .then(function(m){
       if (m.connecte) {
+        // Chat flottant sur toutes les pages, sauf la page Chat elle-même
+        if (!/\/chat(\.html)?$/.test(location.pathname)) { var cs = document.createElement('script'); cs.src = '/chatflot.js'; document.body.appendChild(cs); }
         var b = h.querySelector('.compte');
         var w = document.createElement('span');
         w.className = 'who';
