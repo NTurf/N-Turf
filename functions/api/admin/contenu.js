@@ -1,20 +1,22 @@
-import { json, initDb, currentUser, peutPublier, lireContenu, ecrireContenu, noDb } from '../../_auth.js';
+import { json, initDb, currentUser, peutPublier, peutHippo, lireContenu, ecrireContenu, noDb } from '../../_auth.js';
 
 // Lecture / écriture de contenus par l'administrateur (brouillon et tickets publiés)
 // Contenus qu'on peut préparer pour le lendemain (publiés au moment de la bascule)
 const EN_ATTENTE = ['quinte', 'cpc', 'tickets', 'tickets_brouillon', 'coeurs', 'fanny', 'hippo_quinte', 'hippo_pick5', 'hippo_etquinte', 'hippo_etr1', 'hippo_etout', 'hippo_ettrot'];
 const AUTORISES = ['tickets_brouillon', 'tickets', 'hippo', 'hippo_quinte', 'hippo_pick5', 'hippo_etquinte', 'hippo_etr1', 'hippo_etout', 'hippo_ettrot', 'cpc_archive', 'tickets_report', 'fanny', 'coeurs'];
 
-async function admin(env, request) {
+// cle : le contenu visé. Hippodrome (droit limité) n'a accès qu'à ses deux rubriques.
+async function admin(env, request, cle) {
   if (!env.DB) return null;
   await initDb(env.DB);
   const u = await currentUser(env.DB, request);
-  return peutPublier(u) ? u : null;
+  if (peutPublier(u)) return u;
+  return peutHippo(u) && ['hippo_quinte', 'hippo_pick5'].includes(cle) ? u : null;
 }
 
 export async function onRequestGet({ request, env }) {
   if (!env.DB) return noDb();
-  if (!(await admin(env, request))) return json({ erreur: 'Réservé à l\'administrateur.' }, 403);
+  if (!(await admin(env, request, new URL(request.url).searchParams.get('cle')))) return json({ erreur: 'Réservé à l\'administrateur.' }, 403);
   const q = new URL(request.url).searchParams, cle = q.get('cle');
   if (q.get('attente') === '1') {
     if (!EN_ATTENTE.includes(cle)) return json({ erreur: 'Contenu inconnu.' }, 400);
@@ -26,9 +28,9 @@ export async function onRequestGet({ request, env }) {
 
 export async function onRequestPost({ request, env }) {
   if (!env.DB) return noDb();
-  if (!(await admin(env, request))) return json({ erreur: 'Réservé à l\'administrateur.' }, 403);
   let b;
   try { b = await request.json(); } catch { return json({ erreur: 'Données illisibles.' }, 400); }
+  if (!(await admin(env, request, b && b.cle))) return json({ erreur: 'Réservé à l\'administrateur.' }, 403);
   if (new URL(request.url).searchParams.get('attente') === '1') {
     if (!EN_ATTENTE.includes(b.cle) || b.cle === 'quinte' || b.cle === 'cpc') return json({ erreur: 'Contenu inconnu.' }, 400);
     if (JSON.stringify(b.data || {}).length > 200000) return json({ erreur: 'Trop volumineux.' }, 400);

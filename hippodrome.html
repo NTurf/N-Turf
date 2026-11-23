@@ -18,11 +18,13 @@
 <p class="lead" id="titre"></p>
 <div id="pages"></div>
 <p class="note2">Touche une page pour l'agrandir.</p>
+<p class="note2" id="pubH" hidden><a href="/admin-hippodrome.html">✍ Publier mes pages</a> · <a href="/admin-hippodrome.html?demain=1">Préparer demain</a></p>
 </div>
 </main>
 <div id="lb" hidden><img alt=""></div>
 <script src="/site.js"></script>
 <script>
+NTURF_MOI.then(function(m){ if (m.connecte && m.hippo) document.getElementById('pubH').hidden = false; });
 fetch('/api/membres/hippo', {credentials:'same-origin'})
   .then(function(r){ return r.ok ? r.json() : Promise.reject(); })
   .then(function(d){

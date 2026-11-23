@@ -62,7 +62,7 @@ function dessiner(){
   $('pub').disabled = !IMGS.length;
 }
 NTURF_MOI.then(function(m){
-  if (!(m.connecte && m.publier)) { $('refus').hidden = false; return; }
+  if (!(m.connecte && (m.publier || m.hippo))) { $('refus').hidden = false; return; }
   $('zone').hidden = false; NTA.barre($('modeJour'));
   document.querySelectorAll('.pill[data-g]').forEach(function(b){
     b.onclick = function(){
