@@ -5,9 +5,12 @@
   var tabs = [
     ['/', 'Accueil'],
     ['/pronostics.html#quinte', 'Pronos Quinté+'],
+    ['/tickets.html', 'Tickets'],
     ['/pronostics.html#cpc', 'Pronos course par course'],
     ['/hippodrome.html', 'Pronos Hippodrome'],
-    ['/outils.html', 'Outils']
+    ['/outils.html', 'Outils'],
+    ['/chat.html', 'Chat'],
+    ['/membres.html', 'Espace membres']
   ];
   function actif(u){
     var n = function(z){ return (z || '/').replace(/\/index(\.html)?$/, '/').replace(/\.html$/, ''); };
