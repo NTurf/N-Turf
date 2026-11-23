@@ -11,20 +11,67 @@
 </head>
 <body data-page="inscription">
 <main>
-<h1>Inscription</h1>
-<p class="lead">L'inscription est gratuite. Elle donne accès à l'espace membres et aux concours.</p>
-<div class="note">Les inscriptions ouvrent très bientôt.</div>
-<section class="card">
-<form onsubmit="return false">
-<label>Pseudo (unique, visible des autres membres)</label><input disabled placeholder="Votre pseudo">
-<label>Adresse e-mail (jamais affichée)</label><input disabled type="email" placeholder="vous@exemple.fr">
-<label>Mot de passe</label><input disabled type="password" placeholder="••••••••">
-<p style="color:var(--soft);font-size:14px">Réservé aux personnes majeures. En vous inscrivant, vous acceptez la <a href="/confidentialite.html">politique de confidentialité</a>.</p>
-<button class="btn" disabled style="opacity:.5">Créer mon compte</button>
+<nav class="tabs" style="padding:0 0 10px">
+  <a href="#" id="tInsc" class="on">Créer un compte</a>
+  <a href="#" id="tConn">Se connecter</a>
+</nav>
+
+<section class="card" id="bInsc">
+<h1 style="margin-top:0">Inscription</h1>
+<p class="lead">Gratuite. Elle donne accès à l'espace membres et aux concours.</p>
+<form id="fInsc">
+<label for="iPseudo">Pseudo (unique, visible des autres membres)</label>
+<input id="iPseudo" autocomplete="nickname" maxlength="20" required>
+<label for="iEmail">Adresse e-mail (jamais affichée)</label>
+<input id="iEmail" type="email" autocomplete="email" required>
+<label for="iPass">Mot de passe (8 caractères minimum)</label>
+<input id="iPass" type="password" autocomplete="new-password" minlength="8" required>
+<label style="display:flex;gap:10px;align-items:flex-start;color:var(--txt)"><input id="iMaj" type="checkbox" style="width:auto;margin-top:4px">
+<span>Je suis majeur et j'accepte la <a href="/confidentialite.html">politique de confidentialité</a>.</span></label>
+<p id="mInsc" class="msg"></p>
+<button class="btn" type="submit">Créer mon compte</button>
 </form>
-<p style="margin-top:16px;color:var(--soft)">Déjà membre ? La connexion se fera ici aussi.</p>
+</section>
+
+<section class="card" id="bConn" hidden>
+<h1 style="margin-top:0">Connexion</h1>
+<form id="fConn">
+<label for="cLogin">Pseudo ou adresse e-mail</label>
+<input id="cLogin" autocomplete="username" required>
+<label for="cPass">Mot de passe</label>
+<input id="cPass" type="password" autocomplete="current-password" required>
+<p id="mConn" class="msg"></p>
+<button class="btn" type="submit">Se connecter</button>
+</form>
 </section>
 </main>
 <script src="/site.js"></script>
+<script>
+function show(insc){
+  document.getElementById('bInsc').hidden=!insc; document.getElementById('bConn').hidden=insc;
+  document.getElementById('tInsc').className=insc?'on':''; document.getElementById('tConn').className=insc?'':'on';
+}
+document.getElementById('tInsc').onclick=function(e){e.preventDefault();show(true)};
+document.getElementById('tConn').onclick=function(e){e.preventDefault();show(false)};
+if(location.hash==='#connexion') show(false);
+
+function send(url,body,msgId,btn){
+  var m=document.getElementById(msgId); m.className='msg'; m.textContent='Un instant…'; btn.disabled=true;
+  fetch(url,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)})
+  .then(function(r){return r.json().then(function(d){return {ok:r.ok,d:d}})})
+  .then(function(x){
+    if(x.ok){ m.className='msg ok'; m.textContent='Bienvenue '+x.d.pseudo+' !'; setTimeout(function(){location.href='/membres.html'},700); }
+    else { m.className='msg err'; m.textContent=x.d.erreur||'Une erreur est survenue.'; btn.disabled=false; }
+  }).catch(function(){ m.className='msg err'; m.textContent='Connexion impossible, réessayez.'; btn.disabled=false; });
+}
+document.getElementById('fInsc').onsubmit=function(e){
+  e.preventDefault();
+  send('/api/inscription',{pseudo:iPseudo.value,email:iEmail.value,password:iPass.value,majeur:iMaj.checked},'mInsc',e.submitter||this.querySelector('button'));
+};
+document.getElementById('fConn').onsubmit=function(e){
+  e.preventDefault();
+  send('/api/connexion',{login:cLogin.value,password:cPass.value},'mConn',e.submitter||this.querySelector('button'));
+};
+</script>
 </body>
 </html>

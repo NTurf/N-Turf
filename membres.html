@@ -12,7 +12,7 @@
 <body data-page="membres">
 <main>
 <h1>Espace membres</h1>
-<p class="lead">🔒 Réservé aux membres inscrits. Les rubriques ouvrent au fur et à mesure.</p>
+<p class="lead" id="hello">🔒 Réservé aux membres inscrits. Les rubriques ouvrent au fur et à mesure.</p>
 <div class="grid">
 <div class="tile"><b>Pronostics</b><small>Quinté+ et course par course, synthèse complète</small><span class="soon">Bientôt</span></div>
 <div class="tile"><b>Tickets</b><small>Mise, gagné, net</small><span class="soon">Bientôt</span></div>
@@ -23,8 +23,16 @@
 <div class="tile"><b>Statistiques</b><small>Bilans en euros</small><span class="soon">Bientôt</span></div>
 <div class="tile"><b>Mon compte</b><small>Pseudo, profil</small><span class="soon">Bientôt</span></div>
 </div>
-<p style="text-align:center;margin-top:20px"><a class="btn" href="/inscription.html">S'inscrire gratuitement</a></p>
+<p style="text-align:center;margin-top:20px" id="cta"><a class="btn" href="/inscription.html">S'inscrire gratuitement</a> <a class="btn ghost" href="/inscription.html#connexion">Se connecter</a></p>
 </main>
 <script src="/site.js"></script>
+<script>
+NTURF_MOI.then(function(m){
+  if(m.connecte){
+    document.getElementById('hello').textContent='Bienvenue '+m.pseudo+'. Les rubriques ouvrent au fur et à mesure.';
+    document.getElementById('cta').hidden=true;
+  }
+});
+</script>
 </body>
 </html>

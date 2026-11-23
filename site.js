@@ -20,4 +20,24 @@
     '<p><a href="/plan.html">Plan du site</a>·<a href="/confidentialite.html">Confidentialité</a></p>' +
     '<p>© N-TURF</p>';
   document.body.appendChild(f);
+
+  // Membre connecté : afficher son pseudo à la place de « S'inscrire »
+  window.NTURF_MOI = fetch('/api/moi', {credentials:'same-origin'})
+    .then(function(r){ return r.ok ? r.json() : {connecte:false}; })
+    .catch(function(){ return {connecte:false}; })
+    .then(function(m){
+      if (m.connecte) {
+        var b = h.querySelector('.btn');
+        var w = document.createElement('span');
+        w.className = 'who';
+        w.innerHTML = '<b></b> · <a href="#" id="logout">Déconnexion</a>';
+        w.querySelector('b').textContent = m.pseudo;
+        b.replaceWith(w);
+        w.querySelector('#logout').onclick = function(e){
+          e.preventDefault();
+          fetch('/api/deconnexion',{method:'POST'}).then(function(){ location.href='/'; });
+        };
+      }
+      return m;
+    });
 })();
