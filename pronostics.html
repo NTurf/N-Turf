@@ -30,7 +30,16 @@ fetch('/api/membres/quinte', {credentials:'same-origin'})
     document.getElementById('zone').hidden = false;
     document.getElementById('rendu').innerHTML = NT.afficher(x.d.quinte);
     return fetch('/api/membres/cpc', {credentials:'same-origin'}).then(function(r){ return r.json(); }).then(function(d){
-      var el = document.getElementById('renduC'); el.innerHTML = NT.afficherCpc(d.cpc); NT.brancherOnglets(el);
+      var el = document.getElementById('renduC'), cpc = d.cpc;
+      function dessiner(live){
+        var on = el.querySelector('nav.inner a.on'), ong = on ? parseInt(on.getAttribute('data-r'), 10) : 0;
+        var ouverts = [].map.call(el.querySelectorAll('details[open]'), function(x){ return x.parentNode.id; });
+        el.innerHTML = NT.afficherCpc(cpc, ong, live); NT.brancherOnglets(el);
+        ouverts.forEach(function(id){ var x = document.getElementById(id); if (x) { var dt = x.querySelector('details'); if (dt) dt.open = true; } });
+      }
+      dessiner();
+      function maj(){ NT.chargerLive(cpc, dessiner); }
+      maj(); setInterval(maj, 60000);
     });
   }).catch(function(){ document.getElementById('refus').hidden = false; });
 function onglet(q){

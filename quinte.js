@@ -111,7 +111,7 @@ var NT = (function(){
       if (!(a && /^RÉUNION/i.test(String(a)))) continue;
       var h = hippo(val(ws, 'G'+r));
       if (!date) date = dateFr(val(ws, 'C'+r));
-      var re = { nom: String(a).replace(/^RÉUNION/i,'Réunion'), hippodrome: h, discipline: val(ws,'I'+r) || '', courses: [] };
+      var re = { nom: String(a).replace(/^RÉUNION/i,'Réunion'), hippodrome: h, brut: String(val(ws, 'G'+r)||'').trim(), discipline: val(ws,'I'+r) || '', courses: [] };
       for (var k = 0; k < 10; k++){
         var b = r + 2 + k*8;
         var lab = val(ws, 'A'+b); if (!lab) continue;
@@ -129,35 +129,65 @@ var NT = (function(){
       if (h && re.courses.length) reunions.push(re);
     }
     if (!reunions.length) throw new Error('Aucune réunion remplie dans la feuille Saisie Journaux.');
-    return { date: date, reunions: reunions };
+    var reperes = [], wr = wb.Sheets['Repérés'];
+    if (wr) for (var i = 2; i <= 3000; i++){ var nm = val(wr, 'A'+i); if (nm) reperes.push(String(nm).trim()); }
+    return { date: date, reunions: reunions, reperes: reperes };
   }
-  function afficherCpc(d, onglet){
+  function cle(n){ return String(n||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase().replace(/[^A-Z0-9]/g,''); }
+  function afficherCpc(d, onglet, live){
     if (!d || !d.reunions || !d.reunions.length) return '<p class="empty">La synthèse arrive.</p>';
+    live = live || {};
+    var rep = {}; (d.reperes || []).forEach(function(n){ rep[cle(n)] = 1; });
     var h = '<p class="lead">Course par course du '+esc(d.date)+'</p><nav class="tabs inner">';
     d.reunions.forEach(function(re, i){ h += '<a href="#" data-r="'+i+'" class="'+(i===(onglet||0)?'on':'')+'">'+esc(re.hippodrome)+'</a>'; });
     h += '</nav>';
     d.reunions.forEach(function(re, i){
+      var L = live[i] && live[i].trouve ? live[i] : null;
+      var infos = re.courses.map(function(c){
+        var num = parseInt(String(c.course).replace(/\D/g,''), 10);
+        var lc = L ? (L.courses || []).filter(function(x){ return x.num === num; })[0] : null;
+        var arr = c.arrivee.slice(0,4), etat = '', raps = Object.keys(c.rapports).map(function(k){ return {nom:k, euros:c.rapports[k]}; });
+        if (lc && lc.arrivee.length && (lc.definitive || !arr.length)) {
+          arr = lc.arrivee.slice(0,4); etat = lc.definitive ? '' : 'provisoire';
+          if (lc.rapports.length) raps = lc.rapports;
+        }
+        var parts = lc ? lc.partants : [];
+        var repNums = parts.filter(function(p){ return rep[cle(p.nom)]; }).map(function(p){ return p.n; });
+        return { c: c, lc: lc, arr: arr, etat: etat, raps: raps, parts: parts, repNums: repNums };
+      });
       h += '<div class="reu" data-r="'+i+'"'+(i===(onglet||0)?'':' hidden')+'>';
-      h += '<div class="cbtn">'+re.courses.map(function(c, j){ return '<a href="#c'+i+'-'+j+'" class="'+(c.arrivee.length?'couru':'')+'">'+esc(c.course.replace('C',''))+'</a>'; }).join('')+'</div>';
-      re.courses.forEach(function(c, j){
-        var arr = c.arrivee, top = arr.slice(0,4);
-        h += '<div class="crs" id="c'+i+'-'+j+'"><h3>'+esc(c.course)+(re.discipline?' <small>'+esc(re.discipline)+'</small>':'')+'</h3>';
+      h += '<div class="cbtn">'+infos.map(function(x, j){ return '<a href="#c'+i+'-'+j+'" class="'+(x.arr.length?'couru':'')+'">'+esc(x.c.course.replace('C',''))+'</a>'; }).join('')+'</div>';
+      infos.forEach(function(x, j){
+        var c = x.c, top = x.arr;
+        function marques(n){ return (c.choix.indexOf(n)>=0?'<i class="cc">❤</i>':'') + (c.notes.indexOf(n)>=0?'<i class="st">★</i>':'') + (x.repNums.indexOf(n)>=0?'<i class="rb">★</i>':''); }
+        var heure = x.lc && x.lc.heure ? new Date(x.lc.heure).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit',timeZone:'Europe/Paris'}) : '';
+        h += '<div class="crs" id="c'+i+'-'+j+'"><h3>'+esc(c.course)+' <small>'+esc([heure, re.discipline].filter(Boolean).join(' · '))+'</small></h3>';
         if (!c.synthese.length) h += '<p class="empty">La synthèse arrive.</p>';
-        else h += '<div class="sel">'+c.synthese.map(function(n, x){
-          var cls = x < 3 ? 'piv' : ''; var hit = top.indexOf(n) >= 0;
-          var mk = (c.choix.indexOf(n)>=0?'<i class="cc">❤</i>':'') + (c.notes.indexOf(n)>=0?'<i class="st">★</i>':'');
-          return '<span class="ch '+cls+(hit?' hit':'')+'">'+esc(n)+mk+'</span>';
+        else h += '<div class="sel">'+c.synthese.map(function(n, k){
+          return '<span class="ch '+(k < 3 ? 'piv' : '')+(top.indexOf(n)>=0?' hit':'')+'">'+esc(n)+marques(n)+'</span>';
         }).join('')+'</div>';
-        var hors = c.choix.concat(c.notes).filter(function(n, x, t){ return c.synthese.indexOf(n) < 0 && t.indexOf(n) === x; });
-        if (hors.length) h += '<p class="sub">Hors synthèse : '+hors.map(function(n){ return '<span class="ch bleu'+(top.indexOf(n)>=0?' hit':'')+'">'+esc(n)+(c.choix.indexOf(n)>=0?'<i class="cc">❤</i>':'')+(c.notes.indexOf(n)>=0?'<i class="st">★</i>':'')+'</span>'; }).join('')+'</p>';
-        if (top.length) h += '<div class="arrivee"><b>Arrivée</b> '+top.map(function(n){ return '<span class="ch'+(c.synthese.indexOf(n)>=0||hors.indexOf(n)>=0?' hit':'')+'">'+esc(n)+'</span>'; }).join('')+'</div>';
-        var rk = Object.keys(c.rapports);
-        if (rk.length) h += '<table class="rap">'+rk.map(function(k){ return '<tr><td>'+esc(k)+'</td><td>'+euros(c.rapports[k])+'</td></tr>'; }).join('')+'</table>';
+        var hors = c.choix.concat(c.notes).concat(x.repNums).filter(function(n, k, t){ return c.synthese.indexOf(n) < 0 && t.indexOf(n) === k; });
+        if (hors.length) h += '<p class="sub">Hors synthèse : '+hors.map(function(n){ return '<span class="ch bleu'+(top.indexOf(n)>=0?' hit':'')+'">'+esc(n)+marques(n)+'</span>'; }).join('')+'</p>';
+        if (top.length) h += '<div class="arrivee"><b>Arrivée'+(x.etat?' <span class="prov">(provisoire)</span>':'')+'</b> '+top.map(function(n){ return '<span class="ch'+(c.synthese.indexOf(n)>=0||hors.indexOf(n)>=0?' hit':'')+'">'+esc(n)+'</span>'; }).join('')+'</div>';
+        if (x.raps.length) h += '<table class="rap">'+x.raps.map(function(r){ return '<tr><td>'+esc(r.nom)+'</td><td>'+euros(r.euros)+'</td></tr>'; }).join('')+'</table>';
+        if (x.parts.length) h += '<details class="parts"><summary>Partants ('+x.parts.filter(function(p){return !p.np;}).length+')</summary><table>'+x.parts.map(function(p){
+          return '<tr class="'+(p.np?'np':'')+'"><td>'+esc(p.n)+(x.repNums.indexOf(p.n)>=0?' <span class="rbs">★</span>':'')+'</td><td>'+esc(p.nom)+(p.np?' (NP)':'')+'</td><td class="mus">'+esc(p.musique)+'</td></tr>';
+        }).join('')+'</table></details>';
         h += '</div>';
       });
       h += '</div>';
     });
     return h;
+  }
+  // Va chercher les données PMU de chaque réunion puis rappelle fin(live)
+  function chargerLive(d, fin){
+    if (!d || !d.reunions) return fin({});
+    var live = {}, reste = d.reunions.length;
+    d.reunions.forEach(function(re, i){
+      fetch('/api/pmu/reunion?date='+encodeURIComponent(d.date)+'&hippo='+encodeURIComponent(re.brut || re.hippodrome))
+        .then(function(r){ return r.json(); }).then(function(x){ live[i] = x; })
+        .catch(function(){}).then(function(){ if (--reste === 0) fin(live); });
+    });
   }
   function brancherOnglets(root){
     root.querySelectorAll('nav.inner a').forEach(function(a){
@@ -168,5 +198,5 @@ var NT = (function(){
       };
     });
   }
-  return { lire: lire, afficher: afficher, lireCpc: lireCpc, afficherCpc: afficherCpc, brancherOnglets: brancherOnglets };
+  return { lire: lire, afficher: afficher, lireCpc: lireCpc, afficherCpc: afficherCpc, brancherOnglets: brancherOnglets, chargerLive: chargerLive };
 })();

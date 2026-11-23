@@ -69,8 +69,24 @@ fetch('/api/public',{cache:'no-store'}).then(function(r){return r.json()}).then(
   }
   var h='';
   if(q && q.arrivee && q.arrivee.length) h+='<div class="arr"><div class="t">Quinté+ du '+esc(q.date)+'</div><div class="n">'+q.arrivee.map(esc).join(' - ')+'</div></div>';
-  (d.arrivees||[]).forEach(function(a){ h+='<div class="arr"><div class="t">'+esc(a.hippodrome)+' · '+esc(a.course)+'</div><div class="n">'+a.arrivee.map(esc).join(' - ')+'</div></div>'; });
-  if(h) document.getElementById('arrivees').innerHTML=h;
+  var vues={};
+  (d.arrivees||[]).forEach(function(a){ vues[a.hippodrome+'|'+a.course]=a; });
+  function montrer(){
+    var t=h;
+    Object.keys(vues).forEach(function(k){ var a=vues[k]; t+='<div class="arr"><div class="t">'+esc(a.hippodrome)+' · '+esc(a.course)+(a.prov?' <span class="prov">(provisoire)</span>':'')+'</div><div class="n">'+a.arrivee.map(esc).join(' - ')+'</div></div>'; });
+    if(t) document.getElementById('arrivees').innerHTML=t;
+  }
+  montrer();
+  function direct(){
+    (d.reunionsJour||[]).forEach(function(re){
+      fetch('/api/pmu/reunion?date='+encodeURIComponent(d.dateCpc)+'&hippo='+encodeURIComponent(re.brut)).then(function(r){return r.json()}).then(function(x){
+        if(!x.trouve) return;
+        x.courses.forEach(function(c){ if(c.arrivee.length) vues[re.hippodrome+'|C'+c.num]={hippodrome:re.hippodrome,course:'C'+c.num,arrivee:c.arrivee.slice(0,4),prov:!c.definitive}; });
+        montrer();
+      }).catch(function(){});
+    });
+  }
+  direct(); setInterval(direct,60000);
 }).catch(function(){});
 </script>
 </body>

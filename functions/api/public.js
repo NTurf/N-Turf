@@ -13,7 +13,9 @@ export async function onRequestGet({ env }) {
       if (c.arrivee && c.arrivee.length) arrivees.push({ hippodrome: re.hippodrome, course: c.course, arrivee: c.arrivee.slice(0, 4) });
     }
   }
-  if (!q) return json({ quinte: null, bandeau: [], arrivees });
+  const reunionsJour = cpc && Array.isArray(cpc.reunions) ? cpc.reunions.map((r) => ({ hippodrome: r.hippodrome, brut: r.brut || r.hippodrome })) : [];
+  const dateCpc = cpc ? cpc.date : '';
+  if (!q) return json({ quinte: null, bandeau: [], arrivees, reunionsJour, dateCpc });
   const top3 = (q.synthese || []).slice(0, 3);
   const bandeau = [];
   if (q.arrivee && q.arrivee.length) {
@@ -25,6 +27,8 @@ export async function onRequestGet({ env }) {
     quinte: { date: q.date, discipline: q.discipline, partants: q.partants, top3, arrivee: q.arrivee || [] },
     bandeau,
     arrivees,
+    reunionsJour,
+    dateCpc,
     maj: q.maj,
   });
 }
