@@ -24,14 +24,23 @@
   }
   var h = document.createElement('header');
   h.innerHTML =
-    '<div class="bar"><a class="logo" href="/"><img src="/icon-192.png" alt=""><span class="name">N-TURF</span></a><span class="sp"></span>' +
+    '<div class="bar"><button type="button" class="burger" id="burger" aria-label="Menu">☰</button><a class="logo" href="/"><img src="/icon-192.png" alt=""><span class="name">N-TURF</span></a><span class="sp"></span>' +
     '<span class="compte"><a class="btn" href="/inscription.html">S\'inscrire</a></span></div>' +
-    '<div class="ticker" id="ticker" hidden><span id="tickerText"></span></div>' +
-    '<nav class="mainnav" id="mainnav">' + tabs.map(function(t){ return '<a href="'+t[0]+'">'+t[1]+'</a>'; }).join('') + '</nav>';
+    '<div class="ticker" id="ticker" hidden><span id="tickerText"></span></div>';
   document.body.insertBefore(h, document.body.firstChild);
-  function marquer(){ h.querySelectorAll('.mainnav a').forEach(function(a){ a.classList.toggle('on', actif(a.getAttribute('href'))); }); }
+  // Menu en barre latérale à gauche (toujours visible sur ordinateur, tiroir sur téléphone)
+  var side = document.createElement('aside');
+  side.className = 'sidenav'; side.id = 'sidenav';
+  side.innerHTML = '<nav class="mainnav">' + tabs.map(function(t){ return '<a href="'+t[0]+'">'+t[1]+'</a>'; }).join('') + '</nav>';
+  document.body.insertBefore(side, h.nextSibling);
+  var voile = document.createElement('div'); voile.className = 'voile'; document.body.appendChild(voile);
+  document.body.classList.add('avec-side');
+  function fermer(){ document.body.classList.remove('menu-ouvert'); }
+  h.querySelector('#burger').onclick = function(){ document.body.classList.toggle('menu-ouvert'); };
+  voile.onclick = fermer;
+  side.addEventListener('click', function(e){ if (e.target.tagName === 'A') fermer(); });
+  function marquer(){ side.querySelectorAll('.mainnav a').forEach(function(a){ a.classList.toggle('on', actif(a.getAttribute('href'))); }); }
   marquer(); window.addEventListener('hashchange', marquer);
-  var on = h.querySelector('.mainnav a.on'); if (on && on.scrollIntoView) on.scrollIntoView({ block: 'nearest', inline: 'center' });
 
   // Bandeau défilant, le même sur toutes les pages
   fetch('/api/public', { cache: 'no-store' }).then(function(r){ return r.json(); }).then(function(d){
