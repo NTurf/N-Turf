@@ -25,12 +25,7 @@ var NT = (function(){
   }
   function lireApproche(wb, feuille){
     var ws = wb.Sheets[feuille]; if (!ws) return null;
-    var l5 = [], l6 = [];
-    for (var r = 25; r <= 34; r++){
-      var a = rangee(ws, r, 'B', 'F'); if (a.length) l5.push(a);
-      var b = rangee(ws, r, 'H', 'M'); if (b.length) l6.push(b);
-    }
-    return { selection: rangee(ws, 22, 'B', 'M'), lignes5: l5, lignes6: l6 };
+    return { selection: rangee(ws, 22, 'B', 'M') };
   }
   function lire(wb){
     var s = wb.Sheets['Saisie'];
@@ -88,8 +83,6 @@ var NT = (function(){
     Object.keys(q.approches || {}).forEach(function(k){
       var a = q.approches[k];
       h += '<h3>'+k+'</h3><div class="sel">'+a.selection.map(function(n,i){ return chip(n, arr, i===0?'piv':''); }).join('')+'</div>';
-      if (a.lignes5.length) h += '<p class="sub">Lignes de 5</p>'+a.lignes5.map(function(l){ return '<div class="lig">'+l.map(function(n){return chip(n,arr);}).join('')+'</div>'; }).join('');
-      if (a.lignes6.length) h += '<p class="sub">Lignes de 6</p>'+a.lignes6.map(function(l){ return '<div class="lig">'+l.map(function(n){return chip(n,arr);}).join('')+'</div>'; }).join('');
     });
     var rk = Object.keys(q.rapports || {});
     if (rk.length){
