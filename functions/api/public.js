@@ -1,6 +1,7 @@
 import { json, initDb, lireContenu, noDb } from '../_auth.js';
 import { BASE, norm, cache, get, preparer, lireRapports } from '../_pmu.js';
 import { resultatsFanny } from '../_fanny.js';
+import { cpcAvecCoeurs } from '../_coeurs.js';
 import { initConcours, calculerSiPret, parisJour, dernierJourCalcule, classementJour, isoVersFr } from '../_concours.js';
 
 const eur = (v) => (Math.round(v * 100) / 100).toFixed(2).replace('.', ',') + ' €';
@@ -63,7 +64,7 @@ export async function onRequestGet({ env }) {
   const db = env.DB;
   await initDb(db); await preparer(db);
   const q = await lireContenu(db, 'quinte');
-  const cpc = await lireContenu(db, 'cpc');
+  const cpc = await cpcAvecCoeurs(db, 'cpc', 'coeurs');
   const arrivees = [];
   if (cpc && Array.isArray(cpc.reunions)) {
     for (const re of cpc.reunions) for (const c of re.courses || []) {

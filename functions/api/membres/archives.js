@@ -1,4 +1,5 @@
 import { json, initDb, currentUser, lireContenu, noDb } from '../../_auth.js';
+import { cpcAvecCoeurs } from '../../_coeurs.js';
 
 // Archives : la liste des jours, ou tout ce qui a été donné un jour précis (?jour=2026-11-22)
 export async function onRequestGet({ request, env }) {
@@ -21,7 +22,7 @@ export async function onRequestGet({ request, env }) {
     jour,
     quinte: await lireContenu(env.DB, 'quinte-' + jour),
     tickets: await lireContenu(env.DB, 'tickets-' + jour),
-    cpc: await lireContenu(env.DB, 'cpc-' + jour),
+    cpc: await cpcAvecCoeurs(env.DB, 'cpc-' + jour, 'coeurs-' + jour),
     courses: courses.filter((c) => iso(c.d) === jour),
   });
 }
