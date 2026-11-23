@@ -1,8 +1,8 @@
 import { json, initDb, currentUser, peutPublier, lireContenu, ecrireContenu, noDb } from '../../_auth.js';
 
 // Journée préparée à l'avance : voir ce qui attend (GET) et basculer quand Bruno le décide (POST)
-const LISTE = ['quinte', 'cpc', 'tickets', 'tickets_brouillon', 'coeurs', 'fanny', 'hippo_quinte', 'hippo_pick5'];
-const NOMS = { quinte: 'Quinté+', cpc: 'Course par course', tickets: 'Tickets', coeurs: 'Coups de cœur', fanny: 'Repérés de Fanny', hippo_quinte: 'Hippodrome Quinté+', hippo_pick5: 'Hippodrome Super Pick 5' };
+const LISTE = ['quinte', 'cpc', 'tickets', 'tickets_brouillon', 'coeurs', 'fanny', 'hippo_quinte', 'hippo_pick5', 'hippo_etquinte', 'hippo_etr1', 'hippo_etout', 'hippo_ettrot'];
+const NOMS = { quinte: 'Quinté+', cpc: 'Course par course', tickets: 'Tickets', coeurs: 'Coups de cœur', fanny: 'Repérés de Fanny', hippo_quinte: 'Hippodrome Quinté+', hippo_pick5: 'Hippodrome Super Pick 5', hippo_etquinte: 'Études Quinté+', hippo_etr1: 'Études Réunion 1', hippo_etout: 'Études outsiders', hippo_ettrot: 'Études trotteurs' };
 const isoDe = (d) => (/^\d{2}\/\d{2}\/\d{4}$/.test(d || '') ? d.split('/').reverse().join('-') : null);
 
 async function droit(env, request) {

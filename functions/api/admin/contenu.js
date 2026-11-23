@@ -2,8 +2,8 @@ import { json, initDb, currentUser, peutPublier, lireContenu, ecrireContenu, noD
 
 // Lecture / écriture de contenus par l'administrateur (brouillon et tickets publiés)
 // Contenus qu'on peut préparer pour le lendemain (publiés au moment de la bascule)
-const EN_ATTENTE = ['quinte', 'cpc', 'tickets', 'tickets_brouillon', 'coeurs', 'fanny', 'hippo_quinte', 'hippo_pick5'];
-const AUTORISES = ['tickets_brouillon', 'tickets', 'hippo', 'hippo_quinte', 'hippo_pick5', 'cpc_archive', 'tickets_report', 'fanny', 'coeurs'];
+const EN_ATTENTE = ['quinte', 'cpc', 'tickets', 'tickets_brouillon', 'coeurs', 'fanny', 'hippo_quinte', 'hippo_pick5', 'hippo_etquinte', 'hippo_etr1', 'hippo_etout', 'hippo_ettrot'];
+const AUTORISES = ['tickets_brouillon', 'tickets', 'hippo', 'hippo_quinte', 'hippo_pick5', 'hippo_etquinte', 'hippo_etr1', 'hippo_etout', 'hippo_ettrot', 'cpc_archive', 'tickets_report', 'fanny', 'coeurs'];
 
 async function admin(env, request) {
   if (!env.DB) return null;

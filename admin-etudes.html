@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Études (administration) – N-TURF</title>
+<meta name="theme-color" content="#0D1E3D">
+<meta name="robots" content="noindex">
+<link rel="icon" href="/icone-nturf-192.png">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body data-page="admin">
+<main>
+<h1>Études</h1>
+<div id="refus" class="note" hidden>Cette page est réservée à l'administrateur.</div>
+<div id="zone" hidden>
+<div id="modeJour"></div>
+<section class="card">
+<p style="color:var(--soft)">Choisis la rubrique, puis les images d'étude (celles que Claude te prépare), dans l'ordre voulu. Chaque publication remplace les études précédentes de la même rubrique seulement.</p>
+<div class="pills"><button type="button" class="pill on" data-g="etquinte">Quinté+</button><button type="button" class="pill" data-g="etr1">Réunion 1</button><button type="button" class="pill" data-g="etout">Outsiders</button><button type="button" class="pill" data-g="ettrot">Trotteurs</button></div>
+<p class="note2" id="gInfo">Tu publies dans <b>Études Quinté+</b>. Les autres rubriques ne sont pas touchées.</p>
+<label class="lab" style="flex-direction:column;align-items:stretch">Titre (facultatif)<input id="titre" placeholder="ex. Étude Quinté+ du 24/11 – Deauville" style="width:100%"></label>
+<input type="file" id="fichiers" accept="image/*" multiple style="width:100%;padding:12px;background:var(--navy2);border:1px dashed var(--gold);border-radius:10px;color:var(--txt)">
+<p class="msg" id="msg"></p>
+<div class="hgrid" id="liste"></div>
+<p><button type="button" class="btn" id="pub" disabled>Publier aux membres</button></p>
+<p class="msg" id="msg2"></p>
+</section>
+</div>
+</main>
+<script src="/site.js"></script>
+<script src="/attente.js"></script>
+<script>
+var IMGS = [], G = 'etquinte', NOMS = { etquinte: 'Études Quinté+', etr1: 'Études Réunion 1', etout: 'Études outsiders', ettrot: 'Études trotteurs' };
+function $(i){ return document.getElementById(i); }
+function alleger(file){
+  return new Promise(function(ok, ko){
+    var img = new Image(), url = URL.createObjectURL(file);
+    img.onload = function(){
+      var w = Math.min(1400, img.naturalWidth), h = Math.round(img.naturalHeight * w / img.naturalWidth);
+      var c = document.createElement('canvas'); c.width = w; c.height = h;
+      var g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0,0,w,h); g.drawImage(img, 0, 0, w, h);
+      var q = 0.82, d = c.toDataURL('image/jpeg', q);
+      while (d.length > 1300000 && q > 0.4) { q -= 0.1; d = c.toDataURL('image/jpeg', q); }
+      URL.revokeObjectURL(url); ok(d);
+    };
+    img.onerror = function(){ ko(new Error('Image illisible : ' + file.name)); };
+    img.src = url;
+  });
+}
+function dessiner(){
+  $('liste').innerHTML = IMGS.map(function(d, i){ return '<figure><img src="'+d+'" alt=""><figcaption>'+(i+1)+' <button data-a="g" data-i="'+i+'">◀</button><button data-a="d" data-i="'+i+'">▶</button><button data-a="s" data-i="'+i+'">✕</button></figcaption></figure>'; }).join('');
+  $('liste').querySelectorAll('button').forEach(function(b){
+    b.onclick = function(){
+      var i = +b.getAttribute('data-i'), a = b.getAttribute('data-a');
+      if (a === 's') IMGS.splice(i,1);
+      if (a === 'g' && i > 0) IMGS.splice(i-1, 0, IMGS.splice(i,1)[0]);
+      if (a === 'd' && i < IMGS.length-1) IMGS.splice(i+1, 0, IMGS.splice(i,1)[0]);
+      dessiner();
+    };
+  });
+  $('pub').disabled = !IMGS.length;
+}
+NTURF_MOI.then(function(m){
+  if (!(m.connecte && m.publier)) { $('refus').hidden = false; return; }
+  $('zone').hidden = false; NTA.barre($('modeJour'));
+  document.querySelectorAll('.pill[data-g]').forEach(function(b){
+    b.onclick = function(){
+      G = b.getAttribute('data-g');
+      document.querySelectorAll('.pill[data-g]').forEach(function(x){ x.classList.toggle('on', x === b); });
+      $('gInfo').innerHTML = 'Tu publies dans <b>' + NOMS[G] + '</b>. Les autres rubriques ne sont pas touchées.';
+      IMGS = []; dessiner(); $('msg').textContent = ''; $('msg2').textContent = '';
+    };
+  });
+  $('fichiers').onchange = function(){
+    var f = [].slice.call(this.files).sort(function(a, b){ return a.name.localeCompare(b.name, 'fr', {numeric:true}); });
+    $('msg').className = 'msg'; $('msg').textContent = 'Préparation des images…';
+    f.reduce(function(p, file){ return p.then(function(){ return alleger(file).then(function(d){ IMGS.push(d); }); }); }, Promise.resolve())
+      .then(function(){ $('msg').className = 'msg ok'; $('msg').textContent = IMGS.length + ' page(s) prête(s). Vérifie l\'ordre, puis publie.'; dessiner(); })
+      .catch(function(e){ $('msg').className = 'msg err'; $('msg').textContent = e.message; dessiner(); });
+    this.value = '';
+  };
+  $('pub').onclick = function(){
+    var b = this; b.disabled = true; var m2 = $('msg2'); m2.className = 'msg';
+    var v = Date.now().toString(36);
+    IMGS.reduce(function(p, d, i){ return p.then(function(){
+      m2.textContent = 'Envoi de la page ' + (i+1) + ' sur ' + IMGS.length + '…';
+      return fetch('/api/admin/hippo-image' + NTA.q1, { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({ g: G, i: i, data: d }) })
+        .then(function(r){ if (!r.ok) return r.json().then(function(x){ throw new Error(x.erreur || 'Erreur'); }); });
+    }); }, Promise.resolve())
+    .then(function(){ return fetch('/api/admin/contenu' + NTA.q1, { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({ cle: 'hippo_' + G, data: { titre: $('titre').value.trim(), n: IMGS.length, v: v } }) }); })
+    .then(function(){ m2.className = 'msg ok'; m2.innerHTML = (NTA.demain ? 'Mis en attente pour demain dans ' + NOMS[G] + ' : les pages passeront en ligne quand tu basculeras. ' : 'Publié dans ' + NOMS[G] + ' ! ') + '<a href="/etudes.html#' + G + '">Voir la page des membres</a>'; b.disabled = false; })
+    .catch(function(e){ m2.className = 'msg err'; m2.textContent = e.message || 'Connexion impossible, réessaie.'; b.disabled = false; });
+  };
+});
+</script>
+</body>
+</html>

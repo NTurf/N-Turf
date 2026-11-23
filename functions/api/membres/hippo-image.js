@@ -7,7 +7,7 @@ export async function onRequestGet({ request, env }) {
   const u = await currentUser(env.DB, request);
   if (!u) return json({ erreur: 'Connectez-vous pour voir cette page.' }, 401);
   const q = new URL(request.url).searchParams;
-  const g = ['quinte', 'pick5'].includes(q.get('g')) ? q.get('g') : 'quinte';
+  const g = ['quinte', 'pick5', 'etquinte', 'etr1', 'etout', 'ettrot'].includes(q.get('g')) ? q.get('g') : 'quinte';
   const i = parseInt(q.get('i'), 10);
   const r = await env.DB.prepare('SELECT data FROM contenu WHERE cle = ?').bind('hippo-img-' + g + '-' + i).first();
   if (!r) return new Response('Introuvable', { status: 404 });

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Études – N-TURF</title>
+<meta name="theme-color" content="#0D1E3D">
+<link rel="manifest" href="/manifest.webmanifest?v=2">
+<link rel="icon" href="/icone-nturf-192.png">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body data-page="membres">
+<main>
+<h1>Études</h1>
+<div id="refus" class="note" hidden>🔒 Réservé aux membres. <a href="/inscription.html">S'inscrire gratuitement</a> ou <a href="/inscription.html#connexion">se connecter</a>.</div>
+<div id="zone" hidden>
+<nav class="tabs" style="padding:0 0 10px"><a href="#etquinte" data-g="etquinte" class="on">Études Quinté+</a><a href="#etr1" data-g="etr1">Études Réunion 1</a><a href="#etout" data-g="etout">Études outsiders</a><a href="#ettrot" data-g="ettrot">Études trotteurs</a></nav>
+<p class="lead" id="titre"></p>
+<div id="pages"></div>
+<p class="note2">Touche une étude pour l'agrandir.</p>
+</div>
+</main>
+<div id="lb" hidden><img alt=""></div>
+<script src="/site.js"></script>
+<script>
+fetch('/api/membres/etudes', {credentials:'same-origin'})
+  .then(function(r){ return r.ok ? r.json() : Promise.reject(); })
+  .then(function(d){
+    document.getElementById('zone').hidden = false;
+    var el = document.getElementById('pages'), lb = document.getElementById('lb');
+    function montrer(g){
+      document.querySelectorAll('nav.tabs a[data-g]').forEach(function(a){ a.className = a.getAttribute('data-g') === g ? 'on' : ''; });
+      var h = d[g];
+      document.getElementById('titre').textContent = h && h.titre || '';
+      if (!h || !h.n) { el.innerHTML = '<p class="empty">L'étude du jour arrive.</p>'; return; }
+      var t = ''; for (var i = 0; i < h.n; i++) t += '<img class="hpage" loading="lazy" src="/api/membres/hippo-image?g='+g+'&i='+i+'&v='+encodeURIComponent(h.v||'')+'" alt="Page '+(i+1)+'">';
+      el.innerHTML = t;
+      el.querySelectorAll('img').forEach(function(im){ im.onclick = function(){ lb.querySelector('img').src = im.src; lb.hidden = false; }; });
+    }
+    lb.onclick = function(){ lb.hidden = true; };
+    document.querySelectorAll('nav.tabs a[data-g]').forEach(function(a){ a.onclick = function(e){ e.preventDefault(); montrer(a.getAttribute('data-g')); history.replaceState(null, '', '#' + a.getAttribute('data-g')); }; });
+    var hh = location.hash.slice(1); montrer(['etr1','etout','ettrot'].indexOf(hh) >= 0 ? hh : 'etquinte');
+  }).catch(function(){ document.getElementById('refus').hidden = false; });
+</script>
+</body>
+</html>
