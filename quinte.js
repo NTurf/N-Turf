@@ -20,7 +20,7 @@ var NT = (function(){
     return String(v).trim();
   }
   function dateFr(v){
-    if (v instanceof Date) return ('0'+v.getDate()).slice(-2)+'/'+('0'+(v.getMonth()+1)).slice(-2)+'/'+v.getFullYear();
+    if (v instanceof Date) { v = new Date(v.getTime() + 12*3600*1000); return ('0'+v.getDate()).slice(-2)+'/'+('0'+(v.getMonth()+1)).slice(-2)+'/'+v.getFullYear(); }
     return v ? String(v) : '';
   }
   function lireApproche(wb, feuille){
@@ -202,9 +202,28 @@ var NT = (function(){
       if (h && re.courses.length) reunions.push(re);
     }
     if (!reunions.length) throw new Error('Aucune réunion remplie dans la feuille Saisie Journaux.');
+    // Historique pour les statistiques : feuille « Archive Journaux »
+    var archive = [], wa = wb.Sheets['Archive Journaux'];
+    if (wa && wa['!ref']) {
+      var rg = XLSX.utils.decode_range(wa['!ref']), col = {};
+      for (var c = rg.s.c; c <= rg.e.c; c++){ var hd = wa[XLSX.utils.encode_cell({r: 0, c: c})]; if (hd && hd.v) col[String(hd.v).trim()] = c; }
+      var cell = function(r, nom){ var cc = col[nom]; if (cc === undefined) return null; var x = wa[XLSX.utils.encode_cell({r: r, c: cc})]; return x ? x.v : null; };
+      var nb = function(v){ return typeof v === 'number' ? Math.round(v) : (typeof v === 'string' && /^\d+$/.test(v.trim()) ? parseInt(v, 10) : null); };
+      var rap = function(v){ return typeof v === 'number' ? v : (typeof v === 'string' && v.trim() !== '' ? v.trim() : null); };
+      for (var r = 1; r <= rg.e.r; r++){
+        var dv = cell(r, 'Date'); if (!dv) continue;
+        var syn = [], arr = [];
+        for (var i = 1; i <= 8; i++){ var n1 = nb(cell(r, 'Synthèse ' + i)); if (n1) syn.push(n1); }
+        for (var j = 1; j <= 4; j++){ var n2 = nb(cell(r, 'Arrivée ' + j)); if (n2) arr.push(n2); }
+        if (!syn.length || arr.length < 2) continue;
+        archive.push({ d: dateFr(dv), h: hippo(cell(r, 'Hippodrome')), di: cell(r, 'Discipline') || 'Autre', c: String(cell(r, 'Course') || ''), s: syn, a: arr,
+          g: rap(cell(r, 'Rapport Gagnant')), p: [rap(cell(r, 'Rapport Placé 1er')), rap(cell(r, 'Rapport Placé 2e')), rap(cell(r, 'Rapport Placé 3e'))],
+          cg: rap(cell(r, 'Couplé gagnant')), t: rap(cell(r, 'Trio')), m4: rap(cell(r, 'Multi 4')), s4: rap(cell(r, 'Super 4')) });
+      }
+    }
     var reperes = [], wr = wb.Sheets['Repérés'];
     if (wr) for (var i = 2; i <= 3000; i++){ var nm = val(wr, 'A'+i); if (nm) reperes.push(String(nm).trim()); }
-    return { date: date, reunions: reunions, reperes: reperes };
+    return { date: date, reunions: reunions, reperes: reperes, archive: archive };
   }
   function cle(n){ return String(n||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase().replace(/[^A-Z0-9]/g,''); }
   function afficherCpc(d, onglet, live){

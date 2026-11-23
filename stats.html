@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Statistiques – N-TURF</title>
+<meta name="theme-color" content="#0e2040">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icon-192.png">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body data-page="membres">
+<main>
+<h1>Statistiques</h1>
+<div id="refus" class="note" hidden>🔒 Réservé aux membres. <a href="/inscription.html">S'inscrire gratuitement</a> ou <a href="/inscription.html#connexion">se connecter</a>.</div>
+<div id="zone" hidden>
+<p class="lead">Course par course : tout ce que notre synthèse a donné, en toute transparence, qu'on gagne ou qu'on perde.</p>
+<div class="pills" id="fDisc"></div>
+<div class="pills" id="fPer"></div>
+<div id="rendu"></div>
+<p class="note2" id="maj"></p>
+</div>
+</main>
+<script src="/site.js"></script>
+<script>
+var C = [], F = { disc: 'Toutes', per: 'tout' };
+function $(i){ return document.getElementById(i); }
+function eur(v){ return (Math.round(v*100)/100).toFixed(2).replace('.', ',') + ' €'; }
+function net(v){ return '<span class="'+(v>=0?'pos':'neg')+'">'+(v>=0?'+':'−')+eur(Math.abs(v))+'</span>'; }
+function num(v){ return typeof v === 'number' && v > 0 ? v : null; }
+function jour(d){ var m = String(d).match(/(\d{2})\/(\d{2})\/(\d{4})/); return m ? new Date(+m[3], +m[2]-1, +m[1]) : null; }
+function filtrer(){
+  var lim = null;
+  if (F.per !== 'tout') { lim = new Date(); lim.setHours(0,0,0,0); lim.setDate(lim.getDate() - (F.per === '7' ? 6 : 29)); }
+  return C.filter(function(c){ return (F.disc === 'Toutes' || c.di === F.disc) && (!lim || (jour(c.d) && jour(c.d) >= lim)); });
+}
+function pills(id, liste, cle){
+  $(id).innerHTML = liste.map(function(x){ return '<button type="button" class="pill'+(F[cle]===x[0]?' on':'')+'" data-v="'+x[0]+'">'+x[1]+'</button>'; }).join('');
+  $(id).querySelectorAll('button').forEach(function(b){ b.onclick = function(){ F[cle] = b.getAttribute('data-v'); pills(id, liste, cle); dessiner(); }; });
+}
+function dessiner(){
+  var L = filtrer(), N = L.length;
+  if (!N) { $('rendu').innerHTML = '<p class="empty">Aucune course pour ce choix.</p>'; return; }
+  var jours = {}; L.forEach(function(c){ jours[c.d] = 1; });
+  var h = '<p class="sub">'+N+' courses sur '+Object.keys(jours).length+' jour(s)</p>';
+
+  // Ce que la synthèse (8 chevaux) contenait
+  var t = { g: 0, cp: 0, tr: 0, m4: 0, g3: 0 };
+  var rang = [0,0,0,0,0,0,0,0], absent = 0;
+  L.forEach(function(c){
+    var a = c.a, s = c.s, in8 = function(k){ return a.slice(0,k).length === k && a.slice(0,k).every(function(n){ return s.indexOf(n) >= 0; }); };
+    if (in8(1)) t.g++; if (in8(2)) t.cp++; if (a.length >= 3 && in8(3)) t.tr++; if (a.length >= 4 && in8(4)) t.m4++;
+    var r = s.indexOf(a[0]); if (r >= 0 && r < 8) rang[r]++; else absent++;
+    if (r >= 0 && r < 3) t.g3++;
+  });
+  h += '<section class="card"><h2>Ce que la synthèse a donné</h2><table class="st">'+
+    '<tr><td>Le gagnant était dans nos 3 premiers</td><td><b>'+t.g3+'</b> sur '+N+'</td></tr>'+
+    '<tr><td>Le gagnant était dans nos 8</td><td><b>'+t.g+'</b> sur '+N+'</td></tr>'+
+    '<tr><td>Les 2 premiers dans nos 8 (couplé)</td><td><b>'+t.cp+'</b> sur '+N+'</td></tr>'+
+    '<tr><td>Les 3 premiers dans nos 8 (trio)</td><td><b>'+t.tr+'</b> sur '+N+'</td></tr>'+
+    '<tr><td>Les 4 premiers dans nos 8 (Multi en 4, Super 4)</td><td><b>'+t.m4+'</b> sur '+N+'</td></tr></table>';
+  h += '<h3>Le gagnant, à quel rang de notre synthèse ?</h3><table class="st">'+rang.map(function(v, i){ return '<tr><td>'+(i+1)+(i?'e':'er')+' de la synthèse</td><td><b>'+v+'</b> fois</td></tr>'; }).join('')+'<tr><td>Hors de nos 8</td><td><b>'+absent+'</b> fois</td></tr></table></section>';
+
+  // À masse égale : 1 € gagnant et 1 € placé sur chacun des 3 premiers de la synthèse
+  var G = [0,1,2].map(function(){ return { m: 0, g: 0, n: 0 }; }), P = [0,1,2].map(function(){ return { m: 0, g: 0, n: 0 }; });
+  L.forEach(function(c){
+    var rg = num(c.g), rp = c.p.map(num);
+    [0,1,2].forEach(function(k){
+      var cheval = c.s[k]; if (!cheval) return;
+      if (rg) { G[k].m += 1; if (c.a[0] === cheval) { G[k].g += rg; G[k].n++; } }
+      if (rp[0]) { P[k].m += 1; var pos = c.a.indexOf(cheval); if (pos >= 0 && pos < 3 && rp[pos]) { P[k].g += rp[pos]; P[k].n++; } }
+    });
+  });
+  function bloc(titre, T, mot){
+    var tot = T.reduce(function(a, x){ return { m: a.m + x.m, g: a.g + x.g, n: a.n + x.n }; }, { m: 0, g: 0, n: 0 });
+    return '<h3>'+titre+'</h3><table class="st bil"><tr><th></th><th>Misé</th><th>Gagné</th><th>Net</th></tr>'+
+      T.map(function(x, k){ return '<tr><td>'+(k+1)+(k?'e':'er')+' cité <small>('+x.n+' '+mot+')</small></td><td>'+eur(x.m)+'</td><td>'+eur(x.g)+'</td><td>'+net(x.g - x.m)+'</td></tr>'; }).join('')+
+      '<tr class="tot"><td>Les 3 ensemble <small>('+tot.n+' '+mot+')</small></td><td>'+eur(tot.m)+'</td><td>'+eur(tot.g)+'</td><td>'+net(tot.g - tot.m)+'</td></tr></table>';
+  }
+  h += '<section class="card"><h2>À masse égale : 1 € pour 1 €</h2><p class="note2">1 € sur chacun des 3 premiers de notre synthèse, à chaque course, avec les rapports officiels. Seules les courses dont les rapports sont connus sont comptées.</p>'+
+    bloc('En simple gagnant', G, 'gagnants')+bloc('En simple placé', P, 'placés')+'</section>';
+  $('rendu').innerHTML = h;
+}
+fetch('/api/membres/stats', {credentials:'same-origin'})
+  .then(function(r){ return r.ok ? r.json() : Promise.reject(); })
+  .then(function(d){
+    $('zone').hidden = false;
+    C = d.archive && d.archive.courses || [];
+    C.sort(function(a, b){ return (jour(a.d) || 0) - (jour(b.d) || 0); });
+    if (!C.length) { $('rendu').innerHTML = '<p class="empty">Les statistiques arrivent.</p>'; return; }
+    var disc = {}; C.forEach(function(c){ disc[c.di] = 1; });
+    pills('fDisc', [['Toutes','Toutes']].concat(Object.keys(disc).sort().map(function(x){ return [x, x]; })), 'disc');
+    pills('fPer', [['tout','Depuis le début'],['30','30 derniers jours'],['7','7 derniers jours']], 'per');
+    $('maj').textContent = 'Historique depuis le ' + C[0].d + '.';
+    dessiner();
+  }).catch(function(){ $('refus').hidden = false; });
+</script>
+</body>
+</html>

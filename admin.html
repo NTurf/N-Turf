@@ -71,7 +71,10 @@ document.getElementById('fichier').onchange = function(){
 document.getElementById('publier').onclick = function(){
   var b = this, m = document.getElementById('msg2');
   b.disabled = true; m.className = 'msg'; m.textContent = 'Publication…';
-  fetch('/api/admin/' + typeF, {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(donnees)})
+  var corps = donnees, archive = null;
+  if (typeF === 'cpc') { archive = donnees.archive; corps = Object.assign({}, donnees); delete corps.archive; }
+  fetch('/api/admin/' + typeF, {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(corps)})
+    .then(function(r){ if (r.ok && archive && archive.length) return fetch('/api/admin/contenu', {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({ cle: 'cpc_archive', data: { maj: new Date().toISOString(), courses: archive } })}).then(function(){ return r; }); return r; })
     .then(function(r){ return r.json().then(function(d){ return {ok:r.ok, d:d}; }); })
     .then(function(x){
       if (x.ok) { m.className = 'msg ok'; m.innerHTML = 'Publié ! Les membres voient maintenant la mise à jour, et l\'accueil est à jour.<br><a href="/pronostics.html">Voir la page Pronostics</a> · <a href="/">Voir l\'accueil</a>'; }
