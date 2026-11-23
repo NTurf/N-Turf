@@ -17,9 +17,17 @@
   var f = document.createElement('footer');
   f.innerHTML =
     '<p>Jeu responsable · Interdit aux mineurs<br>Joueurs Info Service : 09 74 75 13 13</p>' +
-    '<p><a href="/contact.html">Contactez-nous</a>·<a href="/plan.html">Plan du site</a>·<a href="/confidentialite.html">Confidentialité</a></p>' +
+    '<p><a href="/installer.html">Installer l\'application</a>·<a href="/contact.html">Contactez-nous</a>·<a href="/plan.html">Plan du site</a>·<a href="/confidentialite.html">Confidentialité</a></p>' +
     '<p>© N-TURF</p>';
   document.body.appendChild(f);
+
+  // Application : enregistrement et bouton « Installer »
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(function(){});
+  window.NTURF_INSTALL = null;
+  window.addEventListener('beforeinstallprompt', function(e){
+    e.preventDefault(); window.NTURF_INSTALL = e;
+    document.querySelectorAll('.btn-install').forEach(function(b){ b.hidden = false; });
+  });
 
   // Membre connecté : afficher son pseudo à la place de « S'inscrire »
   window.NTURF_MOI = fetch('/api/moi', {credentials:'same-origin'})

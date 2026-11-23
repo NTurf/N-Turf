@@ -1,13 +1,17 @@
 {
+  "id": "/",
   "name": "N-TURF Pronostics",
   "short_name": "N-TURF",
+  "description": "Pronostics hippiques N-TURF : Quinté+, course par course, outils et chat.",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#0e2040",
   "theme_color": "#0e2040",
   "lang": "fr",
   "icons": [
-    {"src": "/icon-192.png", "sizes": "192x192", "type": "image/png"},
-    {"src": "/icon-512.png", "sizes": "512x512", "type": "image/png"}
+    {"src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"}
   ]
 }

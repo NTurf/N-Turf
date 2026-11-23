@@ -211,3 +211,4 @@ img.hpage{width:100%;display:block;margin:0 0 12px;border-radius:10px;cursor:zoo
 .sig{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px}
 .sig small{color:var(--mute)}
 .sigb{display:flex;gap:6px;flex-wrap:wrap}
+.etapes{padding-left:22px;margin:6px 0}.etapes li{margin:8px 0;line-height:1.45}
