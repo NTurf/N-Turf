@@ -2,6 +2,8 @@ import { json, initDb, currentUser, peutPublier, ecrireContenu, noDb } from '../
 
 // Réception du Quinté lu dans le fichier Excel (administrateur seulement)
 export async function onRequestPost({ request, env }) {
+  // ?attente=1 : journée du lendemain préparée à l'avance, publiée seulement quand Bruno bascule
+  const attente = new URL(request.url).searchParams.get('attente') === '1';
   if (!env.DB) return noDb();
   await initDb(env.DB);
   const u = await currentUser(env.DB, request);
@@ -11,6 +13,7 @@ export async function onRequestPost({ request, env }) {
   const txt = JSON.stringify(d);
   if (txt.length > 200000) return json({ erreur: 'Données trop volumineuses.' }, 400);
   if (!d || !Array.isArray(d.synthese)) return json({ erreur: 'Synthèse absente.' }, 400);
+  if (attente) { await ecrireContenu(env.DB, 'quinte_attente', d); return json({ ok: true, attente: true }); }
   await ecrireContenu(env.DB, 'quinte', d);
   // gardé aussi par date (arrivée, rapports) pour le bilan cumulé des tickets
   if (/^\d{2}\/\d{2}\/\d{4}$/.test(d.date || '')) {

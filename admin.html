@@ -17,6 +17,12 @@
 <div id="zone" hidden>
 <section class="card" id="cConcours" hidden><h2>Joueurs du concours</h2><p style="color:var(--soft)">Qui a joué le Quinté+ du jour et avec quels chevaux, même avant la course. Visible de toi seul.</p><p><a class="btn" href="/admin-concours.html">Voir les joueurs</a></p></section>
 <section class="card" id="cMembres" hidden><h2>Membres et droits</h2><p style="color:var(--soft)">Donne le rôle de modérateur ou l'accès à l'Administration aux membres de ton choix.</p><p><a class="btn" href="/admin-membres.html">Gérer les membres</a></p></section>
+<section class="card" id="cAttente" hidden style="border-color:var(--gold)">
+<h2>Journée en attente</h2>
+<p id="attenteTxt"></p>
+<p><button class="valider" id="basculer" type="button">Basculer le site sur cette journée</button></p>
+<p id="msgB" class="msg"></p>
+</section>
 <section class="card">
 <h2>Mettre à jour le site</h2>
 <p style="color:var(--soft)">Choisis ton fichier N-Turf (Quinté) ou ton fichier course par course : le site reconnaît lequel c'est, le lit, puis te montre le résultat. Rien n'est publié tant que tu n'as pas appuyé sur « Publier ».</p>
@@ -32,7 +38,8 @@
 <section class="card" id="apercu" hidden>
 <h2>Ce que verront les membres</h2>
 <div id="rendu"></div>
-<p style="margin-top:16px"><button class="btn" id="publier">Publier sur le site</button></p>
+<p id="infoDate" class="note2"></p>
+<p style="margin-top:16px;display:flex;flex-wrap:wrap;gap:8px"><button class="btn" id="publier">Publier maintenant</button><button class="btn ghost" id="publierAttente">Mettre en attente (je basculerai moi-même)</button></p>
 <p id="msg2" class="msg"></p>
 </section>
 </div>
@@ -59,11 +66,11 @@ document.getElementById('fichier').onchange = function(){
       if (wb.Sheets['Saisie Journaux']) {
         typeF = 'cpc'; donnees = NT.lireCpc(wb);
         rendu.innerHTML = NT.afficherCpc(donnees); NT.brancherOnglets(rendu);
-        msg.className = 'msg ok'; msg.textContent = 'Fichier course par course lu : ' + donnees.reunions.map(function(r){return r.hippodrome;}).join(', ') + '. Vérifie ci-dessous, puis publie.';
+        msg.className = 'msg ok'; msg.textContent = 'Fichier course par course lu : ' + donnees.reunions.map(function(r){return r.hippodrome;}).join(', ') + '. Vérifie ci-dessous, puis publie.'; majBoutons();
       } else {
         typeF = 'quinte'; donnees = NT.lire(wb);
         rendu.innerHTML = NT.afficher(donnees);
-        msg.className = 'msg ok'; msg.textContent = 'Fichier lu : Quinté du ' + donnees.date + '. Vérifie ci-dessous, puis publie.';
+        msg.className = 'msg ok'; msg.textContent = 'Fichier lu : Quinté du ' + donnees.date + '. Vérifie ci-dessous, puis publie.'; majBoutons(); majBoutons();
       }
       document.getElementById('apercu').hidden = false;
       document.getElementById('msg2').textContent = ''; document.getElementById('publier').disabled = false;
@@ -73,19 +80,50 @@ document.getElementById('fichier').onchange = function(){
   };
   r.readAsArrayBuffer(f);
 };
-document.getElementById('publier').onclick = function(){
-  var b = this, m = document.getElementById('msg2');
-  b.disabled = true; m.className = 'msg'; m.textContent = 'Publication…';
+function majBoutons(){
+  var auj = new Date().toLocaleDateString('fr-FR', {timeZone:'Europe/Paris', day:'2-digit', month:'2-digit', year:'numeric'});
+  var iso = function(x){ return String(x || '').split('/').reverse().join('-'); };
+  var futur = iso(donnees && donnees.date) > iso(auj);
+  document.getElementById('infoDate').textContent = 'Ton fichier est du ' + (donnees.date || '?') + ', nous sommes le ' + auj + '.' + (futur ? ' C\'est une journée à venir : mets-la en attente, et bascule quand la journée en cours sera finie.' : '');
+  document.getElementById('publier').className = futur ? 'btn ghost' : 'btn';
+  document.getElementById('publierAttente').className = futur ? 'btn' : 'btn ghost';
+  document.getElementById('publier').disabled = false; document.getElementById('publierAttente').disabled = false;
+}
+function publier(attente, b){
+  var m = document.getElementById('msg2');
+  b.disabled = true; m.className = 'msg'; m.textContent = attente ? 'Mise en attente…' : 'Publication…';
   var corps = donnees, archive = null;
   if (typeF === 'cpc') { archive = donnees.archive; corps = Object.assign({}, donnees); delete corps.archive; }
-  fetch('/api/admin/' + typeF, {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(corps)})
+  fetch('/api/admin/' + typeF + (attente ? '?attente=1' : ''), {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(corps)})
     .then(function(r){ if (r.ok && archive && archive.length) return fetch('/api/admin/contenu', {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({ cle: 'cpc_archive', data: { maj: new Date().toISOString(), courses: archive } })}).then(function(){ return r; }); return r; })
     .then(function(r){ return r.json().then(function(d){ return {ok:r.ok, d:d}; }); })
     .then(function(x){
-      if (x.ok) { m.className = 'msg ok'; m.innerHTML = 'Publié ! Les membres voient maintenant la mise à jour, et l\'accueil est à jour.<br><a href="/pronostics.html">Voir la page Pronostics</a> · <a href="/">Voir l\'accueil</a>'; }
+      if (x.ok && attente) { m.className = 'msg ok'; m.textContent = 'Mis en attente. Le site garde la journée en cours. Quand tu voudras, appuie sur « Basculer le site sur cette journée » en haut de la page.'; etatAttente(); window.scrollTo({top:0, behavior:'smooth'}); }
+      else if (x.ok) { m.className = 'msg ok'; m.innerHTML = 'Publié ! Les membres voient maintenant la mise à jour, et l\'accueil est à jour.<br><a href="/pronostics.html">Voir la page Pronostics</a> · <a href="/">Voir l\'accueil</a>'; }
       else { m.className = 'msg err'; m.textContent = x.d.erreur || 'Erreur.'; b.disabled = false; }
     }).catch(function(){ m.className='msg err'; m.textContent='Connexion impossible, réessaie.'; b.disabled=false; });
+}
+document.getElementById('publier').onclick = function(){ publier(false, this); };
+document.getElementById('publierAttente').onclick = function(){ publier(true, this); };
+function etatAttente(){
+  fetch('/api/admin/basculer', {credentials:'same-origin', cache:'no-store'}).then(function(r){ return r.ok ? r.json() : null; }).then(function(d){
+    var c = document.getElementById('cAttente');
+    if (!d || (!d.quinte && !d.cpc)) { c.hidden = true; return; }
+    var t = [];
+    if (d.quinte) t.push('✓ Quinté+ du ' + d.quinte);
+    if (d.cpc) t.push('✓ Course par course du ' + d.cpc + (d.cpcReunions.length ? ' (' + d.cpcReunions.join(', ') + ')' : ''));
+    document.getElementById('attenteTxt').innerHTML = t.join('<br>') + '<br><span class="note2">Le site montre toujours la journée en cours. Rien ne change tant que tu n\'as pas basculé.</span>';
+    c.hidden = false;
+  });
+}
+document.getElementById('basculer').onclick = function(){
+  var b = this, m = document.getElementById('msgB'); b.disabled = true; m.className = 'msg'; m.textContent = 'Bascule…';
+  fetch('/api/admin/basculer', {method:'POST', credentials:'same-origin'}).then(function(r){ return r.json(); }).then(function(d){
+    if (d.ok) { m.className = 'msg ok'; m.innerHTML = '✓ Le site est passé sur la nouvelle journée. <a href="/pronostics.html">Voir les pronostics</a>'; document.getElementById('attenteTxt').textContent = ''; }
+    else { m.className = 'msg err'; m.textContent = d.erreur || 'Erreur.'; b.disabled = false; }
+  });
 };
+NTURF_MOI.then(function(m){ if (m.connecte && (m.role === 'admin' || m.publier)) etatAttente(); });
 </script>
 </body>
 </html>

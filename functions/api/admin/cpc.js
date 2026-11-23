@@ -2,6 +2,8 @@ import { json, initDb, currentUser, peutPublier, ecrireContenu, noDb } from '../
 
 // Réception du course par course lu dans le fichier Excel (administrateur seulement)
 export async function onRequestPost({ request, env }) {
+  // ?attente=1 : journée du lendemain préparée à l'avance, publiée seulement quand Bruno bascule
+  const attente = new URL(request.url).searchParams.get('attente') === '1';
   if (!env.DB) return noDb();
   await initDb(env.DB);
   const u = await currentUser(env.DB, request);
@@ -10,6 +12,7 @@ export async function onRequestPost({ request, env }) {
   try { d = await request.json(); } catch { return json({ erreur: 'Données illisibles.' }, 400); }
   if (JSON.stringify(d).length > 300000) return json({ erreur: 'Données trop volumineuses.' }, 400);
   if (!d || !Array.isArray(d.reunions)) return json({ erreur: 'Aucune réunion.' }, 400);
+  if (attente) { await ecrireContenu(env.DB, 'cpc_attente', d); return json({ ok: true, attente: true }); }
   await ecrireContenu(env.DB, 'cpc', d);
   if (/^\d{2}\/\d{2}\/\d{4}$/.test(d.date || '')) await ecrireContenu(env.DB, 'cpc-' + d.date.split('/').reverse().join('-'), d);
   return json({ ok: true });
