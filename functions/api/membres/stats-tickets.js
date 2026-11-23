@@ -14,5 +14,6 @@ export async function onRequestGet({ request, env }) {
     const j = r.cle.slice(8);
     return { jour: j, tickets: JSON.parse(r.data), quinte: qs[j] || null };
   });
-  return json({ jours });
+  const rep = await env.DB.prepare("SELECT data FROM contenu WHERE cle = 'tickets_report'").first();
+  return json({ jours, report: rep ? JSON.parse(rep.data) : null });
 }

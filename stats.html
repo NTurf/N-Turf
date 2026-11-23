@@ -20,6 +20,7 @@
 <div id="rendu"></div>
 <section class="card" id="cTk"><h2>Bilan cumulé des tickets du Quinté+</h2><div id="renduTk"><p class="empty">Chargement…</p></div></section>
 <p class="note2" id="maj"></p>
+<p class="note2">Pour revoir ce qui a été donné un jour précis : <a href="/archives.html">Archives</a>.</p>
 </div>
 </main>
 <script src="/site.js"></script>
@@ -84,7 +85,7 @@ function dessiner(){
   $('rendu').innerHTML = h;
 }
 // ---- Bilan cumulé des tickets (Tiercé, Quarté+, Quinté+) ----
-var TJ = [];
+var TJ = [], REPORT = null;
 function dessinerTickets(){
   var lim = null;
   if (F.per !== 'tout') { lim = new Date(); lim.setHours(0,0,0,0); lim.setDate(lim.getDate() - (F.per === '7' ? 6 : 29)); }
@@ -104,8 +105,16 @@ function dessinerTickets(){
     });
   });
   var el = document.getElementById('renduTk');
-  if (!jours) { el.innerHTML = '<p class="empty">Le bilan commencera dès que des tickets publiés auront couru.</p>'; return; }
-  var h = '<p class="note2">'+jours+' Quinté+ joué(s). Gains calculés avec les rapports officiels, pour la mise de chaque ticket.</p>';
+  var tm = 0, tg = 0; Object.keys(B).forEach(function(k){ tm += B[k].m; tg += B[k].g; });
+  var rep = '';
+  if (REPORT && F.per === 'tout') {
+    rep = '<h3>Depuis le '+REPORT.du+'</h3><table class="st bil"><tr><th></th><th>Misé</th><th>Gagné</th><th>Net</th></tr>'+
+      '<tr><td>Ancienne page, du '+REPORT.du+' au '+REPORT.au+' <small>(tous paris)</small></td><td>'+eur(REPORT.m)+'</td><td>'+eur(REPORT.g)+'</td><td>'+net(REPORT.g - REPORT.m)+'</td></tr>'+
+      '<tr><td>Sur le site <small>('+jours+' jour(s))</small></td><td>'+eur(tm)+'</td><td>'+eur(tg)+'</td><td>'+net(tg - tm)+'</td></tr>'+
+      '<tr class="tot"><td>Total</td><td>'+eur(REPORT.m + tm)+'</td><td>'+eur(REPORT.g + tg)+'</td><td>'+net(REPORT.g + tg - REPORT.m - tm)+'</td></tr></table>';
+  }
+  if (!jours) { el.innerHTML = rep + '<p class="empty">Le détail par pari commencera dès que des tickets publiés sur le site auront couru.</p>'; return; }
+  var h = rep + '<p class="note2">'+jours+' Quinté+ joué(s) sur le site. Gains calculés avec les rapports officiels, pour la mise de chaque ticket.</p>';
   ['Tiercé', 'Quarté+', 'Quinté+', 'Autres paris'].forEach(function(P){
     var x = B[P]; if (!x) return;
     h += '<h3>'+P+'</h3><table class="st bil"><tr><th></th><th>Misé</th><th>Gagné</th><th>Net</th></tr>'+
@@ -116,7 +125,7 @@ function dessinerTickets(){
   el.innerHTML = h;
 }
 fetch('/api/membres/stats-tickets', {credentials:'same-origin'}).then(function(r){ return r.ok ? r.json() : { jours: [] }; }).then(function(d){
-  var J = d.jours || [];
+  var J = d.jours || []; REPORT = d.report || null;
   return Promise.all(J.map(function(j){
     var q = j.quinte || {}, raps = Object.keys(q.rapports || {}).map(function(k){ return { nom: k, euros: q.rapports[k] }; });
     j.ctx = { arrivee: q.arrivee || [], rapports: raps, partants: q.partants || 0 };

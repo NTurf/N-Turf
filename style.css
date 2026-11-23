@@ -230,3 +230,6 @@ table.st th{font-size:12px;color:var(--soft);font-weight:600}
 table.st small{color:var(--mute)}
 table.st tr.tot td{font-weight:800;border-top:2px solid var(--line)}
 .ch.xx{background:transparent;color:#7fb2ff;border-color:#7fb2ff}
+.jourbar{display:flex;gap:8px;align-items:center;margin:8px 0 12px}
+.jourbar select{flex:1;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--navy2);color:var(--txt);font-size:16px}
+.jourbar .btn{padding:9px 14px}

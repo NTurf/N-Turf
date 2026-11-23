@@ -14,7 +14,7 @@ export async function onRequestPost({ request, env }) {
   await ecrireContenu(env.DB, 'quinte', d);
   // gardé aussi par date (arrivée, rapports) pour le bilan cumulé des tickets
   if (/^\d{2}\/\d{2}\/\d{4}$/.test(d.date || '')) {
-    await ecrireContenu(env.DB, 'quinte-' + d.date.split('/').reverse().join('-'), { date: d.date, partants: d.partants || 0, arrivee: d.arrivee || [], rapports: d.rapports || {} });
+    await ecrireContenu(env.DB, 'quinte-' + d.date.split('/').reverse().join('-'), d);
   }
   return json({ ok: true });
 }

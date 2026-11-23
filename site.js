@@ -9,6 +9,8 @@
     ['/pronostics.html#cpc', 'Pronos course par course'],
     ['/hippodrome.html', 'Pronos Hippodrome'],
     ['/outils.html', 'Outils'],
+    ['/stats.html', 'Statistiques'],
+    ['/archives.html', 'Archives'],
     ['/chat.html', 'Chat'],
     ['/membres.html', 'Espace membres']
   ];

@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Archives – N-TURF</title>
+<meta name="theme-color" content="#0e2040">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icon-192.png">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body data-page="membres">
+<main>
+<h1>Archives</h1>
+<div id="refus" class="note" hidden>🔒 Réservé aux membres. <a href="/inscription.html">S'inscrire gratuitement</a> ou <a href="/inscription.html#connexion">se connecter</a>.</div>
+<div id="zone" hidden>
+<p class="lead">Tout ce qui a été donné, jour par jour, avec les arrivées et les rapports. Rien n'est effacé.</p>
+<div class="jourbar"><button type="button" class="btn ghost" id="prec">◀</button><select id="jour"></select><button type="button" class="btn ghost" id="suiv">▶</button></div>
+<div id="rendu"></div>
+</div>
+</main>
+<script src="/site.js"></script>
+<script src="/quinte.js"></script>
+<script src="/tickets.js"></script>
+<script>
+var JOURS = [];
+function $(i){ return document.getElementById(i); }
+function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+function eur(v){ return typeof v === 'number' ? v.toFixed(2).replace('.', ',') + ' €' : esc(v); }
+function fr(j){ var d = new Date(j + 'T12:00:00'); return d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }); }
+function coursesArchive(L){
+  if (!L.length) return '';
+  var par = {}; L.forEach(function(c){ (par[c.h] = par[c.h] || []).push(c); });
+  var h = '';
+  Object.keys(par).forEach(function(hp){
+    h += '<h3>'+esc(hp)+'</h3>';
+    par[hp].sort(function(a, b){ return parseInt(a.c.replace(/\D/g,''),10) - parseInt(b.c.replace(/\D/g,''),10); }).forEach(function(c){
+      var a = c.a;
+      h += '<div class="crs"><b>'+esc(c.c)+'</b> <small class="note2">'+esc(c.di)+'</small><div class="sel">'+c.s.map(function(n, k){ return '<span class="ch'+(k<3?' piv':'')+(a.indexOf(n)>=0?' hit':'')+'">'+n+'</span>'; }).join('')+'</div>'+
+        '<div class="arrivee"><b>Arrivée</b> '+a.map(function(n){ return '<span class="ch'+(c.s.indexOf(n)>=0?' hit':'')+'">'+n+'</span>'; }).join('')+'</div>';
+      var r = [['Gagnant', c.g], ['Placé '+a[0], c.p[0]], ['Placé '+a[1], c.p[1]], ['Placé '+a[2], c.p[2]], ['Couplé gagnant', c.cg], ['Trio', c.t], ['Multi en 4', c.m4], ['Super 4', c.s4]].filter(function(x){ return x[1] !== null && x[1] !== undefined && x[1] !== '' && x[1] !== 0; });
+      if (r.length) h += '<table class="rap">'+r.map(function(x){ return '<tr><td>'+esc(x[0])+'</td><td>'+eur(x[1])+'</td></tr>'; }).join('')+'</table>';
+      h += '</div>';
+    });
+  });
+  return h;
+}
+function charger(j){
+  $('jour').value = j; $('rendu').innerHTML = '<p class="empty">Chargement…</p>';
+  var i = JOURS.indexOf(j); $('prec').disabled = i >= JOURS.length - 1; $('suiv').disabled = i <= 0;
+  fetch('/api/membres/archives?jour=' + j, {credentials:'same-origin'}).then(function(r){ return r.json(); }).then(function(d){
+    var dfr = j.split('-').reverse().join('/');
+    function dessiner(live){
+      var q = d.quinte, h = '<p class="sub" style="text-transform:capitalize">'+fr(j)+'</p>';
+      // Quinté+
+      if (q || (live && live.trouve)) {
+        var qq = q && q.lignes ? q : null;
+        h += '<section class="card"><h2>Quinté+</h2>';
+        if (qq) h += NT.afficher(qq, live);
+        else {
+          var arr = (q && q.arrivee && q.arrivee.length ? q.arrivee : (live && live.arrivee) || []);
+          h += arr.length ? '<div class="arrivee"><b>Arrivée</b> '+arr.slice(0,5).map(function(n){ return '<span class="ch hit">'+n+'</span>'; }).join('')+'</div>' : '';
+          var rk = q && q.rapports ? Object.keys(q.rapports) : [];
+          if (rk.length) h += '<table class="rap">'+rk.map(function(k){ return '<tr><td>'+esc(k)+'</td><td>'+eur(q.rapports[k])+'</td></tr>'; }).join('')+'</table>';
+        }
+        h += '</section>';
+      }
+      // Tickets
+      if (d.tickets && d.tickets.tickets && d.tickets.tickets.length) {
+        var raps = Object.keys((q && q.rapports) || {}).map(function(k){ return { nom: k, euros: q.rapports[k] }; });
+        var arr2 = (q && q.arrivee) || [], part = q && q.partants || 0;
+        if (live && live.trouve) { if (!arr2.length) arr2 = live.arrivee; raps = (live.rapports || []).concat(raps); if (live.partants.length) part = live.partants.filter(function(p){ return !p.np; }).length; }
+        h += '<section class="card"><h2>Tickets</h2>'+NTT.rendu(d.tickets, { arrivee: arr2, rapports: raps, partants: part })+'</section>';
+      }
+      // Course par course
+      if (d.cpc && d.cpc.reunions) { h += '<section class="card" id="cC"><h2>Course par course</h2><div id="cpcA"></div></section>'; }
+      else if (d.courses && d.courses.length) h += '<section class="card"><h2>Course par course</h2>'+coursesArchive(d.courses)+'</section>';
+      if (h.indexOf('<section') < 0) h += '<p class="empty">Rien d\'archivé pour ce jour.</p>';
+      $('rendu').innerHTML = h;
+      if (d.cpc && d.cpc.reunions) { var el = $('cpcA'); el.innerHTML = NT.afficherCpc(d.cpc); NT.brancherOnglets(el); NT.chargerLive(d.cpc, function(l){ el.innerHTML = NT.afficherCpc(d.cpc, 0, l); NT.brancherOnglets(el); }); }
+    }
+    dessiner(null);
+    fetch('/api/pmu/quinte?date=' + encodeURIComponent(dfr)).then(function(r){ return r.json(); }).then(function(l){ if (l && l.trouve) dessiner(l); }).catch(function(){});
+  });
+}
+fetch('/api/membres/archives', {credentials:'same-origin'})
+  .then(function(r){ return r.ok ? r.json() : Promise.reject(); })
+  .then(function(d){
+    $('zone').hidden = false; JOURS = d.jours || [];
+    if (!JOURS.length) { $('rendu').innerHTML = '<p class="empty">Les archives commenceront avec les prochaines publications.</p>'; return; }
+    $('jour').innerHTML = JOURS.map(function(j){ return '<option value="'+j+'">'+j.split('-').reverse().join('/')+'</option>'; }).join('');
+    $('jour').onchange = function(){ charger(this.value); };
+    $('prec').onclick = function(){ var i = JOURS.indexOf($('jour').value); if (i < JOURS.length - 1) charger(JOURS[i+1]); };
+    $('suiv').onclick = function(){ var i = JOURS.indexOf($('jour').value); if (i > 0) charger(JOURS[i-1]); };
+    var voulu = location.hash.replace('#',''); charger(JOURS.indexOf(voulu) >= 0 ? voulu : JOURS[0]);
+  }).catch(function(){ $('refus').hidden = false; });
+</script>
+</body>
+</html>
