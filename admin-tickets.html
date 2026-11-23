@@ -22,9 +22,9 @@
 <label>Auteur<select id="fAut"><option>Choix Bruno</option><option>TCR</option><option>ALGO</option><option>PERSO</option></select></label>
 <label>Pari<select id="fPari"></select></label>
 <label>Formule<select id="fForm"></select></label>
-<label id="lCh">Chevaux<input id="fCh" inputmode="numeric" placeholder="ex. 9 12 13 14 6 1"></label>
+<label id="lCh">Chevaux<input id="fCh" inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" placeholder="ex. 9 12 13 14 6 1 (espace, virgule ou point)"></label>
 <label>Mise par combinaison (€)<input id="fMise" inputmode="decimal"></label>
-<label>Associés (facultatif)<input id="fAss" inputmode="numeric" placeholder="ex. 3 7 11"></label>
+<label>Associés (facultatif)<input id="fAss" inputmode="text" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="ex. 3 7 11"></label>
 </div>
 <p class="note2" id="fCout"></p>
 <p><button type="button" class="btn" id="fAjout">Ajouter au brouillon</button></p>
@@ -69,7 +69,7 @@ function remplirSelects(){
 }
 function lireForm(){
   var f = $('fForm').value, ch = NTT.nums($('fCh').value);
-  var spec = String($('fCh').value).split(/[\s,;-]+/).filter(Boolean).map(function(x){ return /^x$/i.test(x) ? 'X' : parseInt(x,10); }).filter(function(x){ return x === 'X' || x > 0; });
+  var spec = String($('fCh').value).split(/[\s,;.\/-]+/).filter(Boolean).map(function(x){ return /^x$/i.test(x) ? 'X' : parseInt(x,10); }).filter(function(x){ return x === 'X' || x > 0; });
   var ass = NTT.nums($('fAss').value); if (f === 'positions' && !ass.length) ass = associesDuJour();
   return { id: Date.now().toString(36), auteur: $('fAut').value, pari: $('fPari').value, formule: f,
     chevaux: f === 'champ' || f === 'positions' ? [] : ch, bases: f === 'champ' ? ch : [], spec: f === 'positions' ? spec : undefined,

@@ -156,7 +156,7 @@ var NTT = (function(){
       if (!pari) { erreurs.push('Ligne '+(i+1)+' : pari inconnu « '+p[0]+' »'); return; }
       var t = { id: Date.now().toString(36) + i, pari: pari, auteur: p[1] || 'Choix Bruno', formule: 'combine', chevaux: [], bases: [], mise: PARIS[pari].mise, associes: [] };
       var f = cle(p[3] || '');
-      if (f.indexOf('place') === 0 || f.indexOf('reduit') === 0) { t.formule = 'positions'; t.spec = String(p[2]||'').split(/[\s,;-]+/).filter(Boolean).map(function(x){ return /^x$/i.test(x) ? 'X' : parseInt(x,10); }).filter(function(x){ return x === 'X' || x > 0; }); }
+      if (f.indexOf('place') === 0 || f.indexOf('reduit') === 0) { t.formule = 'positions'; t.spec = String(p[2]||'').split(/[\s,;.\/-]+/).filter(Boolean).map(function(x){ return /^x$/i.test(x) ? 'X' : parseInt(x,10); }).filter(function(x){ return x === 'X' || x > 0; }); }
       else if (f.indexOf('champ') === 0) { t.formule = 'champ'; t.bases = nums(p[2]); }
       else { t.chevaux = nums(p[2]); if (f.indexOf('ligne') === 0 || f.indexOf('ordre') === 0) t.formule = 'ligne'; }
       if (p[4]) { var m = parseFloat(p[4].replace(',', '.')); if (m > 0) t.mise = m; }
