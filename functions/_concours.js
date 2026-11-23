@@ -42,11 +42,13 @@ export function lireRapportsConcours(blocs) {
   each('COUPLE_GAGNANT', (r) => { const c = nums(r.combinaison); if (c.length === 2) R.cg[c.sort((a, b) => a - b).join('-')] = val(r); });
   each('COUPLE_PLACE', (r) => { const c = nums(r.combinaison); if (c.length === 2) R.cp[c.sort((a, b) => a - b).join('-')] = val(r); });
   const ordreDes = (k, o) => each(k, (r) => {
+    // Le PMU écrit « Quinté+ ordre », « Quarté+ désordre », « Bonus 4sur5 », « Bonus 3 », « Bonus »…
     const l = n(r.libelle), v = val(r);
-    if (l === 'ordre') o.o = v; else if (l === 'desordre') o.d = v;
-    else if (l.startsWith('bonus4sur5')) o.b45 = Math.max(o.b45 || 0, v);
-    else if (l.startsWith('bonus4')) o.b4 = v;
-    else if (l.startsWith('bonus3') || l === 'bonus') o.b3 = v;
+    if (l.includes('bonus4sur5')) o.b45 = Math.max(o.b45 || 0, v);
+    else if (l.includes('bonus4')) o.b4 = v;
+    else if (l.includes('bonus3') || l.endsWith('bonus')) o.b3 = v;
+    else if (l.endsWith('desordre')) o.d = v;
+    else if (l.endsWith('ordre')) o.o = v;
   });
   ordreDes('TIERCE', R.t); ordreDes('QUARTE_PLUS', R.qa); ordreDes('QUINTE_PLUS', R.qi);
   each('MULTI', (r) => { if (/en4$/.test(n(r.libelle)) || n(r.libelle) === 'multien4') R.m4 = val(r); });
