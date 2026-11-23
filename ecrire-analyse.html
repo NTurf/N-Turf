@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Écrire une analyse – N-TURF</title>
+<meta name="theme-color" content="#0D1E3D">
+<meta name="robots" content="noindex">
+<link rel="icon" href="/icone-nturf-192.png">
+<link rel="stylesheet" href="/style.css">
+<style>
+.f label{display:block;margin:8px 0 4px;font-weight:700}.f input,.f select,.f textarea{width:100%;box-sizing:border-box}
+.f textarea{min-height:320px;font:inherit;line-height:1.45}
+.mine{padding:10px 12px;margin:8px 0}.mine p{white-space:pre-wrap;margin:6px 0;max-height:7.5em;overflow:hidden}
+</style>
+</head>
+<body data-page="admin">
+<main>
+<h1>Écrire une analyse</h1>
+<div id="refus" class="note" hidden>Cette page est réservée à l'administration et aux analystes autorisés.</div>
+<div id="zone" hidden>
+<section class="card f">
+<div class="pills" id="jours"></div>
+<label for="auteur">Auteur</label><select id="auteur"></select>
+<label for="hippo">Hippodrome</label><input id="hippo" list="hippos" placeholder="ex. Paris-Vincennes"><datalist id="hippos"></datalist>
+<label for="course">Course (numéro)</label><input id="course" inputmode="numeric" placeholder="ex. 1">
+<label for="texte">Analyse</label><textarea id="texte" placeholder="Colle ou écris ici l'analyse, telle quelle (heure, distance, catégorie, avis cheval par cheval, résumé…)."></textarea>
+<p><button type="button" class="btn" id="pub">Publier aux membres</button> <button type="button" class="btn ghost" id="annuler" hidden>Annuler la modification</button></p>
+<p class="msg" id="msg"></p>
+</section>
+<h2>Analyses de ce jour</h2>
+<div id="liste"></div>
+<section class="card" id="droits" hidden>
+<h2>Analystes autorisés</h2>
+<p class="note2">Donne à un membre le droit d'écrire lui-même ses analyses (seulement sous son nom d'auteur). Il doit d'abord être inscrit sur le site.</p>
+<div id="analystes"></div>
+<div class="f"><label for="pseudo">Pseudo sur le site</label><input id="pseudo"><label for="auteur2">Il écrit en tant que</label><select id="auteur2"></select></div>
+<p><button type="button" class="btn" id="donner">Donner le droit</button></p>
+<p class="msg" id="msg2"></p>
+</section>
+<p class="note2"><a href="/analyses.html">Voir la page des membres</a></p>
+</div>
+</main>
+<script src="/site.js"></script>
+<script>
+function $(i){ return document.getElementById(i); }
+function E(s){ return String(s||'').replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+function iso(k){ return new Date(Date.now() + k*86400000).toLocaleDateString('fr-CA', {timeZone:'Europe/Paris'}); }
+function frc(k){ return new Date(Date.now() + k*86400000).toLocaleDateString('fr-FR', {timeZone:'Europe/Paris', day:'2-digit', month:'2-digit', year:'numeric'}); }
+var J = 0, EDIT = null, LISTE = [];
+function post(b){ return fetch('/api/analyses', {method:'POST', credentials:'same-origin', headers:{'content-type':'application/json'}, body: JSON.stringify(b)}).then(function(r){ return r.json().then(function(x){ if (!r.ok) throw new Error(x.erreur || 'Erreur'); return x; }); }); }
+function jours(){
+  $('jours').innerHTML = [[0,'Aujourd\'hui ('+frc(0)+')'],[1,'Demain ('+frc(1)+')']].map(function(x){ return '<button type="button" class="pill'+(x[0]===J?' on':'')+'" data-j="'+x[0]+'">'+x[1]+'</button>'; }).join('');
+  document.querySelectorAll('[data-j]').forEach(function(b){ b.onclick = function(){ J = +b.getAttribute('data-j'); charger(); }; });
+  fetch('/api/pmu/programme?date=' + encodeURIComponent(frc(J))).then(function(r){ return r.json(); }).then(function(d){
+    $('hippos').innerHTML = (d.reunions || []).map(function(r){ return '<option value="' + E(r.h) + '">'; }).join('');
+  }).catch(function(){});
+}
+function charger(){
+  jours();
+  fetch('/api/analyses?jour=' + iso(J), {credentials:'same-origin'}).then(function(r){ return r.ok ? r.json() : Promise.reject(); }).then(function(d){
+    $('zone').hidden = false;
+    if (!$('auteur').options.length) {
+      $('auteur').innerHTML = d.auteurs.map(function(a){ return '<option>' + E(a) + '</option>'; }).join('');
+      $('auteur2').innerHTML = d.auteurs.map(function(a){ return '<option>' + E(a) + '</option>'; }).join('');
+    }
+    LISTE = d.analyses || [];
+    $('liste').innerHTML = LISTE.length ? LISTE.map(function(a){ return '<section class="card mine"><b>' + E(a.hippo) + ' – C' + E(a.course) + '</b> · ' + E(a.auteur) + '<p>' + E(a.texte) + '</p><button type="button" class="btn ghost" data-m="' + a.id + '">Modifier</button> <button type="button" class="btn ghost" data-s="' + a.id + '">Supprimer</button></section>'; }).join('') : '<p class="empty">Aucune analyse pour ce jour.</p>';
+    document.querySelectorAll('[data-m]').forEach(function(b){ b.onclick = function(){
+      var a = LISTE.filter(function(x){ return x.id == b.getAttribute('data-m'); })[0]; if (!a) return;
+      EDIT = a.id; $('auteur').value = a.auteur; $('hippo').value = a.hippo; $('course').value = a.course; $('texte').value = a.texte;
+      $('pub').textContent = 'Enregistrer la modification'; $('annuler').hidden = false; window.scrollTo(0, 0);
+    }; });
+    document.querySelectorAll('[data-s]').forEach(function(b){ b.onclick = function(){
+      if (b.textContent !== 'Confirmer') { b.textContent = 'Confirmer'; return; }
+      post({action:'supprimer', id: +b.getAttribute('data-s')}).then(charger).catch(function(e){ $('msg').className = 'msg err'; $('msg').textContent = e.message; });
+    }; });
+    if (d.admin) {
+      $('droits').hidden = false;
+      $('analystes').innerHTML = (d.analystes || []).length ? d.analystes.map(function(x){ return '<p>' + E(x.pseudo) + ' → ' + E(x.auteur) + ' <button type="button" class="btn ghost" data-r="' + E(x.pseudo) + '">Retirer</button></p>'; }).join('') : '<p class="note2">Aucun analyste pour l\'instant.</p>';
+      document.querySelectorAll('[data-r]').forEach(function(b){ b.onclick = function(){ post({action:'retirer', pseudo: b.getAttribute('data-r')}).then(charger); }; });
+    }
+  }).catch(function(){ $('refus').hidden = false; });
+}
+function vider(){ EDIT = null; $('texte').value = ''; $('course').value = ''; $('pub').textContent = 'Publier aux membres'; $('annuler').hidden = true; }
+$('annuler').onclick = vider;
+$('pub').onclick = function(){
+  var m = $('msg'); m.className = 'msg'; m.textContent = 'Envoi…';
+  post({ id: EDIT, jour: iso(J), auteur: $('auteur').value, hippo: $('hippo').value, course: $('course').value.replace(/^c/i, ''), texte: $('texte').value })
+    .then(function(){ m.className = 'msg ok'; m.textContent = 'Publié !'; vider(); charger(); })
+    .catch(function(e){ m.className = 'msg err'; m.textContent = e.message; });
+};
+$('donner').onclick = function(){
+  var m = $('msg2'); m.className = 'msg';
+  post({action:'analyste', pseudo: $('pseudo').value, auteur: $('auteur2').value}).then(function(){ m.className = 'msg ok'; m.textContent = 'Droit donné.'; $('pseudo').value = ''; charger(); }).catch(function(e){ m.className = 'msg err'; m.textContent = e.message; });
+};
+charger();
+</script>
+</body>
+</html>

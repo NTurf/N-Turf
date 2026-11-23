@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Analyses – N-TURF</title>
+<meta name="theme-color" content="#0D1E3D">
+<link rel="manifest" href="/manifest.webmanifest?v=2">
+<link rel="icon" href="/icone-nturf-192.png">
+<link rel="stylesheet" href="/style.css">
+<style>
+.an{padding:12px 14px;margin:8px 0}.an h3{margin:0 0 2px}.an .aut{font-weight:700;color:var(--gold,#b8860b);margin:0 0 6px}
+.an .tx{white-space:pre-wrap;line-height:1.5;margin:0}
+</style>
+</head>
+<body data-page="membres">
+<main>
+<h1>Analyses</h1>
+<div id="refus" class="note" hidden>🔒 Réservé aux membres. <a href="/inscription.html">S'inscrire gratuitement</a> ou <a href="/inscription.html#connexion">se connecter</a>.</div>
+<div id="zone" hidden>
+<p class="lead">Les analyses course par course de nos pronostiqueurs.</p>
+<div class="pills" id="jours"></div>
+<div class="pills" id="auteurs" style="margin-top:6px"></div>
+<div id="liste"><p class="empty">Chargement…</p></div>
+<p class="note2" id="ecrire" hidden><a href="/ecrire-analyse.html">✍ Écrire une analyse</a></p>
+</div>
+</main>
+<script src="/site.js"></script>
+<script>
+function E(s){ return String(s||'').replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+function iso(k){ var d = new Date(Date.now() + k*86400000); return d.toLocaleDateString('fr-CA', {timeZone:'Europe/Paris'}); }
+function fr(k){ return new Date(Date.now() + k*86400000).toLocaleDateString('fr-FR', {timeZone:'Europe/Paris', weekday:'long', day:'numeric', month:'long'}); }
+var J = 0, A = '', DATA = [];
+function boutons(){
+  document.getElementById('jours').innerHTML = [[-1,'Hier'],[0,'Aujourd\'hui'],[1,'Demain']].map(function(x){ return '<button type="button" class="pill'+(x[0]===J?' on':'')+'" data-j="'+x[0]+'">'+x[1]+'</button>'; }).join('');
+  document.querySelectorAll('[data-j]').forEach(function(b){ b.onclick = function(){ J = +b.getAttribute('data-j'); charger(); }; });
+}
+function dessiner(){
+  var aut = []; DATA.forEach(function(a){ if (aut.indexOf(a.auteur) < 0) aut.push(a.auteur); });
+  document.getElementById('auteurs').innerHTML = aut.length > 1 ? ['<button type="button" class="pill'+(A===''?' on':'')+'" data-a="">Tous</button>'].concat(aut.map(function(x){ return '<button type="button" class="pill'+(A===x?' on':'')+'" data-a="'+E(x)+'">'+E(x)+'</button>'; })).join('') : '';
+  document.querySelectorAll('[data-a]').forEach(function(b){ b.onclick = function(){ A = b.getAttribute('data-a'); dessiner(); }; });
+  var L = DATA.filter(function(a){ return !A || a.auteur === A; });
+  if (!L.length) { document.getElementById('liste').innerHTML = '<p class="empty">Pas encore d\'analyse pour ' + fr(J) + '.</p>'; return; }
+  var h = '', hh = null;
+  L.forEach(function(a){
+    if (a.hippo !== hh) { hh = a.hippo; h += '<h2 style="margin:18px 0 6px">' + E(a.hippo) + '</h2>'; }
+    h += '<section class="card an"><h3>Course ' + E(a.course) + '</h3><p class="aut">' + E(a.auteur) + '</p><p class="tx">' + E(a.texte) + '</p></section>';
+  });
+  document.getElementById('liste').innerHTML = h;
+}
+function charger(){
+  boutons();
+  fetch('/api/membres/analyses?jour=' + iso(J), {credentials:'same-origin'}).then(function(r){ return r.ok ? r.json() : Promise.reject(r.status); }).then(function(d){
+    document.getElementById('zone').hidden = false; DATA = d.analyses || []; if (A && !DATA.some(function(a){ return a.auteur === A; })) A = ''; dessiner();
+  }).catch(function(){ document.getElementById('refus').hidden = false; });
+}
+charger();
+fetch('/api/analyses', {credentials:'same-origin'}).then(function(r){ if (r.ok) document.getElementById('ecrire').hidden = false; });
+</script>
+</body>
+</html>

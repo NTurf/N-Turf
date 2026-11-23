@@ -4,3 +4,4 @@ Disallow: /admin
 Disallow: /api/
 Sitemap: https://n-turf.pages.dev/sitemap.xml
 Disallow: /etudes-img/
+Disallow: /ecrire-analyse
