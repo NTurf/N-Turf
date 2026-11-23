@@ -5,7 +5,15 @@ export async function onRequestGet({ env }) {
   if (!env.DB) return noDb();
   await initDb(env.DB);
   const q = await lireContenu(env.DB, 'quinte');
-  if (!q) return json({ quinte: null, bandeau: [] });
+  const cpc = await lireContenu(env.DB, 'cpc');
+  // Arrivées course par course : 4 premiers seulement, sans les pronostics
+  const arrivees = [];
+  if (cpc && Array.isArray(cpc.reunions)) {
+    for (const re of cpc.reunions) for (const c of re.courses || []) {
+      if (c.arrivee && c.arrivee.length) arrivees.push({ hippodrome: re.hippodrome, course: c.course, arrivee: c.arrivee.slice(0, 4) });
+    }
+  }
+  if (!q) return json({ quinte: null, bandeau: [], arrivees });
   const top3 = (q.synthese || []).slice(0, 3);
   const bandeau = [];
   if (q.arrivee && q.arrivee.length) {
@@ -16,6 +24,7 @@ export async function onRequestGet({ env }) {
   return json({
     quinte: { date: q.date, discipline: q.discipline, partants: q.partants, top3, arrivee: q.arrivee || [] },
     bandeau,
+    arrivees,
     maj: q.maj,
   });
 }

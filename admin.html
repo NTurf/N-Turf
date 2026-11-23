@@ -16,8 +16,8 @@
 <div id="refus" class="note" hidden>Cette page est réservée à l'administrateur. <a href="/inscription.html#connexion">Se connecter</a></div>
 <div id="zone" hidden>
 <section class="card">
-<h2>Mettre à jour le Quinté</h2>
-<p style="color:var(--soft)">Choisis ton fichier N-Turf. Le site lit la feuille Saisie et les pages TCR, ALGO et PERSO, puis te montre le résultat. Rien n'est publié tant que tu n'as pas appuyé sur « Publier ».</p>
+<h2>Mettre à jour le site</h2>
+<p style="color:var(--soft)">Choisis ton fichier N-Turf (Quinté) ou ton fichier course par course : le site reconnaît lequel c'est, le lit, puis te montre le résultat. Rien n'est publié tant que tu n'as pas appuyé sur « Publier ».</p>
 <input type="file" id="fichier" accept=".xlsm,.xlsx,.xls" style="width:100%;padding:12px;background:var(--navy2);border:1px dashed var(--gold);border-radius:10px;color:var(--txt)">
 <p id="msg" class="msg"></p>
 </section>
@@ -33,7 +33,7 @@
 <script src="/vendor/xlsx.full.min.js"></script>
 <script src="/quinte.js"></script>
 <script>
-var donnees = null;
+var donnees = null, typeF = null;
 NTURF_MOI.then(function(m){
   if (m.connecte && m.role === 'admin') document.getElementById('zone').hidden = false;
   else document.getElementById('refus').hidden = false;
@@ -47,10 +47,18 @@ document.getElementById('fichier').onchange = function(){
   r.onload = function(){
     try {
       var wb = XLSX.read(new Uint8Array(r.result), {type:'array', cellDates:true});
-      donnees = NT.lire(wb);
-      document.getElementById('rendu').innerHTML = NT.afficher(donnees);
+      var rendu = document.getElementById('rendu');
+      if (wb.Sheets['Saisie Journaux']) {
+        typeF = 'cpc'; donnees = NT.lireCpc(wb);
+        rendu.innerHTML = NT.afficherCpc(donnees); NT.brancherOnglets(rendu);
+        msg.className = 'msg ok'; msg.textContent = 'Fichier course par course lu : ' + donnees.reunions.map(function(r){return r.hippodrome;}).join(', ') + '. Vérifie ci-dessous, puis publie.';
+      } else {
+        typeF = 'quinte'; donnees = NT.lire(wb);
+        rendu.innerHTML = NT.afficher(donnees);
+        msg.className = 'msg ok'; msg.textContent = 'Fichier lu : Quinté du ' + donnees.date + '. Vérifie ci-dessous, puis publie.';
+      }
       document.getElementById('apercu').hidden = false;
-      msg.className = 'msg ok'; msg.textContent = 'Fichier lu : Quinté du ' + donnees.date + '. Vérifie ci-dessous, puis publie.';
+      document.getElementById('msg2').textContent = ''; document.getElementById('publier').disabled = false;
     } catch(e) {
       msg.className = 'msg err'; msg.textContent = e.message || 'Fichier illisible.';
     }
@@ -60,10 +68,10 @@ document.getElementById('fichier').onchange = function(){
 document.getElementById('publier').onclick = function(){
   var b = this, m = document.getElementById('msg2');
   b.disabled = true; m.className = 'msg'; m.textContent = 'Publication…';
-  fetch('/api/admin/quinte', {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(donnees)})
+  fetch('/api/admin/' + typeF, {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(donnees)})
     .then(function(r){ return r.json().then(function(d){ return {ok:r.ok, d:d}; }); })
     .then(function(x){
-      if (x.ok) { m.className = 'msg ok'; m.innerHTML = 'Publié ! Les membres voient maintenant ce Quinté, et l\'accueil est à jour.<br><a href="/pronostics.html">Voir la page Pronostics</a> · <a href="/">Voir l\'accueil</a>'; }
+      if (x.ok) { m.className = 'msg ok'; m.innerHTML = 'Publié ! Les membres voient maintenant la mise à jour, et l\'accueil est à jour.<br><a href="/pronostics.html">Voir la page Pronostics</a> · <a href="/">Voir l\'accueil</a>'; }
       else { m.className = 'msg err'; m.textContent = x.d.erreur || 'Erreur.'; b.disabled = false; }
     }).catch(function(){ m.className='msg err'; m.textContent='Connexion impossible, réessaie.'; b.disabled=false; });
 };

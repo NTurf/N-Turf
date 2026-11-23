@@ -72,3 +72,14 @@ table.rap td{padding:5px 2px;border-bottom:1px solid var(--line)}
 table.rap td:last-child{text-align:right;font-weight:700;color:var(--gold)}
 .top3 div.hit{background:#d8343f;color:#fff}
 a.tile{display:block}
+nav.tabs.inner{padding:0 0 8px;flex-wrap:wrap}
+.cbtn{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 8px}
+.cbtn a{min-width:34px;text-align:center;padding:6px 8px;border-radius:8px;background:var(--navy2);border:1px solid var(--line);color:var(--txt);text-decoration:none;font-weight:700}
+.cbtn a.couru{background:#2f6fd6;border-color:#2f6fd6}
+.crs{border-top:1px solid var(--line);padding:6px 0 10px}
+.crs h3 small{color:var(--soft);font-weight:400;font-size:13px}
+.ch{position:relative}
+.ch i{position:absolute;top:-7px;right:-5px;font-style:normal;font-size:11px}
+.ch i.st{color:#ff4d4d;right:auto;left:-5px}
+.ch.bleu{background:#a9c7ef;color:var(--navy);border-color:#a9c7ef}
+.ch i.cc{color:#ff4d4d}

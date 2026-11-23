@@ -90,5 +90,83 @@ var NT = (function(){
     }
     return h;
   }
-  return { lire: lire, afficher: afficher };
+  // ===== Course par course (feuille « Saisie Journaux ») =====
+  function nums(v){
+    if (v === null || v === undefined || v === '') return [];
+    if (typeof v === 'number') return [Math.round(v)];
+    return String(v).split(/[^0-9]+/).filter(Boolean).map(function(x){ return parseInt(x,10); });
+  }
+  function hippo(h){
+    h = String(h||'').trim(); if (!h) return '';
+    if (/^vincennes$/i.test(h)) return 'Paris-Vincennes';
+    return h.toLowerCase().replace(/(^|[\s-])([a-zà-ÿ])/g, function(m,a,b){ return a + b.toUpperCase(); });
+  }
+  var RAP = ['Gagnant','Placé 1er','Placé 2e','Placé 3e','Couplé gagnant','Couplé placé 1-2','Couplé placé 1-3','Couplé placé 2-3','Trio','Multi 4','Multi 5','Multi 6','Multi 7','Super 4'];
+  function lireCpc(wb){
+    var ws = wb.Sheets['Saisie Journaux'];
+    if (!ws) throw new Error("La feuille « Saisie Journaux » est introuvable : est-ce bien ton fichier course par course ?");
+    var reunions = [], date = '';
+    for (var r = 1; r <= 400; r++){
+      var a = val(ws, 'A'+r);
+      if (!(a && /^RÉUNION/i.test(String(a)))) continue;
+      var h = hippo(val(ws, 'G'+r));
+      if (!date) date = dateFr(val(ws, 'C'+r));
+      var re = { nom: String(a).replace(/^RÉUNION/i,'Réunion'), hippodrome: h, discipline: val(ws,'I'+r) || '', courses: [] };
+      for (var k = 0; k < 10; k++){
+        var b = r + 2 + k*8;
+        var lab = val(ws, 'A'+b); if (!lab) continue;
+        var c = {
+          course: String(lab).trim(),
+          synthese: rangee(ws, b+4, 'C', 'J'),
+          choix: rangee(ws, b+3, 'C', 'J'),
+          notes: nums(val(ws, 'L'+(b+1))).concat(nums(val(ws, 'M'+(b+1)))),
+          arrivee: rangee(ws, b+5, 'C', 'G'),
+          rapports: {}
+        };
+        RAP.forEach(function(nom, i){ var v = rapport(ws, COLS[2+i] + (b+7)); if (v !== null) c.rapports[nom] = v; });
+        if (c.synthese.length || c.arrivee.length) re.courses.push(c);
+      }
+      if (h && re.courses.length) reunions.push(re);
+    }
+    if (!reunions.length) throw new Error('Aucune réunion remplie dans la feuille Saisie Journaux.');
+    return { date: date, reunions: reunions };
+  }
+  function afficherCpc(d, onglet){
+    if (!d || !d.reunions || !d.reunions.length) return '<p class="empty">La synthèse arrive.</p>';
+    var h = '<p class="lead">Course par course du '+esc(d.date)+'</p><nav class="tabs inner">';
+    d.reunions.forEach(function(re, i){ h += '<a href="#" data-r="'+i+'" class="'+(i===(onglet||0)?'on':'')+'">'+esc(re.hippodrome)+'</a>'; });
+    h += '</nav>';
+    d.reunions.forEach(function(re, i){
+      h += '<div class="reu" data-r="'+i+'"'+(i===(onglet||0)?'':' hidden')+'>';
+      h += '<div class="cbtn">'+re.courses.map(function(c, j){ return '<a href="#c'+i+'-'+j+'" class="'+(c.arrivee.length?'couru':'')+'">'+esc(c.course.replace('C',''))+'</a>'; }).join('')+'</div>';
+      re.courses.forEach(function(c, j){
+        var arr = c.arrivee, top = arr.slice(0,4);
+        h += '<div class="crs" id="c'+i+'-'+j+'"><h3>'+esc(c.course)+(re.discipline?' <small>'+esc(re.discipline)+'</small>':'')+'</h3>';
+        if (!c.synthese.length) h += '<p class="empty">La synthèse arrive.</p>';
+        else h += '<div class="sel">'+c.synthese.map(function(n, x){
+          var cls = x < 3 ? 'piv' : ''; var hit = top.indexOf(n) >= 0;
+          var mk = (c.choix.indexOf(n)>=0?'<i class="cc">❤</i>':'') + (c.notes.indexOf(n)>=0?'<i class="st">★</i>':'');
+          return '<span class="ch '+cls+(hit?' hit':'')+'">'+esc(n)+mk+'</span>';
+        }).join('')+'</div>';
+        var hors = c.choix.concat(c.notes).filter(function(n, x, t){ return c.synthese.indexOf(n) < 0 && t.indexOf(n) === x; });
+        if (hors.length) h += '<p class="sub">Hors synthèse : '+hors.map(function(n){ return '<span class="ch bleu'+(top.indexOf(n)>=0?' hit':'')+'">'+esc(n)+(c.choix.indexOf(n)>=0?'<i class="cc">❤</i>':'')+(c.notes.indexOf(n)>=0?'<i class="st">★</i>':'')+'</span>'; }).join('')+'</p>';
+        if (top.length) h += '<div class="arrivee"><b>Arrivée</b> '+top.map(function(n){ return '<span class="ch'+(c.synthese.indexOf(n)>=0||hors.indexOf(n)>=0?' hit':'')+'">'+esc(n)+'</span>'; }).join('')+'</div>';
+        var rk = Object.keys(c.rapports);
+        if (rk.length) h += '<table class="rap">'+rk.map(function(k){ return '<tr><td>'+esc(k)+'</td><td>'+euros(c.rapports[k])+'</td></tr>'; }).join('')+'</table>';
+        h += '</div>';
+      });
+      h += '</div>';
+    });
+    return h;
+  }
+  function brancherOnglets(root){
+    root.querySelectorAll('nav.inner a').forEach(function(a){
+      a.onclick = function(e){
+        e.preventDefault();
+        root.querySelectorAll('nav.inner a').forEach(function(x){ x.className = x === a ? 'on' : ''; });
+        root.querySelectorAll('.reu').forEach(function(x){ x.hidden = x.getAttribute('data-r') !== a.getAttribute('data-r'); });
+      };
+    });
+  }
+  return { lire: lire, afficher: afficher, lireCpc: lireCpc, afficherCpc: afficherCpc, brancherOnglets: brancherOnglets };
 })();

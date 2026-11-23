@@ -67,9 +67,10 @@ fetch('/api/public',{cache:'no-store'}).then(function(r){return r.json()}).then(
     document.getElementById('qCourse').textContent='Quinté+ du '+q.date+(q.discipline?' · '+q.discipline:'');
     document.getElementById('top3').innerHTML=q.top3.map(function(n){return '<div'+(q.arrivee.indexOf(n)>=0?' class="hit"':'')+'>'+esc(n)+'</div>'}).join('');
   }
-  if(q && q.arrivee && q.arrivee.length){
-    document.getElementById('arrivees').innerHTML='<div class="arr"><div class="t">Quinté+ du '+esc(q.date)+'</div><div class="n">'+q.arrivee.map(esc).join(' - ')+'</div></div>';
-  }
+  var h='';
+  if(q && q.arrivee && q.arrivee.length) h+='<div class="arr"><div class="t">Quinté+ du '+esc(q.date)+'</div><div class="n">'+q.arrivee.map(esc).join(' - ')+'</div></div>';
+  (d.arrivees||[]).forEach(function(a){ h+='<div class="arr"><div class="t">'+esc(a.hippodrome)+' · '+esc(a.course)+'</div><div class="n">'+a.arrivee.map(esc).join(' - ')+'</div></div>'; });
+  if(h) document.getElementById('arrivees').innerHTML=h;
 }).catch(function(){});
 </script>
 </body>
