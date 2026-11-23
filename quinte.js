@@ -275,6 +275,13 @@ var NT = (function(){
         var DISC = {ATTELE:'Trot attelé', MONTE:'Trot monté', PLAT:'Plat', HAIE:'Haies', STEEPLECHASE:'Steeple-chase', CROSS:'Cross'};
         var disc = x.lc && DISC[x.lc.discipline] ? DISC[x.lc.discipline] : re.discipline;
         h += '<div class="crs" id="c'+i+'-'+j+'"'+(j===sel?'':' hidden')+'><h3>'+esc(c.course)+' <small>'+esc([heure, disc].filter(Boolean).join(' · '))+'</small></h3>';
+        if (x.lc) {
+          var CORDE = {CORDE_GAUCHE:'corde à gauche', CORDE_DROITE:'corde à droite'};
+          var nbp = (x.lc.partants || []).filter(function(p){ return !p.np; }).length;
+          var inf = [x.lc.distance ? x.lc.distance + ' m' : '', x.lc.allocation ? Math.round(x.lc.allocation).toLocaleString('fr-FR') + ' €' : '', CORDE[x.lc.corde] || '', nbp ? nbp + ' partants' : ''].filter(Boolean);
+          h += '<div class="prixc">'+(x.lc.libelle ? '<b>'+esc(x.lc.libelle)+'</b>' : '')+(inf.length ? '<span>'+esc(inf.join(' · '))+'</span>' : '')+
+            (x.lc.conditions ? '<details><summary>Conditions de la course</summary><p>'+esc(x.lc.conditions)+'</p></details>' : '')+'</div>';
+        }
         if (!c.synthese.length) h += '<p class="empty">La synthèse arrive.</p>';
         else h += '<div class="sel">'+c.synthese.map(function(n, k){
           return '<span class="ch '+(k < 3 ? 'piv' : '')+(top.indexOf(n)>=0?' hit':'')+'">'+esc(n)+marques(n)+'</span>';

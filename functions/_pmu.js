@@ -97,5 +97,5 @@ export async function detailCourse(db, d, R, c) {
     } catch (e) { rapports = []; } // rapports pas encore publiés : on garde l'arrivée
     if (rapports.length) await db.prepare('UPDATE pmu_cache SET expire = ? WHERE cle = ?').bind(Date.now() + 86400000, cle).run();
   }
-  return { num: C, libelle: c.libelle || '', heure: c.heureDepart || null, discipline: c.discipline || '', distance: dist || null, specialite: c.specialite || '', partants, arrivee, definitive: rapports.length > 0, rapports };
+  return { num: C, libelle: c.libelle || '', heure: c.heureDepart || null, discipline: c.discipline || '', distance: dist || null, specialite: c.specialite || '', allocation: c.montantPrix || null, conditions: c.conditions || '', corde: c.corde || '', categorie: c.categorieParticularite || '', partants, arrivee, definitive: rapports.length > 0, rapports };
 }

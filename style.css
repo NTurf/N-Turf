@@ -495,3 +495,8 @@ table.saisie th{color:var(--navy);font-weight:700}
 .barrejour a{border:1.5px solid var(--navy);border-radius:20px;padding:4px 12px;font-size:14px;font-weight:700;color:var(--navy);text-decoration:none}
 .barrejour a.on{background:var(--navy);color:#fff}
 .barrejour .note2{flex-basis:100%;margin:4px 0 0;color:#A87C06}
+.prixc{background:#EAF0FA;border-radius:10px;padding:6px 10px;margin:0 0 8px;font-size:13px;color:var(--soft)}
+.prixc b{display:block;color:var(--navy);font-size:14px;letter-spacing:.02em}
+.prixc span{display:block;font-weight:600}
+.prixc details summary{color:var(--blue);font-weight:700;cursor:pointer;margin-top:3px}
+.prixc details p{margin:4px 0 0;font-size:12px;line-height:1.4}
