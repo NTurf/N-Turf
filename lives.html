@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Nos lives – N-TURF</title>
+<meta name="theme-color" content="#0D1E3D">
+<link rel="manifest" href="/manifest.webmanifest?v=2">
+<link rel="icon" href="/icone-nturf-192.png">
+<link rel="stylesheet" href="/style.css">
+<style>
+.live{display:flex;align-items:center;gap:12px;padding:14px;margin:10px 0}
+.live .pt{width:14px;height:14px;border-radius:50%;background:#b9c3d3;flex:none}
+.live.on .pt{background:#e5243b;box-shadow:0 0 0 0 rgba(229,36,59,.6);animation:pl 1.4s infinite}
+@keyframes pl{70%{box-shadow:0 0 0 10px rgba(229,36,59,0)}100%{box-shadow:0 0 0 0 rgba(229,36,59,0)}}
+.live .tx{flex:1}.live .tx b{display:block;font-size:1.1em}.live .tx small{color:var(--soft)}
+.live .etat{font-weight:700;color:#e5243b}
+</style>
+</head>
+<body data-page="membres">
+<main>
+<h1>Nos lives</h1>
+<div id="refus" class="note" hidden>🔒 Réservé aux membres. <a href="/inscription.html">S'inscrire gratuitement</a> ou <a href="/inscription.html#connexion">se connecter</a>.</div>
+<div id="zone" hidden>
+<p class="lead">Les passionnés qui font des lives sur TikTok. Le voyant devient rouge quand ils sont en direct.</p>
+<div id="liste"></div>
+<p class="note2">Le voyant est vérifié toutes les trois minutes environ. Le bouton ouvre toujours leur TikTok, qu'ils soient en live ou non.</p>
+</div>
+</main>
+<script src="/site.js"></script>
+<script>
+function E(s){ return String(s||'').replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+function charger(){
+  fetch('/api/membres/lives', {credentials:'same-origin'}).then(function(r){ return r.ok ? r.json() : Promise.reject(); }).then(function(d){
+    document.getElementById('zone').hidden = false;
+    document.getElementById('liste').innerHTML = (d.lives || []).map(function(p){
+      var url = 'https://www.tiktok.com/@' + encodeURIComponent(p.tiktok) + (p.live ? '/live' : '');
+      return '<section class="card live' + (p.live ? ' on' : '') + '"><span class="pt"></span><div class="tx"><b>' + E(p.nom) + '</b><small>@' + E(p.tiktok) + (p.texte ? ' · ' + E(p.texte) : '') + '</small>' + (p.live ? '<div class="etat">● EN LIVE</div>' : '') + '</div><a class="btn" href="' + url + '" target="_blank" rel="noopener">' + (p.live ? 'Rejoindre le live' : 'Voir son TikTok') + '</a></section>';
+    }).join('') || '<p class="empty">Bientôt ici.</p>';
+  }).catch(function(){ document.getElementById('refus').hidden = false; });
+}
+charger(); setInterval(charger, 180000);
+</script>
+</body>
+</html>
