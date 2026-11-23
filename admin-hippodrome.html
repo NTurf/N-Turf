@@ -58,7 +58,7 @@ function dessiner(){
   $('pub').disabled = !IMGS.length;
 }
 NTURF_MOI.then(function(m){
-  if (!(m.connecte && m.role === 'admin')) { $('refus').hidden = false; return; }
+  if (!(m.connecte && m.publier)) { $('refus').hidden = false; return; }
   $('zone').hidden = false;
   $('fichiers').onchange = function(){
     var f = [].slice.call(this.files).sort(function(a, b){ return a.name.localeCompare(b.name, 'fr', {numeric:true}); });

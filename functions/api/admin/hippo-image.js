@@ -1,11 +1,11 @@
-import { json, initDb, currentUser, ecrireContenu, noDb } from '../../_auth.js';
+import { json, initDb, currentUser, peutPublier, ecrireContenu, noDb } from '../../_auth.js';
 
 // Enregistre une image des pages Hippodrome (administrateur seulement)
 export async function onRequestPost({ request, env }) {
   if (!env.DB) return noDb();
   await initDb(env.DB);
   const u = await currentUser(env.DB, request);
-  if (!u || u.role !== 'admin') return json({ erreur: 'Réservé à l\'administrateur.' }, 403);
+  if (!peutPublier(u)) return json({ erreur: 'Réservé à l\'administration.' }, 403);
   let b;
   try { b = await request.json(); } catch { return json({ erreur: 'Données illisibles.' }, 400); }
   const i = parseInt(b.i, 10);

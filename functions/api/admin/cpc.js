@@ -1,11 +1,11 @@
-import { json, initDb, currentUser, ecrireContenu, noDb } from '../../_auth.js';
+import { json, initDb, currentUser, peutPublier, ecrireContenu, noDb } from '../../_auth.js';
 
 // Réception du course par course lu dans le fichier Excel (administrateur seulement)
 export async function onRequestPost({ request, env }) {
   if (!env.DB) return noDb();
   await initDb(env.DB);
   const u = await currentUser(env.DB, request);
-  if (!u || u.role !== 'admin') return json({ erreur: 'Réservé à l\'administrateur.' }, 403);
+  if (!peutPublier(u)) return json({ erreur: 'Réservé à l\'administration.' }, 403);
   let d;
   try { d = await request.json(); } catch { return json({ erreur: 'Données illisibles.' }, 400); }
   if (JSON.stringify(d).length > 300000) return json({ erreur: 'Données trop volumineuses.' }, 400);

@@ -15,6 +15,7 @@
 <h1>Administration</h1>
 <div id="refus" class="note" hidden>Cette page est réservée à l'administrateur. <a href="/inscription.html#connexion">Se connecter</a></div>
 <div id="zone" hidden>
+<section class="card" id="cMembres" hidden><h2>Membres et droits</h2><p style="color:var(--soft)">Donne le rôle de modérateur ou l'accès à l'Administration aux membres de ton choix.</p><p><a class="btn" href="/admin-membres.html">Gérer les membres</a></p></section>
 <section class="card">
 <h2>Mettre à jour le site</h2>
 <p style="color:var(--soft)">Choisis ton fichier N-Turf (Quinté) ou ton fichier course par course : le site reconnaît lequel c'est, le lit, puis te montre le résultat. Rien n'est publié tant que tu n'as pas appuyé sur « Publier ».</p>
@@ -37,7 +38,7 @@
 <script>
 var donnees = null, typeF = null;
 NTURF_MOI.then(function(m){
-  if (m.connecte && m.role === 'admin') document.getElementById('zone').hidden = false;
+  if (m.connecte && m.publier) { document.getElementById('zone').hidden = false; if (m.role === 'admin') document.getElementById('cMembres').hidden = false; }
   else document.getElementById('refus').hidden = false;
 });
 document.getElementById('fichier').onchange = function(){

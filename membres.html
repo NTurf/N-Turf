@@ -33,7 +33,7 @@ NTURF_MOI.then(function(m){
   if(m.connecte){
     document.getElementById('hello').textContent='Bienvenue '+m.pseudo+'. Les rubriques ouvrent au fur et à mesure.';
     document.getElementById('cta').hidden=true;
-    if(m.role==='admin') document.getElementById('tAdmin').hidden=false;
+    if(m.publier) document.getElementById('tAdmin').hidden=false;
   }
 });
 </script>

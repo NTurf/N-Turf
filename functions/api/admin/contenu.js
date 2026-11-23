@@ -1,4 +1,4 @@
-import { json, initDb, currentUser, lireContenu, ecrireContenu, noDb } from '../../_auth.js';
+import { json, initDb, currentUser, peutPublier, lireContenu, ecrireContenu, noDb } from '../../_auth.js';
 
 // Lecture / écriture de contenus par l'administrateur (brouillon et tickets publiés)
 const AUTORISES = ['tickets_brouillon', 'tickets', 'hippo'];
@@ -7,7 +7,7 @@ async function admin(env, request) {
   if (!env.DB) return null;
   await initDb(env.DB);
   const u = await currentUser(env.DB, request);
-  return u && u.role === 'admin' ? u : null;
+  return peutPublier(u) ? u : null;
 }
 
 export async function onRequestGet({ request, env }) {

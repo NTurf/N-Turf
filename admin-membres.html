@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Membres et droits – N-TURF</title>
+<meta name="theme-color" content="#0e2040">
+<meta name="robots" content="noindex">
+<link rel="icon" href="/icon-192.png">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body data-page="admin">
+<main>
+<h1>Membres et droits</h1>
+<div id="refus" class="note" hidden>Cette page est réservée à l'administrateur.</div>
+<div id="zone" hidden>
+<p class="note2"><b>Modérateur</b> : peut gérer le chat (supprimer un message, suspendre quelqu'un). <b>Administration</b> : peut publier les fichiers, les tickets et les pages Hippodrome. <b>Suspendu</b> : ne peut plus se connecter. Toi seul peux changer ces droits.</p>
+<input id="cherche" placeholder="Chercher un pseudo" style="width:100%;padding:9px;border-radius:8px;border:1px solid var(--line);background:var(--navy2);color:var(--txt);font-size:16px;margin:6px 0">
+<p class="note2" id="nb"></p>
+<div id="liste"></div>
+<p class="msg" id="msg"></p>
+</div>
+</main>
+<script src="/site.js"></script>
+<script>
+var M = [];
+function $(i){ return document.getElementById(i); }
+function esc(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+function dt(s){ if (!s) return 'jamais'; var d = new Date(s.replace(' ', 'T') + 'Z'); return d.toLocaleDateString('fr-FR') + ' ' + d.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'}); }
+function dessiner(){
+  var f = $('cherche').value.trim().toLowerCase();
+  var L = M.filter(function(m){ return !f || m.pseudo.toLowerCase().indexOf(f) >= 0; });
+  $('nb').textContent = M.length + ' membre(s) inscrit(s).';
+  $('liste').innerHTML = L.map(function(m){
+    if (m.role === 'admin') return '<div class="mbr"><div><b>'+esc(m.pseudo)+'</b> <span class="tag adm">Administrateur</span><br><small>'+esc(m.email)+'</small></div></div>';
+    function sw(k, lib){ return '<label class="sw"><input type="checkbox" data-id="'+m.id+'" data-k="'+k+'"'+(m[k]?' checked':'')+'> '+lib+'</label>'; }
+    return '<div class="mbr'+(m.banni?' ban':'')+'"><div><b>'+esc(m.pseudo)+'</b><br><small>'+esc(m.email)+' · inscrit le '+dt(m.created_at).split(' ')[0]+' · dernière connexion : '+dt(m.last_login)+'</small></div><div class="sws">'+sw('moderateur','Modérateur')+sw('publier','Administration')+sw('banni','Suspendu')+'</div></div>';
+  }).join('') || '<p class="empty">Aucun membre trouvé.</p>';
+  $('liste').querySelectorAll('input[type=checkbox]').forEach(function(c){
+    c.onchange = function(){
+      var id = +c.getAttribute('data-id'), k = c.getAttribute('data-k'), v = c.checked, corps = { id: id }; corps[k] = v;
+      if (k === 'publier' && v && !confirm('Donner à ce membre l\'accès à l\'Administration (publier les fichiers, tickets et pages) ?')) { c.checked = false; return; }
+      if (k === 'banni' && v && !confirm('Suspendre ce membre ? Il sera déconnecté et ne pourra plus se connecter.')) { c.checked = false; return; }
+      fetch('/api/admin/membres', { method: 'POST', headers: {'content-type':'application/json'}, body: JSON.stringify(corps) })
+        .then(function(r){ return r.json().then(function(d){ return {ok:r.ok, d:d}; }); })
+        .then(function(x){
+          if (x.ok) { M.forEach(function(m){ if (m.id === id) m[k] = v ? 1 : 0; }); $('msg').className = 'msg ok'; $('msg').textContent = 'Enregistré.'; dessiner(); }
+          else { c.checked = !v; $('msg').className = 'msg err'; $('msg').textContent = x.d.erreur || 'Erreur.'; }
+        });
+    };
+  });
+}
+NTURF_MOI.then(function(m){
+  if (!(m.connecte && m.role === 'admin')) { $('refus').hidden = false; return; }
+  $('zone').hidden = false;
+  fetch('/api/admin/membres').then(function(r){ return r.json(); }).then(function(d){ M = d.membres || []; dessiner(); });
+  $('cherche').oninput = dessiner;
+});
+</script>
+</body>
+</html>

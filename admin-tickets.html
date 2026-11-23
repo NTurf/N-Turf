@@ -107,7 +107,7 @@ function envoyer(cle, msg){
     .catch(function(){ $('bMsg').className = 'msg err'; $('bMsg').textContent = 'Connexion impossible, réessaie.'; });
 }
 NTURF_MOI.then(function(m){
-  if (!(m.connecte && m.role === 'admin')) { $('refus').hidden = false; return; }
+  if (!(m.connecte && m.publier)) { $('refus').hidden = false; return; }
   $('zone').hidden = false; remplirSelects();
   Promise.all([
     fetch('/api/admin/contenu?cle=tickets_brouillon').then(function(r){ return r.json(); }),
