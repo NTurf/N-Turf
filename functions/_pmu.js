@@ -37,24 +37,27 @@ export function lireRapports(blocs) {
   for (const b of blocs) {
     if (!b || b.rembourse) continue;
     const k = b.typePari;
-    if (!(k in LIB) && k !== 'MULTI') continue;
+    if (!(k in LIB) && !/MULTI/.test(k)) continue;
     if (['TIERCE', 'QUARTE_PLUS', 'QUINTE_PLUS'].includes(k)) { if (b.audience && b.audience !== 'NATIONAL') continue; out.push(...(b.rapports || []).filter((r) => Number(r.dividendePourUnEuro) > 0 && !String(r.combinaison || '').includes('NP')).map((r) => ({ nom: LIB[k] + ' ' + String(r.libelle || '').toLowerCase(), euros: Number(r.dividendePourUnEuro) / 100 }))); continue; }
     const cur = choisis.get(k);
     if (!cur || (cur.audience !== 'NATIONAL' && b.audience === 'NATIONAL')) choisis.set(k, b);
   }
-  const ordre = ['SIMPLE_GAGNANT', 'SIMPLE_PLACE', 'COUPLE_GAGNANT', 'COUPLE_PLACE', 'COUPLE_ORDRE', 'TRIO', 'TRIO_ORDRE', 'DEUX_SUR_QUATRE', 'MULTI', 'SUPER_QUATRE'];
+  const multis = [...choisis.keys()].filter((k) => /MULTI/.test(k));
+  const ordre = ['SIMPLE_GAGNANT', 'SIMPLE_PLACE', 'COUPLE_GAGNANT', 'COUPLE_PLACE', 'COUPLE_ORDRE', 'TRIO', 'TRIO_ORDRE', 'DEUX_SUR_QUATRE', ...multis, 'SUPER_QUATRE'];
   for (const k of ordre) {
     const b = choisis.get(k); if (!b) continue;
     for (const r of b.rapports || []) {
       const c = Number(r.dividendePourUnEuro);
       const comb = String(r.combinaison || '').trim();
-      if (!comb || comb.includes('NP') || !Number.isFinite(c) || c <= 0) continue;
-      const nom = k === 'MULTI' ? (String(r.libelle || 'Multi').replace(/^multi/i, 'Multi')) : LIB[k];
+      const estMulti = /MULTI/.test(k);
+      if ((!comb && !estMulti) || comb.includes('NP') || !Number.isFinite(c) || c <= 0) continue;
+      const nom = estMulti ? (String(r.libelle || (k === 'MINI_MULTI' ? 'Mini Multi' : 'Multi')).replace(/^mini multi/i, 'Mini Multi').replace(/^multi/i, 'Multi')) : LIB[k];
       const avecComb = ['SIMPLE_PLACE', 'COUPLE_PLACE'].includes(k);
       out.push({ nom: avecComb ? `${nom} ${comb}` : nom, euros: c / 100 });
     }
   }
-  return out;
+  const vus = new Set();
+  return out.filter((r) => { const k = r.nom + '|' + r.euros; if (vus.has(k)) return false; vus.add(k); return true; });
 }
 
 

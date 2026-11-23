@@ -22,8 +22,9 @@ function rapportsFichier(blocs, arr) {
   const cp = R('COUPLE_PLACE');
   if (cp) [[0, 1], [0, 2], [1, 2]].forEach(([a, b], i) => { const k = paire(arr[a], arr[b]); const r = cp.find((x) => paire(...nums(x.combinaison)) === k); if (r) v[5 + i] = val(r); });
   const tr = R('TRIO') || R('TRIO_ORDRE'); if (tr && tr[0]) v[8] = val(tr[0]);
-  const mu = R('MULTI');
-  if (!pris.has('MULTI')) { for (let i = 9; i <= 12; i++) v[i] = 'non'; }
+  const cleMulti = pris.has('MULTI') ? 'MULTI' : [...pris.keys()].find((k) => /MULTI/.test(k));
+  const mu = cleMulti ? R(cleMulti) : null;
+  if (!cleMulti) { for (let i = 9; i <= 12; i++) v[i] = 'non'; }
   else for (let n = 4; n <= 7; n++) { const r = (mu || []).find((x) => new RegExp('en\\s*' + n).test(String(x.libelle || '').toLowerCase())); v[9 + n - 4] = r ? val(r) : 0; }
   const s4 = R('SUPER_QUATRE'); if (s4 && s4[0]) v[13] = val(s4[0]);
   return v;
