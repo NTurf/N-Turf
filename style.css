@@ -474,3 +474,8 @@ label.chk input{width:auto;margin:0}
 .cf-msg{margin:0;padding:0 10px 6px;font-size:12px;color:#c62832}
 .cf-msg:empty{display:none}
 @media (max-width:600px){.cf-fen{height:52vh}}
+/* Tableau du Quinté lisible après l'arrivée */
+table.saisie tr.bas td{color:var(--navy);font-weight:700;font-size:16px}
+table.saisie tr.bas td.hit,table.saisie td.hit{background:#d8343f!important;color:#fff!important;font-weight:900}
+table.saisie tr.lig td.arr{background:#d8343f!important;color:#fff!important;font-weight:900;box-shadow:none}
+table.saisie th{color:var(--navy);font-weight:700}
