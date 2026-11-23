@@ -15,9 +15,10 @@
 <h1>Pronostics</h1>
 <div id="refus" class="note" hidden>🔒 Réservé aux membres. <a href="/inscription.html">S'inscrire gratuitement</a> ou <a href="/inscription.html#connexion">se connecter</a>.</div>
 <div id="zone" hidden>
-<nav class="tabs" style="padding:0 0 10px"><a href="#" id="oQ" class="on">Quinté+</a><a href="#" id="oC">Course par course</a></nav>
+<nav class="tabs" style="padding:0 0 10px;flex-wrap:wrap"><a href="#" id="oQ" class="on">Quinté+</a><a href="#" id="oC">Course par course</a><a href="#" id="oF">Repérés de Fanny</a></nav>
 <section class="card" id="sQ"><div id="rendu"><p class="empty">Chargement…</p></div></section>
 <section class="card" id="sC" hidden><div id="renduC"><p class="empty">Chargement…</p></div></section>
+<section class="card" id="sF" hidden><div id="renduF"><p class="empty">Chargement…</p></div></section>
 </div>
 </main>
 <script src="/site.js"></script>
@@ -45,14 +46,44 @@ fetch('/api/membres/quinte', {credentials:'same-origin'})
       maj(); setInterval(maj, 60000);
     });
   }).catch(function(){ document.getElementById('refus').hidden = false; });
-function onglet(q){
-  document.getElementById('sQ').hidden = !q; document.getElementById('sC').hidden = q;
-  document.getElementById('oQ').className = q ? 'on' : ''; document.getElementById('oC').className = q ? '' : 'on';
+function onglet(k){
+  ['Q','C','F'].forEach(function(x){ document.getElementById('s' + x).hidden = x !== k; document.getElementById('o' + x).className = x === k ? 'on' : ''; });
+  if (k === 'F') chargerFanny();
 }
+function depuisHash(){ onglet(location.hash === '#cpc' ? 'C' : location.hash === '#fanny' ? 'F' : 'Q'); }
 document.getElementById('oQ').onclick = function(e){ e.preventDefault(); location.hash = 'quinte'; };
 document.getElementById('oC').onclick = function(e){ e.preventDefault(); location.hash = 'cpc'; };
-if (location.hash === '#cpc') onglet(false);
-window.addEventListener('hashchange', function(){ onglet(location.hash !== '#cpc'); });
+document.getElementById('oF').onclick = function(e){ e.preventDefault(); location.hash = 'fanny'; };
+depuisHash();
+window.addEventListener('hashchange', depuisHash);
+
+// Repérés de Fanny : ses chevaux (4 au maximum par course), en rouge ceux à l'arrivée, gagnant et couplé gagnant signalés
+var fannyMinuteur = null;
+function chargerFanny(){
+  var el = document.getElementById('renduF');
+  var E = function(s){ return String(s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); };
+  var eur = function(v){ return v == null ? '' : v.toFixed(2).replace('.', ',') + ' €'; };
+  fetch('/api/membres/fanny', {credentials:'same-origin', cache:'no-store'}).then(function(r){ return r.json(); }).then(function(d){
+    var f = d.fanny;
+    if (!f || !f.lignes || !f.lignes.length) { el.innerHTML = '<p class="empty">Les repérés de Fanny arrivent.</p>'; return; }
+    var parH = {};
+    f.lignes.forEach(function(l){ (parH[l.h] = parH[l.h] || []).push(l); });
+    var h = '<h2>Repérés de Fanny du ' + E(f.date) + '</h2>';
+    Object.keys(parH).forEach(function(hip){
+      h += '<h3>' + E(hip) + '</h3>';
+      parH[hip].sort(function(a, b){ return a.c - b.c; }).forEach(function(l){
+        var arr = l.arrivee || [];
+        h += '<div class="crs"><div><b>C' + l.c + '</b> ' + l.ch.map(function(n){ return '<span class="ch' + (arr.indexOf(n) >= 0 ? ' hit' : '') + '">' + n + '</span>'; }).join('') + '</div>';
+        if (arr.length) h += '<div class="sub">Arrivée : ' + arr.join(' - ') + '</div>';
+        if (l.gagnant) h += '<div class="gain">🏆 Le ' + l.gagnant.n + ' gagne' + (l.gagnant.euros ? ' (' + eur(l.gagnant.euros) + ' le gagnant)' : '') + '</div>';
+        if (l.cg) h += '<div class="gain">✓ Couplé gagnant' + (l.cg.euros ? ' : ' + eur(l.cg.euros) : '') + '</div>';
+        h += '</div>';
+      });
+    });
+    el.innerHTML = h;
+  }).catch(function(){ el.innerHTML = '<p class="empty">Connexion impossible, réessaie.</p>'; });
+  if (!fannyMinuteur) fannyMinuteur = setInterval(function(){ if (location.hash === '#fanny') chargerFanny(); }, 60000);
+}
 </script>
 </body>
 </html>

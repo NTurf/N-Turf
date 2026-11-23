@@ -7,6 +7,7 @@
     ['/pronostics.html#quinte', 'Pronos Quinté+'],
     ['/tickets.html', 'Tickets'],
     ['/pronostics.html#cpc', 'Pronos course par course'],
+    ['/pronostics.html#fanny', 'Repérés de Fanny'],
     ['/hippodrome.html', 'Pronos Hippodrome'],
     ['/outils.html', 'Outils'],
     ['/concours.html', 'Concours Quinté+'],
@@ -19,7 +20,8 @@
     var n = function(z){ return (z || '/').replace(/\/index(\.html)?$/, '/').replace(/\.html$/, ''); };
     var p = n(location.pathname), x = u.split('#');
     if (n(x[0]) !== p) return false;
-    if (x[1] === 'quinte') return location.hash !== '#cpc';
+    if (x[1] === 'quinte') return location.hash !== '#cpc' && location.hash !== '#fanny';
+    if (x[1] === 'fanny') return location.hash === '#fanny';
     if (x[1] === 'cpc') return location.hash === '#cpc';
     return true;
   }

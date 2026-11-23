@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Repérés de Fanny – Administration N-TURF</title>
+<meta name="theme-color" content="#0D1E3D">
+<meta name="robots" content="noindex">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icon-192.png">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body data-page="membres">
+<main>
+<h1>Repérés de Fanny</h1>
+<p><a href="/admin.html">← Retour à l'Administration</a></p>
+<div id="refus" class="note" hidden>🔒 Réservé à l'administration.</div>
+<div id="zone" hidden>
+<section class="card">
+  <h2 id="titre">Fanny du jour</h2>
+  <p class="sub">1. Ouvre la photo de Fanny (elle reste sur ton téléphone, elle n'est pas publiée).</p>
+  <input type="file" id="photo" accept="image/*" class="big">
+  <img id="apercu" alt="" style="width:100%;margin-top:8px;border-radius:10px;border:1.5px solid var(--dark)" hidden>
+</section>
+<section class="card">
+  <p class="sub">2. Pour chaque course : choisis l'hippodrome et la course, tape ses chevaux (4 au maximum), puis « Ajouter ».</p>
+  <div class="frm">
+    <label>Hippodrome<select id="hip"></select></label>
+    <label>Course<select id="crs"></select></label>
+  </div>
+  <div class="addrow" style="margin-top:8px">
+    <input id="n1" inputmode="numeric" placeholder="1er"><input id="n2" inputmode="numeric" placeholder="2e"><input id="n3" inputmode="numeric" placeholder="3e"><input id="n4" inputmode="numeric" placeholder="4e">
+  </div>
+  <p><button class="btn" id="ajouter" type="button" style="width:100%">Ajouter</button></p>
+  <p class="msg" id="msgA"></p>
+  <div id="liste"></div>
+</section>
+<section class="card">
+  <p class="sub">3. Publie : ses chevaux apparaissent dans l'onglet Fanny, et le site trouve tout seul ses gagnants et ses couplés gagnants.</p>
+  <button class="valider" id="publier" type="button">Publier les repérés de Fanny</button>
+  <p class="msg" id="msg"></p>
+</section>
+</div>
+</main>
+<script src="/site.js"></script>
+<script>
+(function(){
+  var auj = new Date().toLocaleDateString('fr-FR', {timeZone:'Europe/Paris', day:'2-digit', month:'2-digit', year:'numeric'});
+  var R = [], L = [];
+  var E = function(s){ return String(s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); };
+  document.getElementById('titre').textContent = 'Fanny du ' + auj;
+  document.getElementById('photo').onchange = function(){
+    var f = this.files[0]; if (!f) return;
+    var im = document.getElementById('apercu'); im.src = URL.createObjectURL(f); im.hidden = false;
+  };
+  function nomH(r){ var x = R.find(function(z){ return z.r === r; }); return x ? x.h : 'R' + r; }
+  function remplirCourses(){
+    var r = parseInt(document.getElementById('hip').value, 10), x = R.find(function(z){ return z.r === r; });
+    document.getElementById('crs').innerHTML = (x ? x.courses : []).map(function(c){ return '<option value="' + c + '">C' + c + '</option>'; }).join('');
+  }
+  function dessiner(){
+    L.sort(function(a, b){ return a.r - b.r || a.c - b.c; });
+    document.getElementById('liste').innerHTML = L.length ? L.map(function(l, i){
+      return '<div class="trow"><span><b>' + E(l.h) + ' C' + l.c + '</b></span><span class="mono">' + l.ch.join(' - ') + '</span><button type="button" class="voir" data-i="' + i + '">✕</button></div>';
+    }).join('') : '<p class="empty">Aucune course ajoutée.</p>';
+  }
+  document.getElementById('liste').addEventListener('click', function(e){ var b = e.target.closest('button[data-i]'); if (b) { L.splice(parseInt(b.getAttribute('data-i'), 10), 1); dessiner(); } });
+  document.getElementById('hip').onchange = remplirCourses;
+  document.getElementById('ajouter').onclick = function(){
+    var m = document.getElementById('msgA');
+    var r = parseInt(document.getElementById('hip').value, 10), c = parseInt(document.getElementById('crs').value, 10);
+    var ch = ['n1','n2','n3','n4'].map(function(id){ return parseInt(document.getElementById(id).value, 10); }).filter(function(n){ return n > 0 && n < 31; });
+    if (!r || !c) { m.className = 'msg err'; m.textContent = 'Choisis l\'hippodrome et la course.'; return; }
+    if (!ch.length) { m.className = 'msg err'; m.textContent = 'Tape au moins un cheval.'; return; }
+    if (new Set(ch).size !== ch.length) { m.className = 'msg err'; m.textContent = 'Un même cheval est tapé deux fois.'; return; }
+    L = L.filter(function(l){ return !(l.r === r && l.c === c); });
+    L.push({ r: r, h: nomH(r), c: c, ch: ch });
+    ['n1','n2','n3','n4'].forEach(function(id){ document.getElementById(id).value = ''; });
+    m.className = 'msg ok'; m.textContent = '✓ ' + nomH(r) + ' C' + c + ' ajoutée.';
+    var s = document.getElementById('crs'); if (s.selectedIndex < s.options.length - 1) s.selectedIndex++;
+    document.getElementById('n1').focus();
+    dessiner();
+  };
+  document.getElementById('publier').onclick = function(){
+    var m = document.getElementById('msg');
+    if (!L.length) { m.className = 'msg err'; m.textContent = 'Ajoute au moins une course.'; return; }
+    m.className = 'msg'; m.textContent = 'Publication…';
+    fetch('/api/admin/contenu', {method:'POST', credentials:'same-origin', headers:{'content-type':'application/json'}, body: JSON.stringify({ cle: 'fanny', data: { date: auj, lignes: L, maj: new Date().toISOString() } })})
+      .then(function(r){ return r.json(); }).then(function(d){
+        if (d.ok) { m.className = 'msg ok'; m.innerHTML = '✓ Publié. <a href="/pronostics.html#fanny">Voir l\'onglet Fanny</a>'; }
+        else { m.className = 'msg err'; m.textContent = d.erreur || 'Erreur.'; }
+      });
+  };
+  fetch('/api/admin/contenu?cle=fanny', {credentials:'same-origin'}).then(function(r){
+    if (!r.ok) { document.getElementById('refus').hidden = false; return null; }
+    return r.json();
+  }).then(function(d){
+    if (!d) return;
+    document.getElementById('zone').hidden = false;
+    if (d.data && d.data.date === auj) L = d.data.lignes || [];
+    dessiner();
+    return fetch('/api/pmu/programme?date=' + auj).then(function(r){ return r.json(); }).then(function(p){
+      R = p.reunions || [];
+      document.getElementById('hip').innerHTML = R.map(function(x){ return '<option value="' + x.r + '">' + E(x.h) + '</option>'; }).join('');
+      if (!R.length) document.getElementById('msgA').textContent = 'Le programme du PMU ne répond pas, recharge la page dans un instant.';
+      remplirCourses();
+    });
+  });
+})();
+</script>
+</body>
+</html>

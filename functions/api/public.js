@@ -1,5 +1,6 @@
 import { json, initDb, lireContenu, noDb } from '../_auth.js';
 import { BASE, norm, cache, get, preparer, lireRapports } from '../_pmu.js';
+import { resultatsFanny } from '../_fanny.js';
 import { initConcours, calculerSiPret, parisJour, dernierJourCalcule, classementJour, isoVersFr } from '../_concours.js';
 
 const eur = (v) => (Math.round(v * 100) / 100).toFixed(2).replace('.', ',') + ' €';
@@ -100,6 +101,14 @@ export async function onRequestGet({ env }) {
         if (dj) {
           const L = await classementJour(db, dj);
           if (L.length) b.push(`Concours Quinté+ du ${isoVersFr(dj)} : ` + L.slice(0, 3).map((x, i) => `${i + 1}${i ? 'e' : 'er'} ${x.pseudo} (${x.net >= 0 ? '+' : ''}${eur(x.net).replace(' €', ' fers')})`).join(', '));
+        }
+      } catch (e) {}
+      // Repérés de Fanny : ses gagnants et ses couplés gagnants du jour
+      try {
+        const f = await resultatsFanny(db, await lireContenu(db, 'fanny'));
+        if (f && f.date === aujourdhui()) for (const l of f.lignes || []) {
+          if (l.gagnant) b.push(`Fanny, ${l.h} C${l.c} : le ${l.gagnant.n} gagne${l.gagnant.euros ? ' (' + eur(l.gagnant.euros) + ' le gagnant)' : ''}`);
+          if (l.cg) b.push(`Fanny, ${l.h} C${l.c} : couplé gagnant${l.cg.euros ? ' à ' + eur(l.cg.euros) : ''}`);
         }
       } catch (e) {}
       let jour = [];
