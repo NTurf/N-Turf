@@ -161,7 +161,9 @@ var NT = (function(){
         var c = x.c, top = x.arr;
         function marques(n){ return (c.choix.indexOf(n)>=0?'<i class="cc">❤</i>':'') + (c.notes.indexOf(n)>=0?'<i class="st">★</i>':'') + (x.repNums.indexOf(n)>=0?'<i class="rb">★</i>':''); }
         var heure = x.lc && x.lc.heure ? new Date(x.lc.heure).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit',timeZone:'Europe/Paris'}) : '';
-        h += '<div class="crs" id="c'+i+'-'+j+'"><h3>'+esc(c.course)+' <small>'+esc([heure, re.discipline].filter(Boolean).join(' · '))+'</small></h3>';
+        var DISC = {ATTELE:'Trot attelé', MONTE:'Trot monté', PLAT:'Plat', HAIE:'Haies', STEEPLECHASE:'Steeple-chase', CROSS:'Cross'};
+        var disc = x.lc && DISC[x.lc.discipline] ? DISC[x.lc.discipline] : re.discipline;
+        h += '<div class="crs" id="c'+i+'-'+j+'"><h3>'+esc(c.course)+' <small>'+esc([heure, disc].filter(Boolean).join(' · '))+'</small></h3>';
         if (!c.synthese.length) h += '<p class="empty">La synthèse arrive.</p>';
         else h += '<div class="sel">'+c.synthese.map(function(n, k){
           return '<span class="ch '+(k < 3 ? 'piv' : '')+(top.indexOf(n)>=0?' hit':'')+'">'+esc(n)+marques(n)+'</span>';
