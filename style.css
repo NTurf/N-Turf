@@ -479,3 +479,14 @@ table.saisie tr.bas td{color:var(--navy);font-weight:700;font-size:16px}
 table.saisie tr.bas td.hit,table.saisie td.hit{background:#d8343f!important;color:#fff!important;font-weight:900}
 table.saisie tr.lig td.arr{background:#d8343f!important;color:#fff!important;font-weight:900;box-shadow:none}
 table.saisie th{color:var(--navy);font-weight:700}
+/* Course par course : numéros de course discrets, chevaux bien lisibles */
+.cbtn{gap:5px}
+.cbtn a{min-width:30px;height:30px;padding:0 6px;font-size:13px;font-weight:700;border-radius:7px;display:inline-flex;align-items:center;justify-content:center;border-width:1px}
+.cbtn a.on{outline-width:2px}
+.crs .sel .ch,.crs .sub .ch,.crs .arrivee .ch{min-width:38px;height:38px;font-size:18px;font-weight:800}
+.crs h3{font-size:20px}
+/* Légende repliée en petit bouton */
+.legcpc{border:0;background:transparent;padding:0;margin:0 0 8px}
+.legcpc summary{display:inline-block;font-size:13px;font-weight:700;color:var(--blue);background:#fff;border:1.5px solid var(--blue);border-radius:20px;padding:4px 12px;list-style:none}
+.legcpc summary::-webkit-details-marker{display:none}
+.legcpc[open] ul{background:#fff;border:1.5px solid var(--line);border-radius:12px;padding:8px 12px}

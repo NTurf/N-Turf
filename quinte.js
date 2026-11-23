@@ -230,13 +230,13 @@ var NT = (function(){
     return { date: date, reunions: reunions, reperes: reperes, archive: archive };
   }
   function cle(n){ return String(n||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase().replace(/[^A-Z0-9]/g,''); }
-  var SEL = {}, LEG = true;
+  var SEL = {}, LEG = false;
   function afficherCpc(d, onglet, live){
     if (!d || !d.reunions || !d.reunions.length) return '<p class="empty">La synthèse arrive.</p>';
     live = live || {};
     var rep = {}; (d.reperes || []).forEach(function(n){ rep[cle(n)] = 1; });
     var h = '<p class="lead">Course par course du '+esc(d.date)+'</p>';
-    h += '<details class="legcpc"'+(LEG?' open':'')+'><summary>Comment lire cette page</summary><ul>'+
+    h += '<details class="legcpc"'+(LEG?' open':'')+'><summary>ⓘ Comment lire nos pronostics ?</summary><ul>'+
       '<li><span class="ch piv">5</span> les 3 premiers de notre synthèse, puis la suite de la synthèse en blanc</li>'+
       '<li><span class="ch">5<i class="cc">❤</i></span> coup de cœur de Bruno</li>'+
       '<li><span class="ch">5<i class="st">★</i></span> étoile rouge : cheval noté par Bruno</li>'+
