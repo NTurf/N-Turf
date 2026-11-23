@@ -507,3 +507,11 @@ table.saisie th{color:var(--navy);font-weight:700}
 @media (max-width:480px){.devise b{font-size:13.5px;letter-spacing:.03em}.devise span{font-size:11.5px}}
 .maxime{margin:18px 4px 8px;text-align:center;font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:800;font-style:italic;color:var(--navy);line-height:1.2}
 .maxime span{display:block;margin-top:6px;font-family:'Barlow',sans-serif;font-size:13px;font-style:normal;font-weight:700;color:#A87C06}
+/* Bannière centrée au-dessus de la devise */
+header .bar{display:grid;grid-template-columns:1fr auto 1fr;align-items:center}
+header .bar .burger{justify-self:start}
+header .bar .logo{justify-self:center;grid-column:2}
+header .bar .sp{display:none}
+header .bar .compte,header .bar .who{justify-self:end;grid-column:3}
+@media (max-width:420px){header .bar .who{font-size:11px;white-space:normal;text-align:right}header .bar .compte .btn{padding:6px 10px;font-size:13px}}
+@media (max-width:480px){.devise b{font-size:12.5px;letter-spacing:.02em}}
