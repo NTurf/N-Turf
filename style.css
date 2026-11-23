@@ -404,3 +404,6 @@ table.st.cl td,table.st.cl th{padding:7px 3px}
 table.st.cl td:nth-child(2),table.st.cl th:nth-child(2){text-align:left!important;white-space:normal}
 table.st.cl td small{display:block;font-size:10.5px;color:var(--mute)}
 table.st th{background:#1A2F58}
+/* Fond bleu pastel un peu plus soutenu (23/11) */
+:root{--bg:#DAE5F4;--navy2:#EAF0FA}
+.podium{background:linear-gradient(180deg,#DAE5F4,#EAF0FA)}
