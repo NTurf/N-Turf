@@ -28,7 +28,7 @@
   }
   var h = document.createElement('header');
   h.innerHTML =
-    '<div class="bar"><button type="button" class="burger" id="burger" aria-label="Menu">☰</button><a class="logo" href="/"><img class="banniere" src="/banniere.png" alt="N-TURF Pronostics hippiques"></a><span class="sp"></span>' +
+    '<div class="bar"><button type="button" class="burger" id="burger" aria-label="Menu"><span class="bico">☰</span><span class="blab">Menu</span></button><a class="logo" href="/"><img class="banniere" src="/banniere.png" alt="N-TURF Pronostics hippiques"></a><span class="sp"></span>' +
     '<span class="compte"><a class="btn" href="/inscription.html">S\'inscrire</a></span></div>' +
     '<a class="devise" href="/rejoindre.html"><b>Le collectif des passionnés de courses hippiques</b><span>Pronostiqueurs indépendants réunis par la même passion</span></a>' +
     '<div class="ticker" id="ticker" hidden><span id="tickerText"></span></div>';
