@@ -25,7 +25,7 @@
 <label for="iEmail">Adresse e-mail (jamais affichée)</label>
 <input id="iEmail" type="email" autocomplete="email" required>
 <label for="iPass">Mot de passe (8 caractères minimum)</label>
-<input id="iPass" type="password" autocomplete="new-password" minlength="8" required>
+<div class="mdp"><input id="iPass" type="password" autocomplete="new-password" minlength="8" required><button type="button" class="voir" data-for="iPass">Afficher</button></div>
 <label style="display:flex;gap:10px;align-items:flex-start;color:var(--txt)"><input id="iMaj" type="checkbox" style="width:auto;margin-top:4px">
 <span>Je suis majeur et j'accepte la <a href="/confidentialite.html">politique de confidentialité</a>.</span></label>
 <p id="mInsc" class="msg"></p>
@@ -39,7 +39,7 @@
 <label for="cLogin">Pseudo ou adresse e-mail</label>
 <input id="cLogin" autocomplete="username" required>
 <label for="cPass">Mot de passe</label>
-<input id="cPass" type="password" autocomplete="current-password" required>
+<div class="mdp"><input id="cPass" type="password" autocomplete="current-password" required><button type="button" class="voir" data-for="cPass">Afficher</button></div>
 <p id="mConn" class="msg"></p>
 <button class="btn" type="submit">Se connecter</button>
 </form>
@@ -47,6 +47,9 @@
 </main>
 <script src="/site.js"></script>
 <script>
+document.querySelectorAll('.voir').forEach(function(b){
+  b.onclick = function(){ var i = document.getElementById(b.getAttribute('data-for')), cache = i.type === 'password'; i.type = cache ? 'text' : 'password'; b.textContent = cache ? 'Masquer' : 'Afficher'; };
+});
 function show(insc){
   document.getElementById('bInsc').hidden=!insc; document.getElementById('bConn').hidden=insc;
   document.getElementById('tInsc').className=insc?'on':''; document.getElementById('tConn').className=insc?'':'on';
