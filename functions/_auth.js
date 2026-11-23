@@ -103,6 +103,8 @@ export async function lireContenu(db, cle) {
 export async function ecrireContenu(db, cle, data) {
   await db.prepare(`INSERT INTO contenu (cle, data, maj) VALUES (?, ?, datetime('now'))
     ON CONFLICT(cle) DO UPDATE SET data = excluded.data, maj = excluded.maj`).bind(cle, JSON.stringify(data)).run();
+  // Le bandeau défilant se recalcule tout de suite après une publication
+  try { await db.prepare("DELETE FROM pmu_cache WHERE cle = 'bandeau'").run(); } catch (e) {}
 }
 
 // Peut publier dans l'Administration : l'administrateur, ou un membre qu'il a autorisé
