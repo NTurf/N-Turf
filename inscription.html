@@ -69,11 +69,11 @@ function send(url,body,msgId,btn){
 }
 document.getElementById('fInsc').onsubmit=function(e){
   e.preventDefault();
-  send('/api/inscription',{pseudo:iPseudo.value,email:iEmail.value,password:iPass.value,majeur:iMaj.checked},'mInsc',e.submitter||this.querySelector('button'));
+  send('/api/inscription',{pseudo:iPseudo.value,email:iEmail.value,password:iPass.value,majeur:iMaj.checked},'mInsc',e.submitter||this.querySelector('button[type=submit]'));
 };
 document.getElementById('fConn').onsubmit=function(e){
   e.preventDefault();
-  send('/api/connexion',{login:cLogin.value,password:cPass.value},'mConn',e.submitter||this.querySelector('button'));
+  send('/api/connexion',{login:cLogin.value,password:cPass.value},'mConn',e.submitter||this.querySelector('button[type=submit]'));
 };
 </script>
 </body>

@@ -1,0 +1,40 @@
+import { json, initDb, currentUser, noDb } from '../../_auth.js';
+import { initChat, SALONS } from './_chat.js';
+
+// Lire les messages d'un salon : /api/chat/messages?salon=general&apres=123
+export async function onRequestGet({ request, env }) {
+  if (!env.DB) return noDb();
+  await initDb(env.DB); await initChat(env.DB);
+  const u = await currentUser(env.DB, request);
+  if (!u) return json({ erreur: 'Connectez-vous pour accéder au chat.' }, 401);
+  const q = new URL(request.url).searchParams;
+  const salon = SALONS[q.get('salon')] ? q.get('salon') : 'general';
+  const apres = parseInt(q.get('apres') || '0', 10) || 0;
+  let r;
+  if (apres) r = await env.DB.prepare('SELECT id, user_id, pseudo, modo, texte, cree, supprime FROM chat_messages WHERE salon = ? AND id > ? ORDER BY id LIMIT 200').bind(salon, apres).all();
+  else r = await env.DB.prepare('SELECT * FROM (SELECT id, user_id, pseudo, modo, texte, cree, supprime FROM chat_messages WHERE salon = ? ORDER BY id DESC LIMIT 100) ORDER BY id').bind(salon).all();
+  // messages supprimés depuis la dernière lecture (pour les retirer de l'écran)
+  const sup = apres ? (await env.DB.prepare('SELECT id FROM chat_messages WHERE salon = ? AND supprime = 1 AND id <= ? ORDER BY id DESC LIMIT 200').bind(salon, apres).all()).results.map((x) => x.id) : [];
+  const msgs = (r.results || []).map((m) => m.supprime ? { id: m.id, supprime: 1, cree: m.cree } : { id: m.id, uid: m.user_id, pseudo: m.pseudo, modo: !!m.modo, texte: m.texte, cree: m.cree });
+  let signalements = 0;
+  if (u.moderateur) signalements = (await env.DB.prepare('SELECT COUNT(DISTINCT message_id) AS n FROM chat_signalements WHERE traite = 0').first()).n;
+  return json({ moi: { id: u.id, pseudo: u.pseudo, modo: u.moderateur }, salons: SALONS, messages: msgs, supprimes: sup, signalements });
+}
+
+// Écrire un message
+export async function onRequestPost({ request, env }) {
+  if (!env.DB) return noDb();
+  await initDb(env.DB); await initChat(env.DB);
+  const u = await currentUser(env.DB, request);
+  if (!u) return json({ erreur: 'Connectez-vous pour écrire.' }, 401);
+  let b;
+  try { b = await request.json(); } catch { return json({ erreur: 'Demande invalide.' }, 400); }
+  const salon = SALONS[b.salon] ? b.salon : 'general';
+  const texte = String(b.texte || '').replace(/\s+$/,'').replace(/^\s+/,'').slice(0, 500);
+  if (!texte) return json({ erreur: 'Message vide.' }, 400);
+  const der = await env.DB.prepare('SELECT cree FROM chat_messages WHERE user_id = ? ORDER BY id DESC LIMIT 1').bind(u.id).first();
+  if (der && Date.now() - der.cree < 3000 && !u.moderateur) return json({ erreur: 'Doucement : attends quelques secondes entre deux messages.' }, 429);
+  const r = await env.DB.prepare('INSERT INTO chat_messages (salon, user_id, pseudo, modo, texte, cree) VALUES (?, ?, ?, ?, ?, ?)')
+    .bind(salon, u.id, u.pseudo, u.moderateur ? 1 : 0, texte, Date.now()).run();
+  return json({ ok: true, id: r.meta.last_row_id });
+}

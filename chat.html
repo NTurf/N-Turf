@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Chat – N-TURF</title>
+<meta name="theme-color" content="#0e2040">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icon-192.png">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body data-page="membres">
+<main>
+<h1>Chat</h1>
+<div id="refus" class="note" hidden>🔒 Réservé aux membres. <a href="/inscription.html">S'inscrire gratuitement</a> ou <a href="/inscription.html#connexion">se connecter</a>.</div>
+<div id="zone" hidden>
+<details class="charte"><summary>Règles du chat</summary>
+<p>Respect de tous : pas d'insulte, pas de moquerie, pas de publicité ni de lien vers d'autres sites de jeux. On parle turf, pronostics et jeux. Les pseudos en <b style="color:#ff5a5a">rouge</b> sont les modérateurs : ils peuvent retirer un message ou bannir un membre. Si un message te gêne, touche-le puis « Signaler ». Jeu responsable · Interdit aux mineurs.</p>
+</details>
+<nav class="tabs" id="salons" style="padding:6px 0 8px"></nav>
+<button type="button" class="btn ghost" id="bSig" hidden style="margin-bottom:8px">Signalements (<span id="nSig">0</span>)</button>
+<div id="pSig" class="card" hidden></div>
+<div id="fil" class="fil"><p class="empty">Chargement…</p></div>
+<form id="fEnv" class="envoi">
+<textarea id="txt" rows="1" maxlength="500" placeholder="Ton message…"></textarea>
+<button class="btn" type="submit">Envoyer</button>
+</form>
+<p class="msg" id="msg"></p>
+</div>
+</main>
+<script src="/site.js"></script>
+<script>
+var S = { salon: 'general', dernier: 0, moi: null, msgs: {}, ordre: [] };
+try { S.salon = localStorage.getItem('nt_salon') || 'general'; } catch(e) {}
+function $(i){ return document.getElementById(i); }
+function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+function heure(t){ var d = new Date(t), j = new Date(); var h = d.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'}); return d.toDateString() === j.toDateString() ? h : d.toLocaleDateString('fr-FR', {day:'2-digit', month:'2-digit'}) + ' ' + h; }
+function enBas(){ var f = $('fil'); return f.scrollHeight - f.scrollTop - f.clientHeight < 60; }
+function dessiner(garderBas){
+  var f = $('fil'), bas = garderBas || enBas();
+  var vis = S.ordre.filter(function(id){ return !S.msgs[id].supprime; });
+  f.innerHTML = vis.length ? vis.map(function(id){
+    var m = S.msgs[id], moi = S.moi && m.uid === S.moi.id;
+    return '<div class="cm'+(moi?' moi':'')+'" data-id="'+id+'"><div class="ct"><b class="'+(m.modo?'modo':'')+'">'+esc(m.pseudo)+'</b><small>'+heure(m.cree)+'</small></div><div class="cx">'+esc(m.texte).replace(/\n/g,'<br>')+'</div></div>';
+  }).join('') : '<p class="empty">Aucun message pour l\'instant. Lance la discussion !</p>';
+  f.querySelectorAll('.cm').forEach(function(el){ el.onclick = function(){ menu(+el.getAttribute('data-id'), el); }; });
+  if (bas) f.scrollTop = f.scrollHeight;
+}
+function menu(id, el){
+  var ex = document.querySelector('.cmenu'); if (ex) { var meme = ex.getAttribute('data-id') == id; ex.remove(); if (meme) return; }
+  var m = S.msgs[id], moi = m.uid === S.moi.id, modo = S.moi.modo, b = [];
+  if (!moi) b.push(['signaler','Signaler']);
+  if (moi || modo) b.push(['supprimer','Supprimer']);
+  if (modo && !moi && !m.modo) b.push(['bannir','Bannir '+m.pseudo]);
+  if (!b.length) return;
+  var d = document.createElement('div'); d.className = 'cmenu'; d.setAttribute('data-id', id);
+  d.innerHTML = b.map(function(x){ return '<button type="button" data-a="'+x[0]+'">'+esc(x[1])+'</button>'; }).join('');
+  el.after(d);
+  d.querySelectorAll('button').forEach(function(x){ x.onclick = function(e){ e.stopPropagation(); action(x.getAttribute('data-a'), id); d.remove(); }; });
+}
+function action(a, id, apres){
+  var m = S.msgs[id] || {};
+  if (a === 'bannir' && !confirm('Bannir ' + (m.pseudo || 'ce membre') + ' ? Ses messages seront retirés et il ne pourra plus se connecter.')) return;
+  if (a === 'supprimer' && !confirm('Supprimer ce message ?')) return;
+  fetch('/api/chat/action', { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({ action: a, id: id }) })
+    .then(function(r){ return r.json().then(function(d){ return {ok:r.ok, d:d}; }); })
+    .then(function(x){
+      $('msg').className = 'msg ' + (x.ok ? 'ok' : 'err'); $('msg').textContent = x.ok ? (x.d.texte || '') : (x.d.erreur || 'Erreur.');
+      if (x.ok && a === 'supprimer' && S.msgs[id]) S.msgs[id].supprime = 1;
+      if (x.ok && a === 'bannir') S.ordre.forEach(function(i){ if (S.msgs[i].uid === m.uid) S.msgs[i].supprime = 1; });
+      dessiner(); if (apres) apres();
+    });
+}
+function salons(L){
+  $('salons').innerHTML = Object.keys(L).map(function(k){ return '<a href="#" data-s="'+k+'" class="'+(k===S.salon?'on':'')+'">'+esc(L[k])+'</a>'; }).join('');
+  $('salons').querySelectorAll('a').forEach(function(a){ a.onclick = function(e){ e.preventDefault(); S.salon = a.getAttribute('data-s'); try { localStorage.setItem('nt_salon', S.salon); } catch(x) {} S.dernier = 0; S.msgs = {}; S.ordre = []; $('fil').innerHTML = '<p class="empty">Chargement…</p>'; charger(true); }; });
+}
+var enCours = false;
+function charger(premier){
+  if (enCours) return; enCours = true;
+  fetch('/api/chat/messages?salon=' + S.salon + '&apres=' + S.dernier, {credentials:'same-origin'})
+    .then(function(r){ if (r.status === 401) { location.reload(); throw 0; } return r.json(); })
+    .then(function(d){
+      S.moi = d.moi;
+      if (premier) salons(d.salons);
+      var nouveau = false;
+      d.messages.forEach(function(m){ if (!S.msgs[m.id]) { S.ordre.push(m.id); nouveau = true; } S.msgs[m.id] = m; if (m.id > S.dernier) S.dernier = m.id; });
+      (d.supprimes || []).forEach(function(id){ if (S.msgs[id] && !S.msgs[id].supprime) { S.msgs[id].supprime = 1; nouveau = true; } });
+      if (premier || nouveau) dessiner(premier);
+      $('bSig').hidden = !S.moi.modo; $('nSig').textContent = d.signalements || 0;
+      $('bSig').classList.toggle('alerte', (d.signalements || 0) > 0);
+    }).catch(function(){}).then(function(){ enCours = false; });
+}
+function signalements(){
+  fetch('/api/chat/signalements').then(function(r){ return r.json(); }).then(function(d){
+    var L = d.signalements || [];
+    $('pSig').innerHTML = '<h3 style="margin-top:0">Messages signalés</h3>' + (L.length ? L.map(function(s){
+      return '<div class="sig"><div><b class="'+'">'+esc(s.pseudo)+'</b> <small>'+esc(s.salonNom)+' · '+heure(s.cree)+' · signalé '+s.nb+' fois</small><br>'+esc(s.texte)+'</div><div class="sigb"><button data-a="supprimer" data-id="'+s.id+'">Supprimer</button><button data-a="bannir" data-id="'+s.id+'">Bannir</button><button data-a="classer" data-id="'+s.id+'">Laisser</button></div></div>';
+    }).join('') : '<p class="empty">Aucun message signalé.</p>');
+    $('pSig').querySelectorAll('button').forEach(function(b){
+      b.onclick = function(){ var id = +b.getAttribute('data-id'); if (!S.msgs[id]) S.msgs[id] = { pseudo: b.closest('.sig').querySelector('b').textContent }; action(b.getAttribute('data-a'), id, signalements); };
+    });
+  });
+}
+$('bSig').onclick = function(){ var p = $('pSig'); p.hidden = !p.hidden; if (!p.hidden) signalements(); };
+$('txt').addEventListener('input', function(){ this.style.height = 'auto'; this.style.height = Math.min(this.scrollHeight, 140) + 'px'; });
+$('txt').addEventListener('keydown', function(e){ if (e.key === 'Enter' && !e.shiftKey && window.matchMedia('(min-width:700px)').matches) { e.preventDefault(); $('fEnv').requestSubmit(); } });
+$('fEnv').onsubmit = function(e){
+  e.preventDefault();
+  var t = $('txt').value.trim(); if (!t) return;
+  var bt = this.querySelector('button'); bt.disabled = true;
+  fetch('/api/chat/messages', { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({ salon: S.salon, texte: t }) })
+    .then(function(r){ return r.json().then(function(d){ return {ok:r.ok, d:d}; }); })
+    .then(function(x){
+      if (x.ok) { $('txt').value = ''; $('txt').style.height = 'auto'; $('msg').textContent = ''; charger(); setTimeout(function(){ $('fil').scrollTop = $('fil').scrollHeight; }, 400); }
+      else { $('msg').className = 'msg err'; $('msg').textContent = x.d.erreur || 'Erreur.'; }
+    }).catch(function(){ $('msg').className = 'msg err'; $('msg').textContent = 'Connexion impossible, réessaie.'; })
+    .then(function(){ bt.disabled = false; });
+};
+NTURF_MOI.then(function(m){
+  if (!m.connecte) { $('refus').hidden = false; return; }
+  $('zone').hidden = false; charger(true);
+  setInterval(function(){ if (!document.hidden) charger(); }, 4000);
+});
+</script>
+</body>
+</html>
