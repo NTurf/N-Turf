@@ -116,7 +116,11 @@ var NT = (function(){
     var heure = live && live.heure ? new Date(live.heure).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit',timeZone:'Europe/Paris'}) : '';
     var h = '<p class="lead">Quinté+ du '+esc(q.date)+(live && live.libelle ? ' · '+esc(live.libelle) : '')+(heure?' · '+heure:'')+(q.partants?' · '+esc(q.partants)+' partants':'')+'</p>';
     if (arr.length){
-      h += '<div class="arrivee"><b>Arrivée'+(etat?' <span class="prov">(provisoire)</span>':'')+'</b> '+arr.map(function(n){return '<span class="ch hit">'+esc(n)+'</span>';}).join('')+'</div>';
+      h += '<div class="arrivee"><b>Arrivée'+(etat?' <span class="prov">(provisoire)</span>':'')+'</b> '+arr.map(function(n){
+        // rouge seulement sur un cheval cité dans nos lignes ou classements, jamais sur un cheval non cité
+        var cite = ['A','B','C','D'].some(function(L){ return (q.lignes[L] || []).indexOf(n) >= 0; }) || [q.pondere, q.synthese, q.perso].some(function(t){ return (t || []).indexOf(n) >= 0; });
+        return '<span class="ch'+(cite?' hit':'')+'">'+esc(n)+'</span>';
+      }).join('')+'</div>';
     }
     var mc = meilleuresCases(q);
     h += '<h3>Lignes et classements</h3><table class="saisie">';

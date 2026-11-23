@@ -59,7 +59,7 @@ function charger(j){
         if (qq) h += NT.afficher(qq, live);
         else {
           var arr = (q && q.arrivee && q.arrivee.length ? q.arrivee : (live && live.arrivee) || []);
-          h += arr.length ? '<div class="arrivee"><b>Arrivée</b> '+arr.slice(0,5).map(function(n){ return '<span class="ch hit">'+n+'</span>'; }).join('')+'</div>' : '';
+          h += arr.length ? '<div class="arrivee"><b>Arrivée</b> '+arr.slice(0,5).map(function(n){ var cite = q && [q.synthese, q.pondere, q.perso].some(function(t){ return (t || []).indexOf(n) >= 0; }); return '<span class="ch'+(cite?' hit':'')+'">'+n+'</span>'; }).join('')+'</div>' : '';
           var rk = q && q.rapports ? Object.keys(q.rapports) : [];
           if (rk.length) h += '<table class="rap">'+rk.map(function(k){ return '<tr><td>'+esc(k)+'</td><td>'+eur(q.rapports[k])+'</td></tr>'; }).join('')+'</table>';
         }
