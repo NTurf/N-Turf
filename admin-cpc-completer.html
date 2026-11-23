@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Compléter mon fichier – Administration N-TURF</title>
+<meta name="theme-color" content="#0D1E3D">
+<meta name="robots" content="noindex">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icon-192.png">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body data-page="membres">
+<main>
+<h1>Compléter mon fichier course par course</h1>
+<p><a href="/admin.html">← Retour à l'Administration</a></p>
+<div id="refus" class="note" hidden>🔒 Réservé à l'administration.</div>
+<div id="zone" hidden>
+<section class="card">
+  <p class="sub">Le soir, dépose ton fichier course par course. Le site remplit pour chaque course la ligne « Arrivée » (les 4 premiers) et la ligne des rapports avec les chiffres officiels du PMU, puis te rend le même fichier. Les macros, les couleurs et les formules ne sont pas touchées.</p>
+  <input type="file" id="fichier" accept=".xlsm,.xlsx" class="big">
+  <p class="msg" id="msg"></p>
+  <div id="bilan"></div>
+  <p id="zoneDl" hidden><a class="valider" id="dl" style="display:block;text-align:center;text-decoration:none">⬇ Télécharger mon fichier complété</a></p>
+  <p class="note2" id="apres" hidden>Enregistre-le sur ton ordinateur à la place de l'ancien, ouvre-le, archive avec ton bouton habituel, puis saisis les courses du lendemain et republie-le sur le site.</p>
+</section>
+</div>
+</main>
+<script src="/site.js"></script>
+<script src="/vendor/xlsx.full.min.js"></script>
+<script src="/vendor/jszip.min.js"></script>
+<script src="/cpc-remplir.js"></script>
+<script>
+(function(){
+  var $ = function(id){ return document.getElementById(id); };
+  var E = function(s){ return String(s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); };
+  window.NTURF_MOI.then(function(m){ if (m.connecte && (m.role === 'admin' || m.publier)) $('zone').hidden = false; else $('refus').hidden = false; });
+  $('fichier').onchange = function(){
+    var f = this.files[0]; if (!f) return;
+    var m = $('msg'); m.className = 'msg'; m.textContent = 'Lecture du fichier…';
+    $('bilan').innerHTML = ''; $('zoneDl').hidden = true; $('apres').hidden = true;
+    f.arrayBuffer().then(function(buf){
+      var plan = CPCR.structure(XLSX, new Uint8Array(buf));
+      m.textContent = 'Recherche des arrivées et des rapports du ' + plan.date + ' au PMU…';
+      return fetch('/api/admin/cpc-remplir', {method:'POST', credentials:'same-origin', headers:{'content-type':'application/json'},
+        body: JSON.stringify({ date: plan.date, reunions: plan.reunions.map(function(r){ return { brut: r.brut, courses: r.courses.map(function(c){ return c.num; }) }; }) })})
+        .then(function(r){ return r.json(); }).then(function(d){
+          if (d.erreur) throw new Error(d.erreur);
+          return CPCR.completer(XLSX, JSZip, buf, d, plan);
+        }).then(function(res){
+          var ok = res.bilan.filter(function(x){ return x.etat === 'ok'; }).length;
+          var parH = {};
+          res.bilan.forEach(function(x){ (parH[x.reunion] = parH[x.reunion] || []).push(x); });
+          $('bilan').innerHTML = Object.keys(parH).map(function(h){
+            return '<h3>' + E(h) + '</h3><table class="st">' + parH[h].map(function(x){
+              return '<tr><td>C' + x.course + '</td><td>' + (x.etat === 'ok' ? '✓ ' + x.arrivee.join(' - ') : '<span style="color:var(--mute)">' + E(x.etat) + '</span>') + '</td></tr>';
+            }).join('') + '</table>';
+          }).join('');
+          if (!ok) { m.className = 'msg err'; m.textContent = 'Aucune course à compléter pour l\'instant : les arrivées ou les rapports ne sont pas encore publiés.'; return; }
+          m.className = 'msg ok'; m.textContent = '✓ ' + ok + ' course' + (ok > 1 ? 's' : '') + ' complétée' + (ok > 1 ? 's' : '') + '.';
+          var a = $('dl'); a.href = URL.createObjectURL(res.fichier); a.download = f.name;
+          $('zoneDl').hidden = false; $('apres').hidden = false;
+        });
+    }).catch(function(e){ m.className = 'msg err'; m.textContent = e.message || 'Erreur.'; });
+  };
+})();
+</script>
+</body>
+</html>
