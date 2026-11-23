@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Concours Quinté+ – N-TURF</title>
+<meta name="theme-color" content="#0D1E3D">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icon-192.png">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body data-page="membres">
+<main>
+<h1>Concours Quinté+</h1>
+<p class="lead">Gratuit, en fers à cheval. Classe 8 chevaux, le site calcule tout seul avec les vrais rapports du PMU.</p>
+
+<div class="cd" id="cd" hidden><span>⏱️</span><div class="cdt" id="cdt"></div><div class="cdn" id="cdn"></div></div>
+
+<div id="refus" class="note" hidden>🔒 Pour jouer, il faut être membre (gratuit). <a href="/inscription.html">S'inscrire</a> ou <a href="/inscription.html#connexion">se connecter</a>. Les podiums ci-dessous sont visibles de tous.</div>
+
+<section id="zJeu" hidden>
+  <div class="sectit"><span>Mon pronostic</span></div>
+  <section class="card" id="cSaisie">
+    <p class="sub" id="aide">Touche les chevaux dans l'ordre de ton classement : 1er, 2e… jusqu'au 7e, puis ton cheval de complément. Touche une case pour la vider.</p>
+    <div class="pgrid" id="pgrid"></div>
+    <div class="partants" id="partants"></div>
+    <div class="sectit petit"><span>Mes jeux</span></div>
+    <div class="pal" id="pal"></div>
+    <div class="misebar"><span>💰</span><div><small>Mise du jour</small><b>171,50 fers</b></div><div class="cap"><small>Capital du mois</small><b id="cap">—</b></div></div>
+    <button class="valider" id="valider" type="button">✓ Valider mon pronostic</button>
+    <p class="msg" id="msg"></p>
+  </section>
+  <section class="card" id="cResultat" hidden></section>
+  <section class="card" id="cTous" hidden></section>
+</section>
+
+<div class="sectit"><span>Classements</span></div>
+<div class="globe" id="globe"><div class="gi">🔮</div><div><div class="gt">Globe de Cristal</div><div class="gs">Classement du mois, gains moins mises</div></div><div class="gd"><b id="gRest">–</b><small>jours restants</small></div></div>
+<nav class="tabs inner" id="ongCl"><a href="#" data-k="jour" class="on">Podium du jour</a><a href="#" data-k="semaine">Podium de la semaine</a><a href="#" data-k="globe">Globe de Cristal</a></nav>
+<section class="clsc" id="cl"><p class="empty">Chargement…</p></section>
+
+<section class="card">
+<details><summary><b>Le règlement</b></summary>
+<ul class="regl">
+<li>Concours gratuit, réservé aux membres inscrits (un seul compte par personne, majeurs uniquement). Monnaie du jeu : les fers à cheval.</li>
+<li>Chaque jour, tu classes 8 chevaux du Quinté+ : du 1er au 7e, plus un cheval de complément. Tu peux modifier ton pronostic jusqu'à 5 minutes avant le départ.</li>
+<li>Avant la course, tu ne vois que ton pronostic. Une fois l'arrivée validée, tout le monde voit les pronostics, les gains et le classement.</li>
+<li><b>Non-partant</b> : le cheval de complément remplace le premier non-partant de tes 7. Les autres non-partants sont simplement retirés. Si le complément est lui-même non-partant, rien n'est remplacé.</li>
+<li><b>Tes jeux</b>, à chaque course (171,50 fers) :
+  <ul>
+  <li>Simple gagnant-placé sur tes chevaux 1 et 2 : 4 fers gagnant + 16 fers placé chacun (40 fers).</li>
+  <li>Couplé sur tes chevaux 1 à 3 (3 paires) : 2 fers gagnant + 2 fers placé par paire (12 fers).</li>
+  <li>Tiercé combiné sur tes chevaux 1 à 5 : 10 combinaisons à 1 fer (10 fers).</li>
+  <li>Quarté+ combiné sur tes chevaux 1 à 6 : 15 combinaisons à 1,50 fer (22,50 fers), avec le bonus 3.</li>
+  <li>Multi en 4 sur tes chevaux 1 à 6 : 15 combinaisons à 3 fers (45 fers).</li>
+  <li>Quinté+ combiné sur tes chevaux 1 à 7 : 21 combinaisons à 2 fers (42 fers), avec les bonus 4, 4 sur 5 et 3.</li>
+  </ul></li>
+<li><b>Gains</b> : exactement les rapports officiels du PMU pour 1 €, multipliés par la mise d'une combinaison. Exemple : Quarté+ désordre à 80 pour 1 € = 80 × 1,50 = 120 fers.</li>
+<li><b>Ordre ou désordre</b> : c'est l'ordre si les chevaux arrivés sont dans le même ordre que dans ton classement, même avec des chevaux sautés entre eux (tu classes 4-11-7-2-9, arrivée 4-7-9 : Tiercé ordre). Sinon c'est le désordre. Jamais les deux.</li>
+<li><b>Mises</b> : à partir de ton premier pronostic, 171,50 fers sont retirés pour chaque jour de Quinté+, que tu joues ou non. Celui qui joue tous les jours n'est donc jamais pénalisé.</li>
+<li><b>Trois podiums</b> : celui du jour, celui de la semaine (du lundi au dimanche) et le Globe de Cristal du mois. Tous se classent en gains moins mises.</li>
+<li>Tout est calculé automatiquement dès que le PMU publie les rapports définitifs.</li>
+</ul>
+</details>
+</section>
+</main>
+<script src="/site.js"></script>
+<script>
+(function(){
+  var E = function(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); };
+  var F = function(x){ var v = Math.round(x * 100) / 100; return (v % 1 ? v.toFixed(2).replace('.', ',') : String(v)).replace(/\B(?=(\d{3})+(?!\d))/g, ' '); };
+  var PL = ['1er','2e','3e','4e','5e','6e','7e','Compl.'];
+  var D = null, choix = [], ecart = 0, globeMoi = null;
+
+  function chargerJour(){
+    return fetch('/api/concours/jour', {credentials:'same-origin', cache:'no-store'}).then(function(r){
+      if (r.status === 401) { document.getElementById('refus').hidden = false; return null; }
+      return r.json();
+    }).then(function(d){
+      if (!d) return;
+      D = d; ecart = d.maintenant - Date.now();
+      document.getElementById('zJeu').hidden = false;
+      if (d.moi && !choix.length) choix = d.moi.chevaux.slice();
+      dessinerJeu();
+    });
+  }
+  function ouvert(){ return D && D.course && !D.course.calcule && D.course.cloture && (Date.now() + ecart) < D.course.cloture; }
+
+  function dessinerJeu(){
+    var c = D.course, s = document.getElementById('cSaisie');
+    if (!c) { s.innerHTML = '<p class="empty">' + (D.erreurPmu ? 'Le programme du PMU ne répond pas pour le moment, réessaie dans un instant.' : "Pas de Quinté+ trouvé aujourd'hui.") + '</p>'; return; }
+    var np = {}; c.partants.forEach(function(p){ if (p.np) np[p.n] = 1; });
+    var ok = ouvert();
+    document.getElementById('pgrid').innerHTML = PL.map(function(l, i){
+      var n = choix[i];
+      return '<div class="pc' + (i === 7 ? ' comp' : '') + (n ? ' sel' : '') + (n && np[n] ? ' np' : '') + '" data-i="' + i + '"><small>' + l + '</small><b>' + (n || '–') + '</b></div>';
+    }).join('');
+    document.getElementById('partants').innerHTML = ok ? c.partants.map(function(p){
+      var pris = choix.indexOf(p.n) >= 0;
+      return '<button type="button" class="pa' + (pris ? ' pris' : '') + (p.np ? ' np' : '') + '" data-n="' + p.n + '"' + (p.np ? ' disabled' : '') + '><b>' + p.n + '</b><small>' + E(p.nom) + '</small></button>';
+    }).join('') : '';
+    document.getElementById('aide').hidden = !ok;
+    document.getElementById('valider').hidden = !ok;
+    var L = choix.filter(Boolean);
+    var pal = [['Simple', 'chevaux 1-2', 40], ['Couplé', 'chevaux 1 à 3', 12], ['Tiercé', 'chevaux 1 à 5', 10], ['Quarté+', 'chevaux 1 à 6', 22.5], ['Multi en 4', 'chevaux 1 à 6', 45], ['Quinté+', 'chevaux 1 à 7', 42]];
+    document.getElementById('pal').innerHTML = pal.map(function(p){ return '<div><small>' + p[1] + '</small><b>' + p[0] + ' <i>' + F(p[2]) + '</i></b></div>'; }).join('');
+    if (!ok) {
+      var m = document.getElementById('msg');
+      m.className = 'msg';
+      m.textContent = c.calcule ? '' : (D.moi ? 'Pronostics fermés. Ton pronostic est enregistré, résultat dès l\'arrivée validée.' : 'Pronostics fermés pour aujourd\'hui.');
+      if (!D.moi && !c.calcule) document.getElementById('pgrid').innerHTML = '';
+    }
+    dessinerResultat();
+  }
+
+  function dessinerResultat(){
+    var c = D.course, z = document.getElementById('cResultat'), t = document.getElementById('cTous');
+    if (!c || !c.calcule) { z.hidden = true; t.hidden = true; return; }
+    var arr = '<div class="arrivee"><b>Arrivée</b> ' + c.arrivee.slice(0, 5).map(function(n){ return '<span class="ch">' + n + '</span>'; }).join('') + '</div>';
+    var h = '<h2>Résultat du ' + E(D.dateFr) + '</h2>' + arr;
+    if (D.moi) {
+      var net = (D.moi.gains || 0) - D.miseJour;
+      h += '<p class="sub">Pronostic retenu : ' + (D.moi.retenu || D.moi.chevaux).map(function(n){ return '<span class="ch' + (c.arrivee.slice(0,5).indexOf(n) >= 0 ? ' hit' : '') + '">' + n + '</span>'; }).join('') + '</p>';
+      h += lignes(D.moi.detail) + '<div class="bilan"><div><span>Mise</span><b>' + F(D.miseJour) + ' fers</b></div><div><span>Gains</span><b>' + F(D.moi.gains || 0) + ' fers</b></div><div class="tot"><span>Net</span><b class="' + (net >= 0 ? 'pos' : 'neg') + '">' + (net >= 0 ? '+' : '') + F(net) + ' fers</b></div></div>';
+    } else h += '<p class="empty">Tu n\'as pas joué ce jour-là.</p>';
+    z.innerHTML = h; z.hidden = false;
+    if (D.tous && D.tous.length) {
+      t.innerHTML = '<h2>Les pronostics de tous (' + D.tous.length + ')</h2>' + D.tous.map(function(p, i){
+        return '<details class="ptous"><summary><span class="rg">' + (i + 1) + '</span><b>' + E(p.pseudo) + '</b><span class="lst">' + (p.retenu || p.chevaux).slice(0, 7).map(function(n){ return '<i' + (c.arrivee.slice(0,5).indexOf(n) >= 0 ? ' class="hit"' : '') + '>' + n + '</i>'; }).join('') + '</span><span class="' + (p.net >= 0 ? 'pos' : 'neg') + '">' + F(p.gains) + '</span></summary>' + lignes(p.detail) + '</details>';
+      }).join('') + '<p class="note2">Montants en fers gagnés (mise de 171,50 fers chacun). Touche un joueur pour voir le détail.</p>';
+      t.hidden = false;
+    } else t.hidden = true;
+  }
+  function lignes(d){
+    if (!d || !d.length) return '<p class="empty">Aucun jeu gagnant.</p>';
+    return '<table class="st">' + d.map(function(x){ return '<tr><td>' + E(x.pari) + (x.type !== x.pari ? ' – ' + E(x.type) : '') + (x.nb > 1 ? ' (×' + x.nb + ')' : '') + '</td><td>' + F(x.fers) + ' fers</td></tr>'; }).join('') + '</table>';
+  }
+
+  document.addEventListener('click', function(e){
+    var pa = e.target.closest('.pa'), pc = e.target.closest('.pc');
+    if (pa && ouvert()) {
+      var n = parseInt(pa.getAttribute('data-n'), 10), k = choix.indexOf(n);
+      if (k >= 0) choix[k] = undefined;
+      else { var libre = -1; for (var i = 0; i < 8; i++) if (!choix[i]) { libre = i; break; } if (libre < 0) return; choix[libre] = n; }
+      dessinerJeu();
+    } else if (pc && ouvert()) { choix[parseInt(pc.getAttribute('data-i'), 10)] = undefined; dessinerJeu(); }
+  });
+  document.getElementById('valider').onclick = function(){
+    var m = document.getElementById('msg'), L = [];
+    for (var i = 0; i < 8; i++) L.push(choix[i]);
+    if (L.some(function(x){ return !x; })) { m.className = 'msg err'; m.textContent = 'Il faut remplir les 8 cases.'; return; }
+    m.className = 'msg'; m.textContent = 'Enregistrement…';
+    fetch('/api/concours/prono', {method:'POST', credentials:'same-origin', headers:{'content-type':'application/json'}, body: JSON.stringify({chevaux: L})})
+      .then(function(r){ return r.json(); }).then(function(d){
+        if (d.ok) { m.className = 'msg ok'; m.textContent = '✓ Pronostic enregistré : ' + d.chevaux.join(' - ') + '. Modifiable jusqu\'à 5 minutes avant le départ.'; D.moi = {chevaux: d.chevaux}; }
+        else { m.className = 'msg err'; m.textContent = d.erreur || 'Erreur.'; }
+      }).catch(function(){ m.className = 'msg err'; m.textContent = 'Connexion impossible, réessaie.'; });
+  };
+
+  // Compte à rebours jusqu'à la clôture
+  function tic(){
+    var cd = document.getElementById('cd');
+    if (!D || !D.course || !D.course.heure) { cd.hidden = true; return; }
+    var c = D.course, now = Date.now() + ecart;
+    cd.hidden = false;
+    var titre = 'Quinté+ — ' + E(c.hippodrome) + ' R' + c.reunion + ' C' + c.course;
+    if (c.calcule) { document.getElementById('cdt').innerHTML = titre + '<br><small>Arrivée validée, gains calculés</small>'; document.getElementById('cdn').textContent = '🏁'; return; }
+    var reste = c.cloture - now;
+    if (reste > 0) {
+      var h = Math.floor(reste / 3600000), mn = Math.floor(reste % 3600000 / 60000), s = Math.floor(reste % 60000 / 1000);
+      document.getElementById('cdt').innerHTML = titre + '<br><small>Clôture des pronostics dans</small>';
+      document.getElementById('cdn').textContent = (h ? h + 'h' + String(mn).padStart(2, '0') : mn) + ':' + String(s).padStart(2, '0');
+    } else {
+      document.getElementById('cdt').innerHTML = titre + '<br><small>Pronostics fermés, en attente de l\'arrivée</small>';
+      document.getElementById('cdn').textContent = '🔒';
+      if (ouvertAvant) { ouvertAvant = false; dessinerJeu(); }
+    }
+    if (reste > 0) ouvertAvant = true;
+  }
+  var ouvertAvant = false;
+  setInterval(tic, 1000);
+
+  // Podiums
+  var CL = null, ong = 'jour';
+  function chargerCl(){
+    return fetch('/api/concours/classements', {credentials:'same-origin', cache:'no-store'}).then(function(r){ return r.json(); }).then(function(d){
+      CL = d; document.getElementById('gRest').textContent = d.globe.restants;
+      if (d.globe.moi) document.getElementById('cap').textContent = F(d.globe.moi.net) + ' fers net';
+      dessinerCl();
+    });
+  }
+  function dessinerCl(){
+    var b = CL[ong], z = document.getElementById('cl');
+    var titre = ong === 'jour' ? (b.dateFr ? 'Quinté+ du ' + b.dateFr : 'Pas encore de course calculée') : ong === 'semaine' ? 'Semaine du ' + b.du + ' au ' + b.au : 'Mois en cours, du ' + b.du + ' au ' + b.au + ' (' + b.restants + ' jours restants)';
+    var L = b.liste || [];
+    var pod = function(x, r){ if (!x) return '<div class="pod r' + r + '"><div class="pav">–</div><div class="pblk">' + r + '</div></div>';
+      return '<div class="pod r' + r + '">' + (r === 1 ? '<div class="pstar">⭐</div>' : '') + '<div class="pav">' + E(x.pseudo.charAt(0).toUpperCase()) + '</div><div class="pnm">' + E(x.pseudo) + '</div><div class="pam ' + (x.net >= 0 ? 'pos' : 'neg') + '">' + (x.net >= 0 ? '+' : '') + F(x.net) + '</div><div class="pblk">' + r + '</div></div>'; };
+    var h = '<div class="clh2"><b>' + (ong === 'globe' ? '🔮 Globe de Cristal' : '🏆 ' + (ong === 'jour' ? 'Podium du jour' : 'Podium de la semaine')) + '</b><span>' + E(titre) + '</span></div>';
+    h += '<div class="podium">' + pod(L[1], 2) + pod(L[0], 1) + pod(L[2], 3) + '</div>';
+    if (L.length) h += '<table class="st bil cl"><tr><th>#</th><th>Joueur</th><th>Mises</th><th>Gains</th><th>Net</th></tr>' + L.map(function(x, i){
+      return '<tr><td>' + (i + 1) + '</td><td><b>' + E(x.pseudo) + '</b><small>' + x.joues + ' joué' + (x.joues > 1 ? 's' : '') + ' sur ' + x.jours + ' j.</small></td><td>' + F(x.mises) + '</td><td>' + F(x.gains) + '</td><td class="' + (x.net >= 0 ? 'pos' : 'neg') + '">' + (x.net >= 0 ? '+' : '') + F(x.net) + '</td></tr>';
+    }).join('') + '</table><p class="note2">En fers à cheval. Les mises comptent 171,50 fers par jour depuis le premier pronostic du joueur, qu\'il ait joué ou non.</p>';
+    else h += '<p class="empty">Aucun joueur classé pour l\'instant.</p>';
+    z.innerHTML = h;
+  }
+  document.getElementById('ongCl').addEventListener('click', function(e){
+    var a = e.target.closest('a'); if (!a) return; e.preventDefault();
+    ong = a.getAttribute('data-k');
+    [].forEach.call(this.querySelectorAll('a'), function(x){ x.classList.toggle('on', x === a); });
+    if (CL) dessinerCl();
+  });
+
+  chargerJour().then(chargerCl).then(tic);
+  // Rafraîchit toutes les minutes : dès que l'arrivée est validée, les résultats apparaissent
+  setInterval(function(){ if (D && D.course && !D.course.calcule && (Date.now() + ecart) > D.course.cloture) chargerJour().then(chargerCl); }, 60000);
+})();
+</script>
+</body>
+</html>

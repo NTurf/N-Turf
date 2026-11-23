@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>N-TURF Pronostics</title>
 <meta name="description" content="N-TURF : pronostics hippiques transparents, Quinté+ et course par course.">
-<meta name="theme-color" content="#0e2040">
+<meta name="theme-color" content="#0D1E3D">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="icon" href="/icon-192.png">
 <link rel="apple-touch-icon" href="/icon-192.png">
@@ -34,6 +34,8 @@
     <p style="text-align:center"><a class="btn" href="/inscription.html">S'inscrire gratuitement</a></p>
   </section>
 
+  <a class="globe" href="/concours.html" style="text-decoration:none"><div class="gi">🔮</div><div><div class="gt">Concours Quinté+</div><div class="gs" id="cAcc">Gratuit, en fers à cheval · Globe de Cristal du mois</div></div><div class="gd"><b id="cRest">–</b><small>jours restants</small></div></a>
+
   <section class="card">
     <h2>Arrivées du jour</h2>
     <div id="arrivees"><p class="empty">Les arrivées apparaîtront ici après chaque course.</p></div>
@@ -53,10 +55,20 @@
       <div class="tile"><b>Outils</b><small>Répartition, champ libre, réducteur</small></div>
       <div class="tile"><b>Gestion</b><small>Votre suivi personnel des jeux simples</small></div>
       <div class="tile"><b>Chat</b><small>Échanger entre membres</small></div>
-      <div class="tile"><b>Concours</b><small>Gratuits, entre membres</small></div>
+      <a class="tile" href="/concours.html"><b>Concours Quinté+</b><small>Gratuit, 3 podiums et le Globe de Cristal</small></a>
     </div>
   </section>
 </main>
+<script>
+fetch('/api/concours/classements', {cache:'no-store'}).then(function(r){ return r.json(); }).then(function(d){
+  var F = function(x){ return (Math.round(x * 100) / 100).toFixed(2).replace('.', ',').replace(',00', ''); };
+  document.getElementById('cRest').textContent = d.globe.restants;
+  var t = [];
+  if (d.globe.liste[0]) t.push('En tête du Globe : ' + d.globe.liste[0].pseudo + ' (' + (d.globe.liste[0].net >= 0 ? '+' : '') + F(d.globe.liste[0].net) + ' fers)');
+  if (d.jour.liste[0]) t.push('Podium du ' + d.jour.dateFr + ' : ' + d.jour.liste.slice(0, 3).map(function(x){ return x.pseudo; }).join(', '));
+  if (t.length) document.getElementById('cAcc').textContent = t.join(' · ');
+}).catch(function(){});
+</script>
 
 <script src="/site.js"></script>
 <script>

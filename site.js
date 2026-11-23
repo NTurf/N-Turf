@@ -9,6 +9,7 @@
     ['/pronostics.html#cpc', 'Pronos course par course'],
     ['/hippodrome.html', 'Pronos Hippodrome'],
     ['/outils.html', 'Outils'],
+    ['/concours.html', 'Concours Quinté+'],
     ['/stats.html', 'Statistiques'],
     ['/archives.html', 'Archives'],
     ['/chat.html', 'Chat'],
@@ -24,7 +25,7 @@
   }
   var h = document.createElement('header');
   h.innerHTML =
-    '<div class="bar"><button type="button" class="burger" id="burger" aria-label="Menu">☰</button><a class="logo" href="/"><img src="/icon-192.png" alt=""><span class="name">N-TURF</span></a><span class="sp"></span>' +
+    '<div class="bar"><button type="button" class="burger" id="burger" aria-label="Menu">☰</button><a class="logo" href="/"><img class="banniere" src="/banniere.png" alt="N-TURF Pronostics hippiques"></a><span class="sp"></span>' +
     '<span class="compte"><a class="btn" href="/inscription.html">S\'inscrire</a></span></div>' +
     '<div class="ticker" id="ticker" hidden><span id="tickerText"></span></div>';
   document.body.insertBefore(h, document.body.firstChild);

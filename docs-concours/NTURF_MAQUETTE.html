@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>N-TURF Challenge — Maquette</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--navy:#0D1E3D;--navy2:#1A2F58;--blue:#1E5BB5;--blue2:#2470D4;--gold:#C9960C;--gold2:#F0B429;--gold3:#FFD700;--white:#FFFFFF;--light:#EEF3FB;--grey:#8899AA;--silver:#A8B8CC;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#080D1A;display:flex;justify-content:center;align-items:flex-start;min-height:100vh;padding:30px 20px;font-family:'Barlow',sans-serif;background-image:radial-gradient(ellipse at 20% 20%,#1a2f5820 0%,transparent 60%),radial-gradient(ellipse at 80% 80%,#c9960c10 0%,transparent 60%);}
+.screens-wrapper{display:flex;gap:40px;align-items:flex-start;flex-wrap:wrap;justify-content:center;}
+.screen-label{text-align:center;color:rgba(255,255,255,0.45);font-size:11px;font-weight:700;letter-spacing:3px;text-transform:uppercase;margin-bottom:14px;}
+.phone-frame{width:375px;background:#1a1a2e;border-radius:44px;padding:10px;box-shadow:0 0 0 2px #333,0 0 0 4px #222,0 40px 80px rgba(0,0,0,0.8),0 0 60px rgba(30,91,181,0.15);position:relative;}
+.phone-inner{border-radius:36px;overflow:hidden;background:var(--light);min-height:760px;display:flex;flex-direction:column;}
+.header{background:linear-gradient(135deg,var(--navy) 0%,var(--navy2) 50%,var(--blue) 100%);padding:14px 18px 18px;position:relative;overflow:hidden;}
+.header::before{content:'';position:absolute;top:-30px;right:-30px;width:120px;height:120px;background:radial-gradient(circle,rgba(201,150,12,0.2) 0%,transparent 70%);border-radius:50%;}
+.header-top{display:flex;align-items:center;justify-content:space-between;}
+.menu-btn{color:var(--gold2);font-size:22px;cursor:pointer;}
+.logo{display:flex;flex-direction:column;align-items:center;}
+.logo-text{font-family:'Barlow Condensed',sans-serif;font-size:30px;font-weight:900;color:var(--white);letter-spacing:3px;line-height:1;text-shadow:0 2px 8px rgba(0,0,0,0.4);}
+.logo-text span{color:var(--gold2);}
+.logo-sub{font-size:8px;color:var(--silver);letter-spacing:3px;text-transform:uppercase;margin-top:2px;}
+.logo-line{width:50px;height:2px;background:linear-gradient(90deg,transparent,var(--gold2),transparent);margin-top:4px;}
+.notif-btn{color:var(--gold2);font-size:20px;cursor:pointer;position:relative;}
+.notif-dot{position:absolute;top:0;right:0;width:8px;height:8px;background:#FF4444;border-radius:50%;border:1.5px solid var(--navy);}
+.scroll-area{flex:1;overflow-y:auto;padding-bottom:8px;}
+.scroll-area::-webkit-scrollbar{width:0;}
+.countdown-banner{background:linear-gradient(90deg,var(--blue),var(--blue2));margin:12px 14px;border-radius:12px;padding:10px 14px;display:flex;align-items:center;gap:10px;box-shadow:0 4px 15px rgba(30,91,181,0.35);border:1px solid rgba(255,255,255,0.1);}
+.countdown-text{flex:1;font-size:11px;color:rgba(255,255,255,0.85);font-weight:500;}
+.countdown-time{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:900;color:var(--gold3);letter-spacing:2px;text-shadow:0 0 10px rgba(255,215,0,0.5);animation:pulse 1s ease-in-out infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.6;}}
+.sec-title{display:flex;align-items:center;justify-content:center;gap:10px;margin:4px 14px 10px;}
+.sec-line{flex:1;height:1px;background:linear-gradient(90deg,transparent,var(--blue),transparent);}
+.sec-label{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:900;color:var(--navy);letter-spacing:3px;text-transform:uppercase;}
+.action-btns{padding:0 14px;display:flex;flex-direction:column;gap:8px;margin-bottom:14px;}
+.action-btn{background:linear-gradient(135deg,var(--navy) 0%,var(--navy2) 60%,var(--blue) 100%);border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:12px;cursor:pointer;border:1px solid rgba(255,255,255,0.08);box-shadow:0 4px 20px rgba(13,30,61,0.3),inset 0 1px 0 rgba(255,255,255,0.08);}
+.btn-icon{width:38px;height:38px;background:rgba(255,255,255,0.1);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;border:1px solid rgba(255,255,255,0.12);}
+.btn-content{flex:1;}
+.btn-lbl{font-size:10px;color:rgba(255,255,255,0.55);text-transform:uppercase;letter-spacing:1px;font-weight:600;}
+.btn-title{font-family:'Barlow Condensed',sans-serif;font-size:19px;font-weight:900;color:var(--white);letter-spacing:1px;}
+.btn-title span{color:var(--gold2);}
+.btn-arrow{width:30px;height:30px;background:linear-gradient(135deg,var(--gold),var(--gold2));border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--navy);font-size:18px;font-weight:900;box-shadow:0 2px 8px rgba(201,150,12,0.4);}
+.globe-banner{background:linear-gradient(135deg,var(--navy),#0D1E3D);margin:0 14px 14px;border-radius:14px;padding:11px 14px;display:flex;align-items:center;gap:10px;border:1px solid rgba(201,150,12,0.3);box-shadow:0 0 20px rgba(201,150,12,0.1);}
+.globe-icon{font-size:26px;}
+.globe-title{font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:900;color:var(--gold2);letter-spacing:1px;text-transform:uppercase;}
+.globe-sub{font-size:10px;color:rgba(255,255,255,0.55);margin-top:1px;}
+.globe-days{text-align:center;margin-left:auto;}
+.globe-days-num{font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:900;color:var(--gold3);line-height:1;}
+.globe-days-lbl{font-size:8px;color:rgba(255,255,255,0.45);text-transform:uppercase;letter-spacing:1px;}
+.cls-card{background:white;margin:0 14px 14px;border-radius:16px;overflow:hidden;box-shadow:0 4px 20px rgba(13,30,61,0.1);}
+.cls-head{background:linear-gradient(135deg,var(--navy),var(--blue));padding:9px 14px;display:flex;align-items:center;justify-content:space-between;}
+.cls-head-title{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:900;color:white;letter-spacing:2px;text-transform:uppercase;}
+.cls-head-date{font-size:10px;color:var(--gold2);font-weight:700;letter-spacing:1px;}
+.podium-wrap{padding:14px 10px 10px;background:linear-gradient(180deg,#EEF3FB,#F8FAFF);display:flex;align-items:flex-end;justify-content:center;gap:6px;min-height:160px;}
+.pod-item{display:flex;flex-direction:column;align-items:center;flex:1;}
+.pod-avatar{border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-weight:900;margin:0 auto 4px;border:2px solid;color:white;}
+.r1 .pod-avatar{background:linear-gradient(135deg,#C9960C,#FFD700);border-color:#FFD700;width:42px;height:42px;font-size:16px;}
+.r2 .pod-avatar{background:linear-gradient(135deg,#7A8B9C,#A8B8CC);border-color:#A8B8CC;width:34px;height:34px;font-size:13px;}
+.r3 .pod-avatar{background:linear-gradient(135deg,#8B5E3C,#CD853F);border-color:#CD853F;width:34px;height:34px;font-size:13px;}
+.pod-name{font-family:'Barlow Condensed',sans-serif;font-weight:800;color:var(--navy);white-space:nowrap;font-size:11px;}
+.r1 .pod-name{font-size:13px;}
+.pod-amt{font-size:10px;font-weight:700;color:var(--blue);}
+.r1 .pod-amt{font-size:12px;color:var(--gold);font-weight:900;}
+.pod-star{font-size:14px;animation:starPulse 2s ease-in-out infinite;}
+@keyframes starPulse{0%,100%{transform:scale(1);}50%{transform:scale(1.3);}}
+.pod-block{width:100%;border-radius:8px 8px 0 0;display:flex;align-items:center;justify-content:center;}
+.pod-block-n{font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:900;color:rgba(255,255,255,0.9);text-shadow:0 2px 4px rgba(0,0,0,0.3);}
+.r1 .pod-block{height:76px;background:linear-gradient(135deg,#C9960C,#F0B429,#FFD700);}
+.r2 .pod-block{height:56px;background:linear-gradient(135deg,#7A8B9C,#A8B8CC);}
+.r3 .pod-block{height:40px;background:linear-gradient(135deg,#8B5E3C,#CD853F);}
+.top-list{padding:6px 10px 10px;}
+.top-item{display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:10px;}
+.top-item:nth-child(odd){background:var(--light);}
+.top-rank{width:20px;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:900;color:var(--navy);text-align:center;}
+.top-av{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,var(--navy),var(--blue));display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;color:white;font-family:'Barlow Condensed',sans-serif;}
+.top-name{flex:1;font-size:12px;font-weight:700;color:var(--navy);}
+.top-amt{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:800;color:var(--blue);}
+.voir-plus{margin:0 14px 14px;border:1.5px solid var(--navy);border-radius:12px;padding:10px;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;background:white;}
+.voir-plus-txt{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:800;color:var(--navy);letter-spacing:1px;text-transform:uppercase;}
+.navbar{background:white;border-top:1px solid rgba(13,30,61,0.08);padding:8px 4px 14px;display:flex;justify-content:space-around;}
+.nav-item{display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;padding:4px 6px;border-radius:10px;min-width:50px;}
+.nav-item.active{background:rgba(30,91,181,0.08);}
+.nav-icon{font-size:18px;filter:grayscale(1) opacity(0.35);}
+.nav-item.active .nav-icon{filter:none;}
+.nav-lbl{font-size:9px;font-weight:700;color:var(--grey);letter-spacing:0.3px;}
+.nav-item.active .nav-lbl{color:var(--blue);}
+/* SCREEN 2 */
+.prono-wrap{flex:1;padding:12px 14px;overflow-y:auto;}
+.prono-wrap::-webkit-scrollbar{width:0;}
+.prono-ttl{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:900;color:var(--navy);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;}
+.prono-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:12px;}
+.p-cell{background:white;border:2px solid rgba(13,30,61,0.1);border-radius:10px;padding:7px 4px;text-align:center;box-shadow:0 2px 6px rgba(0,0,0,0.05);}
+.p-cell.sel{border-color:var(--blue);background:linear-gradient(135deg,#EEF3FB,#D6E4F7);}
+.p-cell.gold-c{border-color:var(--gold);background:linear-gradient(135deg,#FFF8E8,#FFF0CC);}
+.p-pos{font-size:8px;color:var(--grey);text-transform:uppercase;letter-spacing:0.5px;font-weight:700;}
+.p-num{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:900;color:var(--navy);line-height:1;}
+.p-cell.sel .p-num{color:var(--blue);}
+.p-cell.gold-c .p-num{color:var(--gold);}
+.paliers-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px;}
+.pal-item{background:linear-gradient(135deg,var(--navy),var(--blue));border-radius:10px;padding:8px 10px;color:white;}
+.pal-lbl{font-size:8px;color:rgba(255,255,255,0.55);letter-spacing:1px;text-transform:uppercase;font-weight:700;}
+.pal-title{font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:900;}
+.pal-title span{color:var(--gold2);}
+.mise-bar{background:rgba(201,150,12,0.1);border:1px solid rgba(201,150,12,0.3);border-radius:10px;padding:8px 12px;margin-bottom:12px;display:flex;align-items:center;gap:10px;}
+.mise-left{}
+.mise-lbl{font-size:8px;color:var(--gold);text-transform:uppercase;letter-spacing:1px;font-weight:800;}
+.mise-val{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:900;color:var(--navy);}
+.cap-right{margin-left:auto;text-align:right;}
+.cap-lbl{font-size:8px;color:var(--grey);text-transform:uppercase;letter-spacing:1px;}
+.cap-val{font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:900;color:var(--blue);}
+.valider-btn{background:linear-gradient(135deg,var(--gold),var(--gold2));border:none;border-radius:13px;padding:13px;width:100%;font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:900;color:var(--navy);letter-spacing:2px;text-transform:uppercase;cursor:pointer;box-shadow:0 4px 20px rgba(201,150,12,0.4);}
+</style>
+</head>
+<body>
+<div class="screens-wrapper">
+
+<!-- ÉCRAN 1 : ACCUEIL -->
+<div>
+<div class="screen-label">🏠 Accueil</div>
+<div class="phone-frame"><div class="phone-inner">
+  <div class="header">
+    <div class="header-top">
+      <div class="menu-btn">☰</div>
+      <div class="logo">
+        <div class="logo-text">N<span>-</span>TURF</div>
+        <div class="logo-sub">Pronostics Hippiques</div>
+        <div class="logo-line"></div>
+      </div>
+      <div class="notif-btn">🔔<div class="notif-dot"></div></div>
+    </div>
+  </div>
+  <div class="scroll-area">
+    <div class="countdown-banner">
+      <span style="font-size:16px;">⏱️</span>
+      <div class="countdown-text">Prochaine course : R1 C4 — Départ dans</div>
+      <div class="countdown-time">3:47</div>
+    </div>
+    <div class="sec-title"><div class="sec-line"></div><div class="sec-label">Concours</div><div class="sec-line"></div></div>
+    <div class="action-btns">
+      <div class="action-btn">
+        <div class="btn-icon">🏇</div>
+        <div class="btn-content"><div class="btn-lbl">Votre sélection</div><div class="btn-title">QUINTÉ<span>+</span></div></div>
+        <div class="btn-arrow">›</div>
+      </div>
+      <div class="action-btn">
+        <div class="btn-icon">🎯</div>
+        <div class="btn-content"><div class="btn-lbl">Votre sélection</div><div class="btn-title">COURSE <span>PAR COURSE</span></div></div>
+        <div class="btn-arrow">›</div>
+      </div>
+    </div>
+    <div class="globe-banner">
+      <div class="globe-icon">🔮</div>
+      <div><div class="globe-title">Globe de Cristal</div><div class="globe-sub">Classement mensuel en cours</div></div>
+      <div class="globe-days"><div class="globe-days-num">18</div><div class="globe-days-lbl">jours restants</div></div>
+    </div>
+    <div class="sec-title"><div class="sec-line"></div><div class="sec-label">Classement Actuel</div><div class="sec-line"></div></div>
+    <div class="cls-card">
+      <div class="cls-head"><div class="cls-head-title">🏆 Top du jour</div><div class="cls-head-date">Dimanche 8 mars</div></div>
+      <div class="podium-wrap">
+        <div class="pod-item r2">
+          <div style="text-align:center;margin-bottom:6px;"><div class="pod-avatar">M</div><div class="pod-name">MARIO59</div><div class="pod-amt">98,25 €</div></div>
+          <div class="pod-block"><div class="pod-block-n">2</div></div>
+        </div>
+        <div class="pod-item r1">
+          <div class="pod-star">⭐</div>
+          <div style="text-align:center;margin-bottom:6px;"><div class="pod-avatar">L</div><div class="pod-name">LEASPORT45</div><div class="pod-amt">145,60 €</div></div>
+          <div class="pod-block"><div class="pod-block-n">1</div></div>
+        </div>
+        <div class="pod-item r3">
+          <div style="text-align:center;margin-bottom:6px;"><div class="pod-avatar">P</div><div class="pod-name">PUNKY74</div><div class="pod-amt">82,00 €</div></div>
+          <div class="pod-block"><div class="pod-block-n">3</div></div>
+        </div>
+      </div>
+      <div class="top-list">
+        <div class="top-item"><div class="top-rank">4</div><div class="top-av">R</div><div class="top-name">RACING33</div><div class="top-amt">74,50 €</div><span>📈</span></div>
+        <div class="top-item"><div class="top-rank">5</div><div class="top-av">T</div><div class="top-name">TURFMAN06</div><div class="top-amt">68,20 €</div><span>➡️</span></div>
+        <div class="top-item"><div class="top-rank">6</div><div class="top-av">J</div><div class="top-name">JOCKEY13</div><div class="top-amt">61,80 €</div><span>📉</span></div>
+      </div>
+    </div>
+    <div class="voir-plus"><div class="voir-plus-txt">Voir le classement complet</div><span style="color:var(--navy);font-weight:900;font-size:16px;">›</span></div>
+  </div>
+  <div class="navbar">
+    <div class="nav-item active"><div class="nav-icon">🏠</div><div class="nav-lbl">Accueil</div></div>
+    <div class="nav-item"><div class="nav-icon">💰</div><div class="nav-lbl">Gestion</div></div>
+    <div class="nav-item"><div class="nav-icon">💬</div><div class="nav-lbl">Tchat</div></div>
+    <div class="nav-item"><div class="nav-icon">📋</div><div class="nav-lbl">Notes</div></div>
+    <div class="nav-item"><div class="nav-icon">📊</div><div class="nav-lbl">Résultats</div></div>
+  </div>
+</div></div>
+</div>
+
+<!-- ÉCRAN 2 : SAISIE PRONO -->
+<div>
+<div class="screen-label">🎯 Saisie Pronostic</div>
+<div class="phone-frame"><div class="phone-inner">
+  <div class="header">
+    <div class="header-top">
+      <div class="menu-btn" style="font-size:18px;">‹</div>
+      <div class="logo"><div class="logo-text">N<span>-</span>TURF</div><div class="logo-sub">Pronostics Hippiques</div><div class="logo-line"></div></div>
+      <div class="notif-btn" style="font-size:18px;">🔔</div>
+    </div>
+  </div>
+  <div class="countdown-banner" style="margin:12px 14px 8px;">
+    <span style="font-size:16px;">🏁</span>
+    <div class="countdown-text">Quinté+ — Vincennes R1 C4</div>
+    <div class="countdown-time">3:47</div>
+  </div>
+  <div class="prono-wrap">
+    <div class="prono-ttl">🏇 Classez vos 8 chevaux</div>
+    <div class="prono-grid">
+      <div class="p-cell sel"><div class="p-pos">1er</div><div class="p-num">4</div></div>
+      <div class="p-cell sel"><div class="p-pos">2e</div><div class="p-num">11</div></div>
+      <div class="p-cell sel"><div class="p-pos">3e</div><div class="p-num">7</div></div>
+      <div class="p-cell sel"><div class="p-pos">4e</div><div class="p-num">2</div></div>
+      <div class="p-cell sel"><div class="p-pos">5e</div><div class="p-num">9</div></div>
+      <div class="p-cell sel"><div class="p-pos">6e</div><div class="p-num">1</div></div>
+      <div class="p-cell sel"><div class="p-pos">7e</div><div class="p-num">6</div></div>
+      <div class="p-cell gold-c"><div class="p-pos">Compl.</div><div class="p-num">13</div></div>
+    </div>
+    <div class="sec-title" style="margin:0 0 8px;"><div class="sec-line"></div><div class="sec-label" style="font-size:11px;">Paliers actifs</div><div class="sec-line"></div></div>
+    <div class="paliers-grid">
+      <div class="pal-item"><div class="pal-lbl">Palier 1</div><div class="pal-title">SGP <span>40€</span></div></div>
+      <div class="pal-item"><div class="pal-lbl">Palier 2</div><div class="pal-title">Couplé <span>18€</span></div></div>
+      <div class="pal-item"><div class="pal-lbl">Palier 3</div><div class="pal-title">Tiercé <span>10€</span></div></div>
+      <div class="pal-item"><div class="pal-lbl">Palier 4</div><div class="pal-title">Quarté <span>19,50€</span></div></div>
+      <div class="pal-item"><div class="pal-lbl">Palier 4bis</div><div class="pal-title">Multi 4 <span>15€</span></div></div>
+      <div class="pal-item"><div class="pal-lbl">Palier 5</div><div class="pal-title">Quinté+ <span>42€</span></div></div>
+    </div>
+    <div class="mise-bar">
+      <span style="font-size:20px;">💰</span>
+      <div class="mise-left"><div class="mise-lbl">Mise totale</div><div class="mise-val">144,50 €</div></div>
+      <div class="cap-right"><div class="cap-lbl">Capital restant</div><div class="cap-val">1 744,50 €</div></div>
+    </div>
+    <button class="valider-btn">✓  Valider mon pronostic</button>
+  </div>
+  <div class="navbar">
+    <div class="nav-item"><div class="nav-icon">🏠</div><div class="nav-lbl">Accueil</div></div>
+    <div class="nav-item"><div class="nav-icon">💰</div><div class="nav-lbl">Gestion</div></div>
+    <div class="nav-item active"><div class="nav-icon">💬</div><div class="nav-lbl">Tchat</div></div>
+    <div class="nav-item"><div class="nav-icon">📋</div><div class="nav-lbl">Notes</div></div>
+    <div class="nav-item"><div class="nav-icon">📊</div><div class="nav-lbl">Résultats</div></div>
+  </div>
+</div></div>
+</div>
+
+</div>
+</body>
+</html>

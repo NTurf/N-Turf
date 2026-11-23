@@ -1,5 +1,6 @@
 import { json, initDb, lireContenu, noDb } from '../_auth.js';
 import { BASE, norm, cache, get, preparer, lireRapports } from '../_pmu.js';
+import { initConcours, calculerSiPret, parisJour, dernierJourCalcule, classementJour, isoVersFr } from '../_concours.js';
 
 const eur = (v) => (Math.round(v * 100) / 100).toFixed(2).replace('.', ',') + ' €';
 const rang = (r) => (r + 1) + (r ? 'e' : 'er');
@@ -92,6 +93,15 @@ export async function onRequestGet({ env }) {
           if (dans.length) b.push(`Quinté+ du ${v.date} : ${dans.length} des 5 premiers de notre synthèse à l'arrivée (${dans.join(', ')})`);
         }
       }
+      // Concours Quinté+ : calcul dès l'arrivée validée, puis le podium du jour dans le bandeau
+      try {
+        await initConcours(db); await calculerSiPret(db, parisJour());
+        const dj = await dernierJourCalcule(db);
+        if (dj) {
+          const L = await classementJour(db, dj);
+          if (L.length) b.push(`Concours Quinté+ du ${isoVersFr(dj)} : ` + L.slice(0, 3).map((x, i) => `${i + 1}${i ? 'e' : 'er'} ${x.pseudo} (${x.net >= 0 ? '+' : ''}${eur(x.net).replace(' €', ' fers')})`).join(', '));
+        }
+      } catch (e) {}
       let jour = [];
       try { jour = await touchesDuJour(db, cpc); } catch (e) { jour = []; }
       b.push(...jour);
