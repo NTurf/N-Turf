@@ -55,22 +55,20 @@
 
 <script src="/site.js"></script>
 <script>
-fetch('/jour.json',{cache:'no-store'}).then(function(r){return r.json()}).then(function(d){
+fetch('/api/public',{cache:'no-store'}).then(function(r){return r.json()}).then(function(d){
   var esc=function(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})};
   if(d.bandeau && d.bandeau.length){
     document.getElementById('tickerText').innerHTML=d.bandeau.map(esc).join(' &nbsp;<b>•</b>&nbsp; ');
     document.getElementById('ticker').hidden=false;
   }
-  if(d.quinte && d.quinte.top3 && d.quinte.top3.length){
+  var q=d.quinte;
+  if(q && q.top3 && q.top3.length){
     document.getElementById('qEmpty').hidden=true;
-    document.getElementById('qCourse').textContent=d.quinte.course||'';
-    document.getElementById('top3').innerHTML=d.quinte.top3.slice(0,3).map(function(n){return '<div>'+esc(n)+'</div>'}).join('');
+    document.getElementById('qCourse').textContent='Quinté+ du '+q.date+(q.discipline?' · '+q.discipline:'');
+    document.getElementById('top3').innerHTML=q.top3.map(function(n){return '<div'+(q.arrivee.indexOf(n)>=0?' class="hit"':'')+'>'+esc(n)+'</div>'}).join('');
   }
-  if(d.arrivees && d.arrivees.length){
-    document.getElementById('arrivees').innerHTML=d.arrivees.map(function(a){
-      return '<div class="arr"><div class="t">'+esc(a.hippodrome)+' · '+esc(a.course)+'</div>'+
-        '<div class="n">'+esc(a.arrivee)+'</div>'+(a.rapports?'<div class="r">'+esc(a.rapports)+'</div>':'')+'</div>';
-    }).join('');
+  if(q && q.arrivee && q.arrivee.length){
+    document.getElementById('arrivees').innerHTML='<div class="arr"><div class="t">Quinté+ du '+esc(q.date)+'</div><div class="n">'+q.arrivee.map(esc).join(' - ')+'</div></div>';
   }
 }).catch(function(){});
 </script>

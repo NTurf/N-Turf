@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Administration – N-TURF</title>
+<meta name="theme-color" content="#0e2040">
+<meta name="robots" content="noindex">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icon-192.png">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body data-page="admin">
+<main>
+<h1>Administration</h1>
+<div id="refus" class="note" hidden>Cette page est réservée à l'administrateur. <a href="/inscription.html#connexion">Se connecter</a></div>
+<div id="zone" hidden>
+<section class="card">
+<h2>Mettre à jour le Quinté</h2>
+<p style="color:var(--soft)">Choisis ton fichier N-Turf. Le site lit la feuille Saisie et les pages TCR, ALGO et PERSO, puis te montre le résultat. Rien n'est publié tant que tu n'as pas appuyé sur « Publier ».</p>
+<input type="file" id="fichier" accept=".xlsm,.xlsx,.xls" style="width:100%;padding:12px;background:var(--navy2);border:1px dashed var(--gold);border-radius:10px;color:var(--txt)">
+<p id="msg" class="msg"></p>
+</section>
+<section class="card" id="apercu" hidden>
+<h2>Ce que verront les membres</h2>
+<div id="rendu"></div>
+<p style="margin-top:16px"><button class="btn" id="publier">Publier sur le site</button></p>
+<p id="msg2" class="msg"></p>
+</section>
+</div>
+</main>
+<script src="/site.js"></script>
+<script src="/vendor/xlsx.full.min.js"></script>
+<script src="/quinte.js"></script>
+<script>
+var donnees = null;
+NTURF_MOI.then(function(m){
+  if (m.connecte && m.role === 'admin') document.getElementById('zone').hidden = false;
+  else document.getElementById('refus').hidden = false;
+});
+document.getElementById('fichier').onchange = function(){
+  var f = this.files[0], msg = document.getElementById('msg');
+  if (!f) return;
+  msg.className = 'msg'; msg.textContent = 'Lecture du fichier…';
+  document.getElementById('apercu').hidden = true;
+  var r = new FileReader();
+  r.onload = function(){
+    try {
+      var wb = XLSX.read(new Uint8Array(r.result), {type:'array', cellDates:true});
+      donnees = NT.lire(wb);
+      document.getElementById('rendu').innerHTML = NT.afficher(donnees);
+      document.getElementById('apercu').hidden = false;
+      msg.className = 'msg ok'; msg.textContent = 'Fichier lu : Quinté du ' + donnees.date + '. Vérifie ci-dessous, puis publie.';
+    } catch(e) {
+      msg.className = 'msg err'; msg.textContent = e.message || 'Fichier illisible.';
+    }
+  };
+  r.readAsArrayBuffer(f);
+};
+document.getElementById('publier').onclick = function(){
+  var b = this, m = document.getElementById('msg2');
+  b.disabled = true; m.className = 'msg'; m.textContent = 'Publication…';
+  fetch('/api/admin/quinte', {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(donnees)})
+    .then(function(r){ return r.json().then(function(d){ return {ok:r.ok, d:d}; }); })
+    .then(function(x){
+      if (x.ok) { m.className = 'msg ok'; m.textContent = 'Publié ! Les membres voient maintenant ce Quinté, et l\'accueil est à jour.'; }
+      else { m.className = 'msg err'; m.textContent = x.d.erreur || 'Erreur.'; b.disabled = false; }
+    }).catch(function(){ m.className='msg err'; m.textContent='Connexion impossible, réessaie.'; b.disabled=false; });
+};
+</script>
+</body>
+</html>

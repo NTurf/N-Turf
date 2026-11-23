@@ -28,6 +28,11 @@ export async function initDb(db) {
       user_id INTEGER NOT NULL,
       expires_at INTEGER NOT NULL
     )`),
+    db.prepare(`CREATE TABLE IF NOT EXISTS contenu (
+      cle TEXT PRIMARY KEY,
+      data TEXT NOT NULL,
+      maj TEXT NOT NULL DEFAULT (datetime('now'))
+    )`),
   ]);
   ready = true;
 }
@@ -83,4 +88,14 @@ export async function endSession(db, request) {
 
 export function noDb() {
   return json({ erreur: "Le service d'inscription n'est pas encore branché." }, 503);
+}
+
+export async function lireContenu(db, cle) {
+  const r = await db.prepare('SELECT data, maj FROM contenu WHERE cle = ?').bind(cle).first();
+  return r ? { ...JSON.parse(r.data), maj: r.maj } : null;
+}
+
+export async function ecrireContenu(db, cle, data) {
+  await db.prepare(`INSERT INTO contenu (cle, data, maj) VALUES (?, ?, datetime('now'))
+    ON CONFLICT(cle) DO UPDATE SET data = excluded.data, maj = excluded.maj`).bind(cle, JSON.stringify(data)).run();
 }

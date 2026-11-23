@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pronostics – N-TURF</title>
+<meta name="theme-color" content="#0e2040">
+<meta name="robots" content="noindex">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icon-192.png">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body data-page="membres">
+<main>
+<h1>Pronostics</h1>
+<div id="refus" class="note" hidden>🔒 Réservé aux membres. <a href="/inscription.html">S'inscrire gratuitement</a> ou <a href="/inscription.html#connexion">se connecter</a>.</div>
+<section class="card" id="zone" hidden><div id="rendu"><p class="empty">Chargement…</p></div></section>
+</main>
+<script src="/site.js"></script>
+<script src="/quinte.js"></script>
+<script>
+fetch('/api/membres/quinte', {credentials:'same-origin'})
+  .then(function(r){ return r.json().then(function(d){ return {ok:r.ok, d:d}; }); })
+  .then(function(x){
+    if (!x.ok) { document.getElementById('refus').hidden = false; return; }
+    document.getElementById('zone').hidden = false;
+    document.getElementById('rendu').innerHTML = NT.afficher(x.d.quinte);
+  }).catch(function(){ document.getElementById('refus').hidden = false; });
+</script>
+</body>
+</html>
