@@ -29,7 +29,7 @@
 <p class="note2" id="fCout"></p>
 <p><button type="button" class="btn" id="fAjout">Ajouter au brouillon</button></p>
 <details><summary class="sub">Ou coller une liste de tickets en texte</summary>
-<p class="note2">Une ligne par ticket : <b>pari | auteur | chevaux | formule | mise</b>. Exemples :<br>Quinté+ | TCR | 9 12 13 14 6 1<br>Tiercé | Choix Bruno | 9 12 | champ<br>Multi | ALGO | 14 9 12 13 1 8 | combiné | 0,50</p>
+<p class="note2">Une ligne par ticket : <b>pari | auteur | chevaux | formule | mise</b>. Exemples :<br>Quinté+ | TCR | 9 12 13 14 6 1<br>Tiercé | Choix Bruno | 9 12 | champ<br>Quarté+ | N-TURF | 14 16 X 15 | places (X = associés TCR, ALGO, PERSO)<br>Multi | ALGO | 14 9 12 13 1 8 | combiné | 0,50</p>
 <textarea id="fTxt" rows="5" style="width:100%;background:var(--navy2);color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:8px"></textarea>
 <p><button type="button" class="btn ghost" id="fColler">Ajouter ces tickets</button></p>
 <p class="msg" id="fMsg"></p>
@@ -69,18 +69,25 @@ function remplirSelects(){
 }
 function lireForm(){
   var f = $('fForm').value, ch = NTT.nums($('fCh').value);
+  var spec = String($('fCh').value).split(/[\s,;-]+/).filter(Boolean).map(function(x){ return /^x$/i.test(x) ? 'X' : parseInt(x,10); }).filter(function(x){ return x === 'X' || x > 0; });
+  var ass = NTT.nums($('fAss').value); if (f === 'positions' && !ass.length) ass = associesDuJour();
   return { id: Date.now().toString(36), auteur: $('fAut').value, pari: $('fPari').value, formule: f,
-    chevaux: f === 'champ' ? [] : ch, bases: f === 'champ' ? ch : [],
-    mise: parseFloat($('fMise').value.replace(',', '.')) || 0, associes: NTT.nums($('fAss').value) };
+    chevaux: f === 'champ' || f === 'positions' ? [] : ch, bases: f === 'champ' ? ch : [], spec: f === 'positions' ? spec : undefined,
+    mise: parseFloat($('fMise').value.replace(',', '.')) || 0, associes: ass };
+}
+function associesDuJour(){
+  var U = []; if (!Q || !Q.approches) return U;
+  Object.keys(Q.approches).forEach(function(k){ (Q.approches[k].selection || []).forEach(function(n){ if (U.indexOf(n) < 0) U.push(n); }); });
+  return U.sort(function(a, b){ return a - b; });
 }
 function majCout(){
   var t = lireForm(), nb = NTT.combinaisons(t, partants());
-  $('lCh').firstChild.textContent = t.formule === 'champ' ? 'Bases (le reste = X, tous les partants)' : 'Chevaux';
+  $('lCh').firstChild.textContent = t.formule === 'champ' ? 'Bases (le reste = X, tous les partants)' : t.formule === 'positions' ? 'Chevaux par place, X = associés (ex. 14 16 X)' : 'Chevaux';
   $('fCout').textContent = nb + ' combinaison' + (nb>1?'s':'') + ' × ' + NTT.eur(t.mise) + ' = ' + NTT.eur(nb * t.mise) + (t.formule === 'champ' ? ' (' + partants() + ' partants)' : '');
 }
 function dessiner(){
   $('liste').innerHTML = B.tickets.length ? B.tickets.map(function(t, i){
-    var ch = t.formule === 'champ' ? t.bases.join(' ') + ' X' : t.chevaux.join(' ');
+    var ch = t.formule === 'champ' ? t.bases.join(' ') + ' X' : t.formule === 'positions' ? (t.spec || []).join(' ') : t.chevaux.join(' ');
     return '<div class="trow"><div><b>'+NTT.esc(t.auteur)+'</b> · '+NTT.esc(t.pari)+' · '+NTT.esc(NTT.FORMULES[t.formule])+'<br><span class="mono">'+NTT.esc(ch)+'</span> — '+NTT.eur(NTT.cout(t, partants()))+
       '<br><label class="note2">Gagné saisi à la main (vide = calcul auto) <input class="gm" data-i="'+i+'" inputmode="decimal" value="'+(t.gainManuel===undefined||t.gainManuel===null?'':String(t.gainManuel).replace('.', ','))+'" style="width:90px"></label></div>'+
       '<div class="tact"><button data-a="h" data-i="'+i+'">▲</button><button data-a="b" data-i="'+i+'">▼</button><button data-a="s" data-i="'+i+'">✕</button></div></div>';
@@ -129,6 +136,7 @@ NTURF_MOI.then(function(m){
   };
   $('fColler').onclick = function(){
     var r = NTT.lireTexte($('fTxt').value);
+    r.tickets.forEach(function(t){ if (t.formule === 'positions' && !t.associes.length) t.associes = associesDuJour(); });
     B.tickets = B.tickets.concat(r.tickets); dessiner();
     $('fMsg').className = 'msg ' + (r.erreurs.length ? 'err' : 'ok');
     $('fMsg').textContent = r.tickets.length + ' ticket(s) ajouté(s).' + (r.erreurs.length ? ' ' + r.erreurs.join(' · ') : '');

@@ -229,3 +229,4 @@ table.st.bil td:not(:first-child),table.st.bil th:not(:first-child){text-align:r
 table.st th{font-size:12px;color:var(--soft);font-weight:600}
 table.st small{color:var(--mute)}
 table.st tr.tot td{font-weight:800;border-top:2px solid var(--line)}
+.ch.xx{background:transparent;color:#7fb2ff;border-color:#7fb2ff}

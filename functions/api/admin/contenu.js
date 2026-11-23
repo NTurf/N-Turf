@@ -23,7 +23,8 @@ export async function onRequestPost({ request, env }) {
   if (!(await admin(env, request))) return json({ erreur: 'Réservé à l\'administrateur.' }, 403);
   let b;
   try { b = await request.json(); } catch { return json({ erreur: 'Données illisibles.' }, 400); }
-  if (!AUTORISES.includes(b.cle)) return json({ erreur: 'Contenu inconnu.' }, 400);
+  const historique = /^(tickets|quinte)-\d{4}-\d{2}-\d{2}$/.test(b.cle || '');
+  if (!AUTORISES.includes(b.cle) && !historique) return json({ erreur: 'Contenu inconnu.' }, 400);
   if (JSON.stringify(b.data || {}).length > (b.cle === 'cpc_archive' ? 1500000 : 200000)) return json({ erreur: 'Trop volumineux.' }, 400);
   await ecrireContenu(env.DB, b.cle, b.data || {});
   // les tickets publiés sont aussi gardés par date, pour les bilans

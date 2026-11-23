@@ -9,7 +9,7 @@ var NTT = (function(){
     'Trio':     { k: 3, mise: 1 },
     'Super 4':  { k: 4, mise: 3, ordre: true }
   };
-  var FORMULES = { combine: 'Combiné', ligne: 'Ligne (dans l\'ordre écrit)', champ: 'Champ (X = tous les partants)' };
+  var FORMULES = { combine: 'Combiné', ligne: 'Ligne (dans l\'ordre écrit)', champ: 'Champ (X = tous les partants)', positions: 'Champ réduit par place (X = associés)' };
   function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
   function eur(v){ return (Math.round(v*100)/100).toFixed(2).replace('.', ',') + ' €'; }
   function C(n, k){ if (k < 0 || n < k) return 0; var r = 1; for (var i = 1; i <= k; i++) r = r * (n - k + i) / i; return Math.round(r); }
@@ -21,8 +21,14 @@ var NTT = (function(){
     if (t.formule === 'champ') { var p = []; for (var i = 1; i <= (partants || 0); i++) p.push(i); return p; }
     return t.chevaux || [];
   }
+  // champ réduit par place : chaque place reçoit un cheval précis ou X (= la liste des associés)
+  function tuples(t, cb){
+    var cols = (t.spec || []).map(function(v){ return v === 'X' ? (t.associes || []) : [v]; }), used = {}, acc = [];
+    (function rec(i){ if (i === cols.length) { cb(acc.slice()); return; } cols[i].forEach(function(n){ if (!used[n]) { used[n] = 1; acc.push(n); rec(i+1); acc.pop(); used[n] = 0; } }); })(0);
+  }
   function combinaisons(t, partants){
     var P = PARIS[t.pari]; if (!P) return 0;
+    if (t.formule === 'positions') { if ((t.spec || []).length !== P.k) return 0; var c = 0; tuples(t, function(){ c++; }); return c; }
     if (t.formule === 'ligne') return (t.chevaux || []).length === P.k ? 1 : 0;
     var b = t.formule === 'champ' ? (t.bases || []).length : 0;
     var n = t.formule === 'champ' ? (partants || 0) - b : (t.chevaux || []).length;
@@ -79,7 +85,9 @@ var NTT = (function(){
         case 'Super 4': if (ordreExact) ajoute('Super 4'); break;
       }
     }
-    if (t.formule === 'ligne') {
+    if (t.formule === 'positions') {
+      tuples(t, function(L){ evalue(L, L.every(function(n, i){ return A[i] === n; })); });
+    } else if (t.formule === 'ligne') {
       var L = t.chevaux || [];
       var exact = L.slice(0, P.k).every(function(n, i){ return A[i] === n; });
       evalue(L, exact);
@@ -113,9 +121,9 @@ var NTT = (function(){
       if (t.gainManuel !== undefined && t.gainManuel !== null && t.gainManuel !== '') gagne = parseFloat(t.gainManuel) || 0;
       else if (g) { gagne = g.gagne; if (g.attente) attente = true; }
       if (gagne !== null) totG += gagne;
-      var ch = t.formule === 'champ' ? (t.bases || []).concat(['X']) : (t.chevaux || []);
+      var ch = t.formule === 'champ' ? (t.bases || []).concat(['X']) : t.formule === 'positions' ? (t.spec || []) : (t.chevaux || []);
       h += '<div class="tkt'+(gagne > 0 ? ' gagnant' : '')+'"><div class="tkh"><b>'+esc(t.auteur || '')+'</b><span>'+esc(t.pari)+' · '+esc(FORMULES[t.formule] || '')+'</span></div>';
-      h += '<div class="sel">'+ch.map(function(n){ var hit = arr.slice(0,5).indexOf(n) >= 0; return '<span class="ch'+(t.formule==='champ' && n !== 'X' ? ' piv' : '')+(hit?' hit':'')+'">'+esc(n)+'</span>'; }).join('')+'</div>';
+      h += '<div class="sel">'+ch.map(function(n){ var hit = arr.slice(0,5).indexOf(n) >= 0; return '<span class="ch'+(t.formule==='champ' && n !== 'X' ? ' piv' : '')+(n === 'X' ? ' xx' : '')+(hit?' hit':'')+'">'+esc(n)+'</span>'; }).join('')+'</div>';
       if (t.associes && t.associes.length) h += '<p class="assoc">X = associés : '+t.associes.map(esc).join(' - ')+'</p>';
       h += '<div class="tkb"><span>'+nb+' combinaison'+(nb>1?'s':'')+' × '+eur(t.mise || 0)+'</span><b>'+eur(c)+'</b></div>';
       if (gagne !== null) {
@@ -148,7 +156,8 @@ var NTT = (function(){
       if (!pari) { erreurs.push('Ligne '+(i+1)+' : pari inconnu « '+p[0]+' »'); return; }
       var t = { id: Date.now().toString(36) + i, pari: pari, auteur: p[1] || 'Choix Bruno', formule: 'combine', chevaux: [], bases: [], mise: PARIS[pari].mise, associes: [] };
       var f = cle(p[3] || '');
-      if (f.indexOf('champ') === 0) { t.formule = 'champ'; t.bases = nums(p[2]); }
+      if (f.indexOf('place') === 0 || f.indexOf('reduit') === 0) { t.formule = 'positions'; t.spec = String(p[2]||'').split(/[\s,;-]+/).filter(Boolean).map(function(x){ return /^x$/i.test(x) ? 'X' : parseInt(x,10); }).filter(function(x){ return x === 'X' || x > 0; }); }
+      else if (f.indexOf('champ') === 0) { t.formule = 'champ'; t.bases = nums(p[2]); }
       else { t.chevaux = nums(p[2]); if (f.indexOf('ligne') === 0 || f.indexOf('ordre') === 0) t.formule = 'ligne'; }
       if (p[4]) { var m = parseFloat(p[4].replace(',', '.')); if (m > 0) t.mise = m; }
       out.push(t);
