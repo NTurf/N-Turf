@@ -16,6 +16,7 @@
 <p><a href="/admin.html">← Retour à l'Administration</a></p>
 <div id="refus" class="note" hidden>🔒 Réservé à l'administration.</div>
 <div id="zone" hidden>
+<div id="modeJour"></div>
 <section class="card">
   <h2 id="titre">Fanny du jour</h2>
   <p class="sub">1. Ouvre la photo de Fanny (elle reste sur ton téléphone, elle n'est pas publiée).</p>
@@ -43,9 +44,10 @@
 </div>
 </main>
 <script src="/site.js"></script>
+<script src="/attente.js"></script>
 <script>
 (function(){
-  var auj = new Date().toLocaleDateString('fr-FR', {timeZone:'Europe/Paris', day:'2-digit', month:'2-digit', year:'numeric'});
+  var auj = NTA.date; NTA.barre(document.getElementById('modeJour'));
   var R = [], L = [];
   var E = function(s){ return String(s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); };
   document.getElementById('titre').textContent = 'Fanny du ' + auj;
@@ -85,13 +87,13 @@
     var m = document.getElementById('msg');
     if (!L.length) { m.className = 'msg err'; m.textContent = 'Ajoute au moins une course.'; return; }
     m.className = 'msg'; m.textContent = 'Publication…';
-    fetch('/api/admin/contenu', {method:'POST', credentials:'same-origin', headers:{'content-type':'application/json'}, body: JSON.stringify({ cle: 'fanny', data: { date: auj, lignes: L, maj: new Date().toISOString() } })})
+    fetch('/api/admin/contenu' + NTA.q1, {method:'POST', credentials:'same-origin', headers:{'content-type':'application/json'}, body: JSON.stringify({ cle: 'fanny', data: { date: auj, lignes: L, maj: new Date().toISOString() } })})
       .then(function(r){ return r.json(); }).then(function(d){
-        if (d.ok) { m.className = 'msg ok'; m.innerHTML = '✓ Publié. <a href="/pronostics.html#fanny">Voir l\'onglet Fanny</a>'; }
+        if (d.ok) { m.className = 'msg ok'; m.innerHTML = (NTA.demain ? '✓ Mis en attente pour demain. Il passera en ligne quand tu basculeras. ' : '✓ Publié. ') + ' <a href="/pronostics.html#fanny">Voir l\'onglet Fanny</a>'; }
         else { m.className = 'msg err'; m.textContent = d.erreur || 'Erreur.'; }
       });
   };
-  fetch('/api/admin/contenu?cle=fanny', {credentials:'same-origin'}).then(function(r){
+  fetch('/api/admin/contenu?cle=fanny' + NTA.q, {credentials:'same-origin'}).then(function(r){
     if (!r.ok) { document.getElementById('refus').hidden = false; return null; }
     return r.json();
   }).then(function(d){

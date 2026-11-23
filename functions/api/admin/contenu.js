@@ -1,6 +1,8 @@
 import { json, initDb, currentUser, peutPublier, lireContenu, ecrireContenu, noDb } from '../../_auth.js';
 
 // Lecture / écriture de contenus par l'administrateur (brouillon et tickets publiés)
+// Contenus qu'on peut préparer pour le lendemain (publiés au moment de la bascule)
+const EN_ATTENTE = ['quinte', 'cpc', 'tickets', 'tickets_brouillon', 'coeurs', 'fanny', 'hippo_quinte', 'hippo_pick5'];
 const AUTORISES = ['tickets_brouillon', 'tickets', 'hippo', 'hippo_quinte', 'hippo_pick5', 'cpc_archive', 'tickets_report', 'fanny', 'coeurs'];
 
 async function admin(env, request) {
@@ -13,7 +15,11 @@ async function admin(env, request) {
 export async function onRequestGet({ request, env }) {
   if (!env.DB) return noDb();
   if (!(await admin(env, request))) return json({ erreur: 'Réservé à l\'administrateur.' }, 403);
-  const cle = new URL(request.url).searchParams.get('cle');
+  const q = new URL(request.url).searchParams, cle = q.get('cle');
+  if (q.get('attente') === '1') {
+    if (!EN_ATTENTE.includes(cle)) return json({ erreur: 'Contenu inconnu.' }, 400);
+    return json({ data: await lireContenu(env.DB, cle + '_attente') });
+  }
   if (!AUTORISES.includes(cle)) return json({ erreur: 'Contenu inconnu.' }, 400);
   return json({ data: await lireContenu(env.DB, cle) });
 }
@@ -23,6 +29,12 @@ export async function onRequestPost({ request, env }) {
   if (!(await admin(env, request))) return json({ erreur: 'Réservé à l\'administrateur.' }, 403);
   let b;
   try { b = await request.json(); } catch { return json({ erreur: 'Données illisibles.' }, 400); }
+  if (new URL(request.url).searchParams.get('attente') === '1') {
+    if (!EN_ATTENTE.includes(b.cle) || b.cle === 'quinte' || b.cle === 'cpc') return json({ erreur: 'Contenu inconnu.' }, 400);
+    if (JSON.stringify(b.data || {}).length > 200000) return json({ erreur: 'Trop volumineux.' }, 400);
+    await ecrireContenu(env.DB, b.cle + '_attente', b.data || {});
+    return json({ ok: true, attente: true });
+  }
   const historique = /^(tickets|quinte|cpc|fanny|coeurs)-\d{4}-\d{2}-\d{2}$/.test(b.cle || '');
   if (!AUTORISES.includes(b.cle) && !historique) return json({ erreur: 'Contenu inconnu.' }, 400);
   if (JSON.stringify(b.data || {}).length > (b.cle === 'cpc_archive' ? 1500000 : 200000)) return json({ erreur: 'Trop volumineux.' }, 400);

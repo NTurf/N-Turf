@@ -14,6 +14,7 @@ export async function onRequestPost({ request, env }) {
   if (!(i >= 0 && i < 40)) return json({ erreur: 'Numéro d\'image invalide.' }, 400);
   if (typeof b.data !== 'string' || !b.data.startsWith('data:image/jpeg;base64,')) return json({ erreur: 'Image invalide.' }, 400);
   if (b.data.length > 1400000) return json({ erreur: 'Image trop lourde.' }, 400);
-  await ecrireContenu(env.DB, 'hippo-img-' + g + '-' + i, { data: b.data });
+  const att = new URL(request.url).searchParams.get('attente') === '1';
+  await ecrireContenu(env.DB, (att ? 'hippo-img-att-' : 'hippo-img-') + g + '-' + i, { data: b.data });
   return json({ ok: true });
 }

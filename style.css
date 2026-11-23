@@ -490,3 +490,8 @@ table.saisie th{color:var(--navy);font-weight:700}
 .legcpc summary{display:inline-block;font-size:13px;font-weight:700;color:var(--blue);background:#fff;border:1.5px solid var(--blue);border-radius:20px;padding:4px 12px;list-style:none}
 .legcpc summary::-webkit-details-marker{display:none}
 .legcpc[open] ul{background:#fff;border:1.5px solid var(--line);border-radius:12px;padding:8px 12px}
+.barrejour{display:flex;flex-wrap:wrap;align-items:center;gap:6px;background:#fff;border:1.5px solid var(--gold);border-radius:12px;padding:8px 10px;margin:0 0 12px}
+.barrejour span{font-weight:700;color:var(--navy);font-size:14px}
+.barrejour a{border:1.5px solid var(--navy);border-radius:20px;padding:4px 12px;font-size:14px;font-weight:700;color:var(--navy);text-decoration:none}
+.barrejour a.on{background:var(--navy);color:#fff}
+.barrejour .note2{flex-basis:100%;margin:4px 0 0;color:#A87C06}
