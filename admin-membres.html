@@ -23,7 +23,7 @@
 </main>
 <script src="/site.js"></script>
 <script>
-var M = [];
+var M = [], AUT = [];
 function $(i){ return document.getElementById(i); }
 function esc(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
 function dt(s){ if (!s) return 'jamais'; var d = new Date(s.replace(' ', 'T') + 'Z'); return d.toLocaleDateString('fr-FR') + ' ' + d.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'}); }
@@ -34,8 +34,19 @@ function dessiner(){
   $('liste').innerHTML = L.map(function(m){
     if (m.role === 'admin') return '<div class="mbr"><div><b>'+esc(m.pseudo)+'</b> <span class="tag adm">Administrateur</span><br><small>'+esc(m.email)+'</small></div></div>';
     function sw(k, lib){ return '<label class="sw"><input type="checkbox" data-id="'+m.id+'" data-k="'+k+'"'+(m[k]?' checked':'')+'> '+lib+'</label>'; }
-    return '<div class="mbr'+(m.banni?' ban':'')+'"><div><b>'+esc(m.pseudo)+'</b><br><small>'+esc(m.email)+' · inscrit le '+dt(m.created_at).split(' ')[0]+' · dernière connexion : '+dt(m.last_login)+'</small></div><div class="sws">'+sw('moderateur','Modérateur')+sw('publier','Administration')+sw('banni','Suspendu')+'</div></div>';
+    return '<div class="mbr'+(m.banni?' ban':'')+'"><div><b>'+esc(m.pseudo)+'</b><br><small>'+esc(m.email)+' · inscrit le '+dt(m.created_at).split(' ')[0]+' · dernière connexion : '+dt(m.last_login)+'</small></div><div class="sws">'+sw('moderateur','Modérateur')+sw('publier','Administration')+sw('banni','Suspendu')+'<label class="sw">Analyste : <select data-an="'+m.id+'"><option value="">non</option>'+AUT.map(function(a){ return '<option'+(m.analyste===a?' selected':'')+'>'+esc(a)+'</option>'; }).join('')+'</select></label></div></div>';
   }).join('') || '<p class="empty">Aucun membre trouvé.</p>';
+  $('liste').querySelectorAll('select[data-an]').forEach(function(sel){
+    sel.onchange = function(){
+      var id = +sel.getAttribute('data-an'), v = sel.value;
+      fetch('/api/admin/membres', { method: 'POST', headers: {'content-type':'application/json'}, body: JSON.stringify({ id: id, analyste: v }) })
+        .then(function(r){ return r.json().then(function(d){ return {ok:r.ok, d:d}; }); })
+        .then(function(x){
+          if (x.ok) { M.forEach(function(m){ if (m.id === id) m.analyste = v || null; }); $('msg').className = 'msg ok'; $('msg').textContent = v ? 'Analyste « ' + v + ' » : il peut écrire ses analyses (et seulement les siennes).' : 'Droit analyste retiré.'; }
+          else { $('msg').className = 'msg err'; $('msg').textContent = x.d.erreur || 'Erreur.'; dessiner(); }
+        });
+    };
+  });
   $('liste').querySelectorAll('input[type=checkbox]').forEach(function(c){
     c.onchange = function(){
       var id = +c.getAttribute('data-id'), k = c.getAttribute('data-k'), v = c.checked, corps = { id: id }; corps[k] = v;
@@ -53,7 +64,7 @@ function dessiner(){
 NTURF_MOI.then(function(m){
   if (!(m.connecte && m.role === 'admin')) { $('refus').hidden = false; return; }
   $('zone').hidden = false;
-  fetch('/api/admin/membres').then(function(r){ return r.json(); }).then(function(d){ M = d.membres || []; dessiner(); });
+  fetch('/api/admin/membres').then(function(r){ return r.json(); }).then(function(d){ M = d.membres || []; AUT = d.auteurs || []; dessiner(); });
   $('cherche').oninput = dessiner;
 });
 </script>
