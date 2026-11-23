@@ -14,6 +14,7 @@
     ['/stats.html', 'Statistiques'],
     ['/archives.html', 'Archives'],
     ['/chat.html', 'Chat'],
+    ['/rejoindre.html', 'Rejoindre N-TURF'],
     ['/membres.html', 'Espace membres']
   ];
   function actif(u){
@@ -29,6 +30,7 @@
   h.innerHTML =
     '<div class="bar"><button type="button" class="burger" id="burger" aria-label="Menu">☰</button><a class="logo" href="/"><img class="banniere" src="/banniere.png" alt="N-TURF Pronostics hippiques"></a><span class="sp"></span>' +
     '<span class="compte"><a class="btn" href="/inscription.html">S\'inscrire</a></span></div>' +
+    '<a class="devise" href="/rejoindre.html"><b>Le collectif des passionnés de courses</b><span>Pronostiqueurs indépendants réunis par la même passion</span></a>' +
     '<div class="ticker" id="ticker" hidden><span id="tickerText"></span></div>';
   document.body.insertBefore(h, document.body.firstChild);
   // Menu en barre latérale à gauche (toujours visible sur ordinateur, tiroir sur téléphone)

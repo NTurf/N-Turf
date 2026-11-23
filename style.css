@@ -500,3 +500,8 @@ table.saisie th{color:var(--navy);font-weight:700}
 .prixc span{display:block;font-weight:600}
 .prixc details summary{color:var(--blue);font-weight:700;cursor:pointer;margin-top:3px}
 .prixc details p{margin:4px 0 0;font-size:12px;line-height:1.4}
+/* Devise sous la bannière */
+.devise{display:block;text-align:center;text-decoration:none;background:#fff;padding:2px 10px 6px;border-top:1px solid var(--line)}
+.devise b{display:block;font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:16px;letter-spacing:.06em;text-transform:uppercase;color:var(--navy)}
+.devise span{display:block;font-size:12.5px;color:#A87C06;font-weight:700}
+@media (max-width:480px){.devise b{font-size:13.5px;letter-spacing:.03em}.devise span{font-size:11.5px}}
