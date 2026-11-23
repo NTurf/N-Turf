@@ -1,4 +1,17 @@
 [
- { "nom": "L'Oeil du Trot", "tiktok": "loeil.du.trot", "texte": "Passionné de trot : analyse, outsiders, Œil du Jour, interviews de professionnels" },
- { "nom": "Turfiste.com", "tiktok": "turfiste.com", "texte": "Analyse et pronos, une vidéo info et débrief par jour, interviews et immersions" }
+ {
+  "nom": "L'Oeil du Trot",
+  "tiktok": "loeil.du.trot",
+  "texte": "Passionné de trot : analyse, outsiders, Œil du Jour, interviews de professionnels"
+ },
+ {
+  "nom": "Turfiste.com",
+  "tiktok": "turfiste.com",
+  "texte": "Analyse et pronos, une vidéo info et débrief par jour, interviews et immersions"
+ },
+ {
+  "nom": "Fanny la Dynamite",
+  "tiktok": "fannyladynamite",
+  "texte": "Les repérés de Fanny, dans le respect, la joie et la bonne humeur"
+ }
 ]
