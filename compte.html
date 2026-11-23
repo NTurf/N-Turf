@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mon compte – N-TURF</title>
+<meta name="theme-color" content="#0D1E3D">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icon-192.png">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body data-page="membres">
+<main>
+<h1>Mon compte</h1>
+<div id="refus" class="note" hidden>🔒 <a href="/inscription.html#connexion">Connecte-toi</a> pour voir ton compte.</div>
+<div id="zone" hidden>
+<section class="card">
+  <h2>Mon profil</h2>
+  <table class="st"><tr><td>Pseudo</td><td><b id="pPseudo"></b></td></tr><tr><td>E-mail</td><td id="pEmail"></td></tr><tr><td>Inscrit depuis le</td><td id="pDate"></td></tr></table>
+  <p class="note2">Le pseudo est définitif : il ne peut pas être changé.</p>
+</section>
+<section class="card">
+  <h2>Mon concours Quinté+</h2>
+  <div id="bilan"></div>
+  <p><a class="btn" href="/concours.html">Aller au concours</a></p>
+</section>
+<section class="card">
+  <h2>Changer mon mot de passe</h2>
+  <form id="fMdp" class="frm">
+    <label>Mot de passe actuel<input type="password" id="mA" autocomplete="current-password" required></label>
+    <label>Nouveau mot de passe (8 caractères minimum)<input type="password" id="mN" autocomplete="new-password" required></label>
+    <label class="chk"><input type="checkbox" id="mVoir"> Afficher les mots de passe</label>
+    <button class="btn" type="submit">Changer le mot de passe</button>
+    <p class="msg" id="msgM"></p>
+  </form>
+</section>
+<section class="card">
+  <h2>Changer mon e-mail</h2>
+  <form id="fMail" class="frm">
+    <label>Nouvelle adresse e-mail<input type="email" id="eN" autocomplete="email" required></label>
+    <label>Mot de passe actuel<input type="password" id="eA" autocomplete="current-password" required></label>
+    <button class="btn" type="submit">Changer l'e-mail</button>
+    <p class="msg" id="msgE"></p>
+  </form>
+</section>
+<section class="card">
+  <h2>Supprimer mon compte</h2>
+  <p class="sub">Ton compte, tes pronostics, ta place dans les classements du concours et tes messages du chat sont effacés définitivement. On ne peut pas revenir en arrière.</p>
+  <form id="fSup" class="frm">
+    <label>Mot de passe actuel<input type="password" id="sA" autocomplete="current-password" required></label>
+    <label class="chk"><input type="checkbox" id="sOk" required> Je confirme vouloir supprimer mon compte</label>
+    <button class="btn ghost" type="submit" style="color:#c62832;border-color:#c62832">Supprimer définitivement mon compte</button>
+    <p class="msg" id="msgS"></p>
+  </form>
+</section>
+</div>
+</main>
+<script src="/site.js"></script>
+<script>
+(function(){
+  var $ = function(id){ return document.getElementById(id); };
+  var F = function(x){ var v = Math.round(x * 100) / 100; return (v % 1 ? v.toFixed(2).replace('.', ',') : String(v)).replace(/\B(?=(\d{3})+(?!\d))/g, ' '); };
+  var E = function(s){ return String(s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); };
+  function envoyer(url, corps, msg, ok){
+    var m = $(msg); m.className = 'msg'; m.textContent = 'Un instant…';
+    return fetch(url, {method:'POST', credentials:'same-origin', headers:{'content-type':'application/json'}, body: JSON.stringify(corps)})
+      .then(function(r){ return r.json(); }).then(function(d){
+        if (d.ok) { m.className = 'msg ok'; m.textContent = ok; return d; }
+        m.className = 'msg err'; m.textContent = d.erreur || 'Erreur.'; return null;
+      }).catch(function(){ m.className = 'msg err'; m.textContent = 'Connexion impossible, réessaie.'; return null; });
+  }
+  fetch('/api/compte/infos', {credentials:'same-origin', cache:'no-store'}).then(function(r){
+    if (!r.ok) { $('refus').hidden = false; return null; } return r.json();
+  }).then(function(d){
+    if (!d) return;
+    $('zone').hidden = false;
+    $('pPseudo').textContent = d.pseudo; $('pEmail').textContent = d.email;
+    $('pDate').textContent = new Date(String(d.inscrit).replace(' ', 'T') + 'Z').toLocaleDateString('fr-FR');
+    var h = '';
+    if (d.mois) {
+      h += '<p><b>Ce mois-ci</b> : ' + d.mois.rang + '<sup>' + (d.mois.rang === 1 ? 'er' : 'e') + '</sup> du Globe de Cristal sur ' + d.mois.sur + ' joueur' + (d.mois.sur > 1 ? 's' : '') + '.</p>';
+      h += '<div class="bilan"><div><span>Jours joués</span><b>' + d.mois.joues + ' sur ' + d.mois.jours + '</b></div><div><span>Mises</span><b>' + F(d.mois.mises) + ' fers</b></div><div><span>Gains</span><b>' + F(d.mois.gains) + ' fers</b></div><div class="tot"><span>Net du mois</span><b class="' + (d.mois.net >= 0 ? 'pos' : 'neg') + '">' + (d.mois.net >= 0 ? '+' : '') + F(d.mois.net) + ' fers</b></div></div>';
+    } else h += '<p class="empty">Pas encore de course jouée et calculée ce mois-ci.</p>';
+    if (d.total.joues) h += '<p class="note2">Depuis le début : ' + d.total.joues + ' Quinté+ joué' + (d.total.joues > 1 ? 's' : '') + ', ' + F(d.total.gains) + ' fers gagnés pour ' + F(d.total.misesJouees) + ' fers misés.</p>';
+    $('bilan').innerHTML = h;
+  });
+  $('mVoir').onchange = function(){ $('mA').type = $('mN').type = this.checked ? 'text' : 'password'; };
+  $('fMdp').onsubmit = function(e){ e.preventDefault(); envoyer('/api/compte/motdepasse', {actuel: $('mA').value, nouveau: $('mN').value}, 'msgM', '✓ Mot de passe changé.').then(function(d){ if (d) { $('mA').value = ''; $('mN').value = ''; } }); };
+  $('fMail').onsubmit = function(e){ e.preventDefault(); envoyer('/api/compte/email', {actuel: $('eA').value, email: $('eN').value}, 'msgE', '✓ E-mail changé.').then(function(d){ if (d) { $('pEmail').textContent = d.email; $('eA').value = ''; $('eN').value = ''; } }); };
+  $('fSup').onsubmit = function(e){ e.preventDefault(); envoyer('/api/compte/supprimer', {actuel: $('sA').value}, 'msgS', 'Compte supprimé. Au revoir !').then(function(d){ if (d) setTimeout(function(){ location.href = '/'; }, 1500); }); };
+})();
+</script>
+</body>
+</html>

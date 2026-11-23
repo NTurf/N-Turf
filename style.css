@@ -411,3 +411,5 @@ table.st th{background:#1A2F58}
 .sidenav{background:#C9D8EE;border-right:1.5px solid #AFC3E2}
 .mainnav a:hover{background:#B9CCE8;color:var(--navy)}
 .mainnav a.on{background:#EAF0FA;color:var(--blue);border-left-color:var(--blue)}
+label.chk{display:flex;align-items:center;gap:8px;flex-direction:row}
+label.chk input{width:auto;margin:0}

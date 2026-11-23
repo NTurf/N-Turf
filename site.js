@@ -83,7 +83,7 @@
         var b = h.querySelector('.compte');
         var w = document.createElement('span');
         w.className = 'who';
-        w.innerHTML = '<a href="/membres.html"><b></b></a> · <a href="#" id="logout">Déconnexion</a>';
+        w.innerHTML = '<a href="/compte.html"><b></b></a> · <a href="#" id="logout">Déconnexion</a>';
         w.querySelector('b').textContent = m.pseudo;
         b.replaceWith(w);
         w.querySelector('#logout').onclick = function(e){
