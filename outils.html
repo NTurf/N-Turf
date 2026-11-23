@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Outils – N-TURF</title>
+<meta name="theme-color" content="#0e2040">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icon-192.png">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body data-page="membres">
+<main>
+<h1>Outils</h1>
+<div id="refus" class="note" hidden>🔒 Réservé aux membres. <a href="/inscription.html">S'inscrire gratuitement</a> ou <a href="/inscription.html#connexion">se connecter</a>.</div>
+<div id="zone" hidden>
+<nav class="tabs" style="padding:0 0 10px;flex-wrap:wrap">
+  <a href="#" class="otab on" data-p="pRep">Répartition</a>
+  <a href="#" class="otab" data-p="pCl">Champ libre</a>
+  <a href="#" class="otab" data-p="pRd">Réducteur de chevaux</a>
+  <a href="#" class="otab" data-p="pTuto">Comment et pourquoi</a>
+</nav>
+
+<section class="card opanel" id="pRep">
+<h2>Répartition simple gagnant</h2>
+<p class="lead">Plusieurs chevaux se valent ? Ne mise pas tout sur un seul.</p>
+<p class="sub">D'où viennent les chevaux ? Une course du jour :</p><div class="pills" id="repSrcC"></div>
+<p class="sub">Ou une liste du Quinté :</p><div class="pills" id="repSrcQ"></div>
+<p class="sub">Ou tape tes chevaux (2 à 4) et leurs cotes :</p>
+<table class="rept"><thead><tr><th>N°</th><th>Cote</th><th>Mise</th></tr></thead><tbody id="repRows"></tbody></table>
+<p class="note2">Cote = ce que rapporte 1 € misé, mise comprise (par exemple 3,5).</p>
+<div class="pills"><button type="button" class="pill on" id="repMise">Je répartis une mise</button><button type="button" class="pill" id="repBen">Je vise un bénéfice</button></div>
+<label class="lab"><span id="repLab">Mise totale (€)</span><input id="repVal" inputmode="decimal" value="20"></label>
+<div id="repRes"></div>
+</section>
+
+<section class="card opanel" id="pCl" hidden>
+<h2>Champ libre : fais ton ticket</h2>
+<p class="lead">Tu places chaque cheval et tu vois le prix tout de suite.</p>
+<p class="sub">Partir d'une liste du Quinté :</p><div class="pills" id="clSrc"></div>
+<p class="sub">Ou de notre sélection d'une course :</p><div class="pills" id="clSrcC"></div>
+<div class="addrow"><input id="clNum" inputmode="numeric" placeholder="Ajouter des numéros (ex. 3 7 12)"><button type="button" class="btn" id="clAdd">Ajouter</button><button type="button" class="btn ghost" id="clVider">Vider</button></div>
+<p class="note2">Les chevaux chargés sont placés dans les 5 places. Touche une place pour l'ajouter ou l'enlever, ou utilise les raccourcis (Gagnant, Dans les 2, Dans les 3… Écarté). Le prix baisse quand tu retires.</p>
+<div id="clPrix"></div>
+<div id="clChevaux"></div>
+<p class="note2">Tiercé 1 € · Quarté 1,50 € · Quinté 2 € la combinaison.</p>
+</section>
+
+<section class="card opanel" id="pRd" hidden>
+<h2>Réducteur de chevaux — tickets de 5</h2>
+<p class="lead">Tes chevaux rangés en quelques tickets de 5.</p>
+<p class="sub"><b>1. Tes chevaux (8 à 11 numéros)</b></p>
+<input id="rdNums" class="big" inputmode="numeric" placeholder="ex. 9 12 13 6 2 3 14 1">
+<p class="sub">Ou une liste du Quinté :</p><div class="pills" id="rdSrcQ"></div>
+<p class="sub">Ou notre sélection d'une course :</p><div class="pills" id="rdSrcC"></div>
+<p class="sub"><b>2. Tes bases (facultatif, 3 au maximum)</b> — touche un cheval : il est sur chaque ticket. Touche-le encore pour l'enlever.</p>
+<div class="sel" id="rdBases"></div>
+<p class="note2" id="rdInfo"></p>
+<p class="note2">Plus de bases = moins de tickets, mais si ta base ne fait pas l'arrivée, la garantie tombe.</p>
+<div id="rdModes" hidden>
+<p class="sub"><b>3. Ce que tu veux garantir</b></p>
+<div class="mode" id="rdM_multi"><b>Multi en 4 garanti</b><p></p><div class="nb"></div><div class="cout"></div></div>
+<div class="mode" id="rdM_q45"><b>4 sur 5 (moins cher)</b><p></p><div class="nb"></div><div class="cout"></div></div>
+<p class="sub"><b>4. Fabriquer mes tickets</b></p>
+<div class="pills"><button type="button" class="pill on" id="rdFixe">Tickets fixes</button><button type="button" class="pill" id="rdMel">Tickets mélangés</button></div>
+<p><button type="button" class="btn" id="rdGo" style="width:100%;background:#2e9b57;color:#fff">Fabriquer mes tickets</button></p>
+<div id="rdOut"></div>
+</div>
+<p class="note2">Outil de calcul, sans garantie de gain. On l'obtient ou on ne l'obtient pas : nous offrons la sélection, à toi de bâtir ton ticket et de choisir ton risque.</p>
+</section>
+
+<section class="card opanel" id="pTuto" hidden>
+<h2>Comment utiliser nos outils et pourquoi</h2>
+<h3>Réducteur de chevaux</h3>
+<p>Tu choisis tes chevaux (ou une de nos listes), tu peux mettre une à trois bases, et l'outil range tout en quelques tickets de 5. Tu choisis ce que tu veux garantir : le Multi en 4, ou le « 4 sur 5 », moins cher. Tu peux changer l'ordre de ta liste et bâtir ton ticket toi-même.</p>
+<video controls preload="none" playsinline src="/videos/tuto_reducteur.mp4"></video>
+<h3>Champ libre</h3>
+<p>Tu pars d'une liste du jour, tu places chaque cheval où tu le vois arriver, et tu vois le prix tout de suite. Si c'est trop cher, retire un cheval des places où tu n'y crois pas : le prix baisse.</p>
+<video controls preload="none" playsinline src="/videos/tuto_champ_libre.mp4"></video>
+<h3>Répartition simple gagnant</h3>
+<p>Pourquoi ? Quand plusieurs chevaux se valent, on ne prend pas le risque de tout miser sur un seul. On répartit les mises de façon à équilibrer les gains : tu gagnes un peu moins, mais tu gagnes quel que soit celui qui l'emporte.</p>
+<video controls preload="none" playsinline src="/videos/tuto_repartition.mp4"></video>
+<p class="note2">Jeu responsable · Interdit aux mineurs · Joueurs Info Service 09 74 75 13 13</p>
+</section>
+</div>
+</main>
+<script src="/site.js"></script>
+<script src="/outils.js"></script>
+<script>
+Promise.all([
+  fetch('/api/membres/quinte',{credentials:'same-origin'}).then(function(r){ return r.ok ? r.json() : Promise.reject(); }),
+  fetch('/api/membres/cpc',{credentials:'same-origin'}).then(function(r){ return r.ok ? r.json() : {}; })
+]).then(function(x){
+  document.getElementById('zone').hidden = false;
+  NTOutils.demarrer(x[0].quinte, x[1].cpc);
+  if (location.hash === '#tuto') document.querySelector('[data-p=pTuto]').click();
+}).catch(function(){ document.getElementById('refus').hidden = false; });
+document.querySelectorAll('.otab').forEach(function(a){ a.addEventListener('click', function(e){ e.preventDefault(); }); });
+</script>
+</body>
+</html>
