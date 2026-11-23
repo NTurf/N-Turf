@@ -18,10 +18,12 @@
 <div class="pills" id="fDisc"></div>
 <div class="pills" id="fPer"></div>
 <div id="rendu"></div>
+<section class="card" id="cTk"><h2>Bilan cumulé des tickets du Quinté+</h2><div id="renduTk"><p class="empty">Chargement…</p></div></section>
 <p class="note2" id="maj"></p>
 </div>
 </main>
 <script src="/site.js"></script>
+<script src="/tickets.js"></script>
 <script>
 var C = [], F = { disc: 'Toutes', per: 'tout' };
 function $(i){ return document.getElementById(i); }
@@ -36,7 +38,7 @@ function filtrer(){
 }
 function pills(id, liste, cle){
   $(id).innerHTML = liste.map(function(x){ return '<button type="button" class="pill'+(F[cle]===x[0]?' on':'')+'" data-v="'+x[0]+'">'+x[1]+'</button>'; }).join('');
-  $(id).querySelectorAll('button').forEach(function(b){ b.onclick = function(){ F[cle] = b.getAttribute('data-v'); pills(id, liste, cle); dessiner(); }; });
+  $(id).querySelectorAll('button').forEach(function(b){ b.onclick = function(){ F[cle] = b.getAttribute('data-v'); pills(id, liste, cle); dessiner(); if (TJ.length) dessinerTickets(); }; });
 }
 function dessiner(){
   var L = filtrer(), N = L.length;
@@ -81,6 +83,53 @@ function dessiner(){
     bloc('En simple gagnant', G, 'gagnants')+bloc('En simple placé', P, 'placés')+'</section>';
   $('rendu').innerHTML = h;
 }
+// ---- Bilan cumulé des tickets (Tiercé, Quarté+, Quinté+) ----
+var TJ = [];
+function dessinerTickets(){
+  var lim = null;
+  if (F.per !== 'tout') { lim = new Date(); lim.setHours(0,0,0,0); lim.setDate(lim.getDate() - (F.per === '7' ? 6 : 29)); }
+  var B = {}, jours = 0, attente = 0;
+  TJ.forEach(function(j){
+    var d = new Date(j.jour + 'T12:00:00'); if (lim && d < lim) return;
+    if (!j.ctx || !j.ctx.arrivee || j.ctx.arrivee.length < 3) return;
+    jours++;
+    (j.tickets.tickets || []).forEach(function(t){
+      var cout = NTT.cout(t, j.ctx.partants), g;
+      if (t.gainManuel !== undefined && t.gainManuel !== null && t.gainManuel !== '') g = parseFloat(t.gainManuel) || 0;
+      else { var r = NTT.gains(t, j.ctx.arrivee, j.ctx.rapports, j.ctx.partants); g = r ? r.gagne : 0; if (r && r.attente) attente++; }
+      var P = ['Tiercé', 'Quarté+', 'Quinté+'].indexOf(t.pari) >= 0 ? t.pari : 'Autres paris';
+      B[P] = B[P] || { m: 0, g: 0, n: 0, nb: 0, aut: {} };
+      var a = B[P].aut[t.auteur] = B[P].aut[t.auteur] || { m: 0, g: 0, n: 0, nb: 0 };
+      [B[P], a].forEach(function(x){ x.m += cout; x.g += g; x.nb++; if (g > 0) x.n++; });
+    });
+  });
+  var el = document.getElementById('renduTk');
+  if (!jours) { el.innerHTML = '<p class="empty">Le bilan commencera dès que des tickets publiés auront couru.</p>'; return; }
+  var h = '<p class="note2">'+jours+' Quinté+ joué(s). Gains calculés avec les rapports officiels, pour la mise de chaque ticket.</p>';
+  ['Tiercé', 'Quarté+', 'Quinté+', 'Autres paris'].forEach(function(P){
+    var x = B[P]; if (!x) return;
+    h += '<h3>'+P+'</h3><table class="st bil"><tr><th></th><th>Misé</th><th>Gagné</th><th>Net</th></tr>'+
+      Object.keys(x.aut).map(function(k){ var a = x.aut[k]; return '<tr><td>'+k+' <small>('+a.n+' gagnant'+(a.n>1?'s':'')+' sur '+a.nb+')</small></td><td>'+eur(a.m)+'</td><td>'+eur(a.g)+'</td><td>'+net(a.g - a.m)+'</td></tr>'; }).join('')+
+      '<tr class="tot"><td>Total '+P+' <small>('+x.n+' sur '+x.nb+')</small></td><td>'+eur(x.m)+'</td><td>'+eur(x.g)+'</td><td>'+net(x.g - x.m)+'</td></tr></table>';
+  });
+  if (attente) h += '<p class="note2">'+attente+' ticket(s) gagnant(s) attendent encore un rapport officiel : leur gain sera ajouté dès qu\'il sera connu.</p>';
+  el.innerHTML = h;
+}
+fetch('/api/membres/stats-tickets', {credentials:'same-origin'}).then(function(r){ return r.ok ? r.json() : { jours: [] }; }).then(function(d){
+  var J = d.jours || [];
+  return Promise.all(J.map(function(j){
+    var q = j.quinte || {}, raps = Object.keys(q.rapports || {}).map(function(k){ return { nom: k, euros: q.rapports[k] }; });
+    j.ctx = { arrivee: q.arrivee || [], rapports: raps, partants: q.partants || 0 };
+    var dfr = j.jour.split('-').reverse().join('/');
+    return fetch('/api/pmu/quinte?date=' + encodeURIComponent(dfr)).then(function(r){ return r.json(); }).then(function(l){
+      if (l && l.trouve) {
+        if (!j.ctx.arrivee.length && l.arrivee.length) j.ctx.arrivee = l.arrivee;
+        j.ctx.rapports = (l.rapports || []).concat(j.ctx.rapports);
+        if (l.partants && l.partants.length) j.ctx.partants = l.partants.filter(function(p){ return !p.np; }).length;
+      }
+    }).catch(function(){});
+  })).then(function(){ TJ = J; dessinerTickets(); });
+}).catch(function(){});
 fetch('/api/membres/stats', {credentials:'same-origin'})
   .then(function(r){ return r.ok ? r.json() : Promise.reject(); })
   .then(function(d){

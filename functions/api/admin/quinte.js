@@ -12,5 +12,9 @@ export async function onRequestPost({ request, env }) {
   if (txt.length > 200000) return json({ erreur: 'Données trop volumineuses.' }, 400);
   if (!d || !Array.isArray(d.synthese)) return json({ erreur: 'Synthèse absente.' }, 400);
   await ecrireContenu(env.DB, 'quinte', d);
+  // gardé aussi par date (arrivée, rapports) pour le bilan cumulé des tickets
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(d.date || '')) {
+    await ecrireContenu(env.DB, 'quinte-' + d.date.split('/').reverse().join('-'), { date: d.date, partants: d.partants || 0, arrivee: d.arrivee || [], rapports: d.rapports || {} });
+  }
   return json({ ok: true });
 }
