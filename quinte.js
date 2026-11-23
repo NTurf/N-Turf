@@ -226,12 +226,23 @@ var NT = (function(){
     return { date: date, reunions: reunions, reperes: reperes, archive: archive };
   }
   function cle(n){ return String(n||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase().replace(/[^A-Z0-9]/g,''); }
-  var SEL = {};
+  var SEL = {}, LEG = true;
   function afficherCpc(d, onglet, live){
     if (!d || !d.reunions || !d.reunions.length) return '<p class="empty">La synthèse arrive.</p>';
     live = live || {};
     var rep = {}; (d.reperes || []).forEach(function(n){ rep[cle(n)] = 1; });
-    var h = '<p class="lead">Course par course du '+esc(d.date)+'</p><nav class="tabs inner">';
+    var h = '<p class="lead">Course par course du '+esc(d.date)+'</p>';
+    h += '<details class="legcpc"'+(LEG?' open':'')+'><summary>Comment lire cette page</summary><ul>'+
+      '<li><span class="ch piv">5</span> les 3 premiers de notre synthèse, puis la suite de la synthèse en blanc</li>'+
+      '<li><span class="ch">5<i class="cc">❤</i></span> coup de cœur de Bruno</li>'+
+      '<li><span class="ch">5<i class="st">★</i></span> étoile rouge : cheval noté par Bruno</li>'+
+      '<li><span class="ch">5<i class="rb">★</i></span> étoile bleue : cheval repéré (suivi des courses)</li>'+
+      '<li><span class="ch bleu">5</span> « Hors synthèse » : coups de cœur, notes et repérés qui ne sont pas dans la synthèse</li>'+
+      '<li><span class="ch hit">5</span> en rouge : cheval de notre pronostic arrivé dans les 4 premiers</li>'+
+      '<li class="sans"><span class="btnex couru">3</span> course déjà courue · <span class="btnex on">4</span> course affichée</li>'+
+      '<li class="sans">Partants : <b class="fer">D4</b> déferré des 4 pieds, <b class="fer">DA</b> des antérieurs, <b class="fer">DP</b> des postérieurs, <b class="fer">PA / PP / P4</b> protégé ; « Ferré » = pas de déferrage ; <b class="rec">+25 m</b> = recul</li>'+
+      '</ul></details>';
+    h += '<nav class="tabs inner">';
     d.reunions.forEach(function(re, i){ h += '<a href="#" data-r="'+i+'" class="'+(i===(onglet||0)?'on':'')+'">'+esc(re.hippodrome)+'</a>'; });
     h += '</nav>';
     d.reunions.forEach(function(re, i){
@@ -299,6 +310,7 @@ var NT = (function(){
     });
   }
   function brancherOnglets(root){
+    var lg = root.querySelector('.legcpc'); if (lg) lg.addEventListener('toggle', function(){ LEG = lg.open; });
     root.querySelectorAll('.cbtn a').forEach(function(a){
       a.onclick = function(e){
         e.preventDefault();
