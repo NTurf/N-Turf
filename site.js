@@ -51,6 +51,9 @@
     var e = function(s){ return String(s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); };
     document.getElementById('tickerText').innerHTML = d.bandeau.map(e).join(' &nbsp;<b>•</b>&nbsp; ');
     document.getElementById('ticker').hidden = false;
+    // vitesse constante, quelle que soit la longueur du texte : environ 55 pixels par seconde
+    var sp = document.getElementById('tickerText');
+    requestAnimationFrame(function(){ sp.style.animationDuration = Math.max(25, Math.round(sp.scrollWidth / 55)) + 's'; });
   }).catch(function(){});
 
   // Emplacements réservés aux futures publicités (vides et invisibles pour l'instant)
