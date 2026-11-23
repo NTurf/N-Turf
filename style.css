@@ -407,3 +407,7 @@ table.st th{background:#1A2F58}
 /* Fond bleu pastel un peu plus soutenu (23/11) */
 :root{--bg:#DAE5F4;--navy2:#EAF0FA}
 .podium{background:linear-gradient(180deg,#DAE5F4,#EAF0FA)}
+/* Menu de gauche en bleu pastel */
+.sidenav{background:#C9D8EE;border-right:1.5px solid #AFC3E2}
+.mainnav a:hover{background:#B9CCE8;color:var(--navy)}
+.mainnav a.on{background:#EAF0FA;color:var(--blue);border-left-color:var(--blue)}
