@@ -63,7 +63,7 @@ document.getElementById('publier').onclick = function(){
   fetch('/api/admin/quinte', {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(donnees)})
     .then(function(r){ return r.json().then(function(d){ return {ok:r.ok, d:d}; }); })
     .then(function(x){
-      if (x.ok) { m.className = 'msg ok'; m.textContent = 'Publié ! Les membres voient maintenant ce Quinté, et l\'accueil est à jour.'; }
+      if (x.ok) { m.className = 'msg ok'; m.innerHTML = 'Publié ! Les membres voient maintenant ce Quinté, et l\'accueil est à jour.<br><a href="/pronostics.html">Voir la page Pronostics</a> · <a href="/">Voir l\'accueil</a>'; }
       else { m.className = 'msg err'; m.textContent = x.d.erreur || 'Erreur.'; b.disabled = false; }
     }).catch(function(){ m.className='msg err'; m.textContent='Connexion impossible, réessaie.'; b.disabled=false; });
 };
