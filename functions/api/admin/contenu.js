@@ -1,7 +1,7 @@
 import { json, initDb, currentUser, lireContenu, ecrireContenu, noDb } from '../../_auth.js';
 
 // Lecture / écriture de contenus par l'administrateur (brouillon et tickets publiés)
-const AUTORISES = ['tickets_brouillon', 'tickets'];
+const AUTORISES = ['tickets_brouillon', 'tickets', 'hippo'];
 
 async function admin(env, request) {
   if (!env.DB) return null;
