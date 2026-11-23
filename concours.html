@@ -13,6 +13,7 @@
 <main>
 <h1>Concours Quinté+</h1>
 <p class="lead">Gratuit, en fers à cheval. Classe 8 chevaux, le site calcule tout seul avec les vrais rapports du PMU.</p>
+<p><a class="btn ghost" href="#reglement" id="lienRegl">📜 Lire le règlement du concours</a></p>
 
 <div class="cd" id="cd" hidden><span>⏱️</span><div class="cdt" id="cdt"></div><div class="cdn" id="cdn"></div></div>
 
@@ -39,8 +40,8 @@
 <nav class="tabs inner" id="ongCl"><a href="#" data-k="jour" class="on">Podium du jour</a><a href="#" data-k="semaine">Podium de la semaine</a><a href="#" data-k="globe">Globe de Cristal</a></nav>
 <section class="clsc" id="cl"><p class="empty">Chargement…</p></section>
 
-<section class="card">
-<details><summary><b>Le règlement</b></summary>
+<section class="card" id="reglement">
+<details id="dRegl"><summary><b>📜 Le règlement du concours</b></summary>
 <ul class="regl">
 <li>Concours gratuit, réservé aux membres inscrits (un seul compte par personne, majeurs uniquement). Monnaie du jeu : les fers à cheval.</li>
 <li>Chaque jour, tu classes 8 chevaux du Quinté+ : du 1er au 7e, plus un cheval de complément. Tu peux modifier ton pronostic jusqu'à 5 minutes avant le départ.</li>
@@ -210,6 +211,8 @@
     if (CL) dessinerCl();
   });
 
+  document.getElementById('lienRegl').onclick = function(e){ e.preventDefault(); var d = document.getElementById('dRegl'); d.open = true; document.getElementById('reglement').scrollIntoView({behavior:'smooth'}); };
+  if (location.hash === '#reglement') document.getElementById('dRegl').open = true;
   chargerJour().then(chargerCl).then(tic);
   // Rafraîchit toutes les minutes : dès que l'arrivée est validée, les résultats apparaissent
   setInterval(function(){ if (D && D.course && !D.course.calcule && (Date.now() + ecart) > D.course.cloture) chargerJour().then(chargerCl); }, 60000);
