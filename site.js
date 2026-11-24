@@ -4,6 +4,7 @@
   // Barre de navigation principale
   var tabs = [
     ['/', 'Accueil'],
+    ['/journal', 'Le Journal N-TURF'],
     null,
     ['/pronostics.html#quinte', 'Pronos Quinté+'],
     ['/tickets.html', 'Tickets'],

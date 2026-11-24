@@ -53,6 +53,11 @@
     <p style="color:var(--soft)">Vous pouvez avoir votre espace dédié sur N-TURF. C'est un collectif : chacun garde son nom, ses réseaux et sa liberté. <b style="color:var(--blue)">Découvrez comment nous rejoindre →</b></p>
   </a>
 
+  <section class="card" id="billetCard" hidden>
+    <h2>Le Journal N-TURF</h2>
+    <div id="billet"></div>
+  </section>
+
   <section class="card">
     <h2>Arrivées du jour</h2>
     <div id="arrivees"><p class="empty">Les arrivées apparaîtront ici après chaque course.</p></div>
@@ -90,6 +95,12 @@ fetch('/api/concours/classements', {cache:'no-store'}).then(function(r){ return 
 
 <script src="/site.js"></script>
 <script>
+fetch('/api/journal/dernier').then(function(r){return r.json()}).then(function(d){
+  var b=d&&d.billet; if(!b) return;
+  var e=function(t){return String(t||'').replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})};
+  document.getElementById('billet').innerHTML='<h3 style="margin:4px 0"><a href="'+e(b.lien)+'">'+e(b.titre)+'</a></h3><p class="note2" style="margin:0 0 6px">Par '+e(b.auteur)+'</p><p>'+e(b.extrait)+'</p><p><a class="btn ghost" href="'+e(b.lien)+'">Lire la suite</a> <a href="/journal">Tous les billets</a></p>';
+  document.getElementById('billetCard').hidden=false;
+}).catch(function(){});
 fetch('/api/public',{cache:'no-store'}).then(function(r){return r.json()}).then(function(d){
   var esc=function(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})};
   var q=d.quinte;

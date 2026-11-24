@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Écrire un billet – Le Journal N-TURF</title>
+<meta name="theme-color" content="#0D1E3D">
+<meta name="robots" content="noindex">
+<link rel="icon" href="/icone-nturf-192.png">
+<link rel="stylesheet" href="/style.css">
+<style>
+.f label{display:block;margin:8px 0 4px;font-weight:700}.f input,.f select,.f textarea{width:100%;box-sizing:border-box}
+.f textarea{min-height:320px;font:inherit;line-height:1.45}
+.tb{display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin:4px 0;padding:6px;background:#f2f6fc;border:1px solid #c9d6ea;border-radius:8px 8px 0 0}
+.tb button{min-width:34px;height:32px;border:1px solid #c9d6ea;border-radius:6px;background:#fff;cursor:pointer;font:inherit;padding:0 8px}
+.tb .pt{min-width:28px;width:28px;border:2px solid #fff;box-shadow:0 0 0 1px #c9d6ea}
+.tb .sep{width:1px;height:24px;background:#c9d6ea;margin:0 4px}
+.ed{min-height:320px;border:1px solid #c9d6ea;border-top:0;border-radius:0 0 8px 8px;padding:10px;background:#fff;line-height:1.5;outline:none;overflow-wrap:anywhere}
+.ed:empty:before{content:attr(data-ph);color:#8a98b0}
+.mine{padding:10px 12px;margin:8px 0}.mine .ap{white-space:pre-wrap;margin:6px 0;max-height:7.5em;overflow:hidden}
+</style>
+</head>
+<body data-page="admin">
+<main>
+<h1>Écrire un billet</h1>
+<div id="refus" class="note" hidden>Cette page est réservée aux rédacteurs autorisés du Journal.</div>
+<div id="zone" hidden>
+<p class="note2" id="info"></p>
+<section class="card f">
+<label for="titre">Titre du billet</label><input id="titre" maxlength="140" placeholder="ex. Le couplé placé, comment ça marche ?">
+<label>Texte</label>
+<div class="tb" id="tb">
+<button type="button" data-c="bold" title="Gras"><b>G</b></button><button type="button" data-c="italic" title="Italique"><i>I</i></button><button type="button" data-c="underline" title="Souligné"><u>S</u></button>
+<span class="sep"></span>
+<button type="button" data-col="#d8232f" title="Rouge" class="pt" style="background:#d8232f"></button><button type="button" data-col="#1a5fb4" title="Bleu" class="pt" style="background:#1a5fb4"></button><button type="button" data-col="#1a8a3a" title="Vert" class="pt" style="background:#1a8a3a"></button><button type="button" data-col="#b8860b" title="Or" class="pt" style="background:#b8860b"></button><button type="button" data-col="#22324f" title="Noir" class="pt" style="background:#22324f"></button>
+<span class="sep"></span>
+<button type="button" data-hl="#fff176" title="Surligner en jaune" class="hl" style="background:#fff176">ab</button><button type="button" data-hl="#c8f7c5" title="Surligner en vert" class="hl" style="background:#c8f7c5">ab</button><button type="button" data-hl="#ffd1d1" title="Surligner en rose" class="hl" style="background:#ffd1d1">ab</button>
+<span class="sep"></span>
+<button type="button" data-c="insertUnorderedList" title="Liste à puces">• Liste</button><button type="button" data-c="removeFormat" title="Enlever la mise en forme">✕ Effacer</button>
+</div>
+<div id="texte" class="ed" contenteditable="true" data-ph="Écris ou colle ici ton billet. Sélectionne un mot puis touche un bouton pour le mettre en gras, en couleur ou en surligné."></div>
+<p><button type="button" class="btn" id="pub">Envoyer</button> <button type="button" class="btn ghost" id="annuler" hidden>Annuler la modification</button></p>
+<p class="msg" id="msg"></p>
+</section>
+<h2 id="tliste">Mes billets</h2>
+<div id="liste"></div>
+<p class="note2"><a href="/journal">Voir le Journal</a></p>
+</div>
+</main>
+<script src="/site.js"></script>
+<script>
+function $(i){ return document.getElementById(i); }
+function E(s){ return String(s||'').replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+var EDIT = null, LISTE = [], ADMIN = false;
+var ST = { attente: '⏳ En attente de validation', publie: '✅ Publié', refuse: '✖ Refusé' };
+try { document.execCommand('styleWithCSS', false, true); } catch (e) {}
+document.querySelectorAll('#tb [data-c]').forEach(function(b){ b.onmousedown = function(e){ e.preventDefault(); }; b.onclick = function(){ document.execCommand(b.getAttribute('data-c'), false, null); $('texte').focus(); }; });
+document.querySelectorAll('#tb [data-col]').forEach(function(b){ b.onmousedown = function(e){ e.preventDefault(); }; b.onclick = function(){ document.execCommand('foreColor', false, b.getAttribute('data-col')); }; });
+document.querySelectorAll('#tb [data-hl]').forEach(function(b){ b.onmousedown = function(e){ e.preventDefault(); }; b.onclick = function(){ if (!document.execCommand('hiliteColor', false, b.getAttribute('data-hl'))) document.execCommand('backColor', false, b.getAttribute('data-hl')); }; });
+$('texte').addEventListener('paste', function(e){ e.preventDefault(); var t = (e.clipboardData || window.clipboardData).getData('text/plain'); document.execCommand('insertText', false, t); });
+function post(b){ return fetch('/api/journal', {method:'POST', credentials:'same-origin', headers:{'content-type':'application/json'}, body: JSON.stringify(b)}).then(function(r){ return r.json().then(function(x){ if (!r.ok) throw new Error(x.erreur || 'Erreur'); return x; }); }); }
+function charger(){
+  fetch('/api/journal', {credentials:'same-origin'}).then(function(r){ return r.ok ? r.json() : Promise.reject(); }).then(function(d){
+    $('zone').hidden = false; ADMIN = d.admin; LISTE = d.billets || [];
+    $('info').textContent = ADMIN ? 'Administrateur : tes billets sont publiés tout de suite. Les billets des rédacteurs attendent ta validation ci-dessous.' : 'Ton billet sera publié dans le Journal après validation par l\'administrateur.';
+    $('tliste').textContent = ADMIN ? 'Tous les billets' : 'Mes billets';
+    $('liste').innerHTML = LISTE.length ? LISTE.map(function(b){
+      return '<section class="card mine"><b>' + E(b.titre) + '</b><br><small>' + E(ST[b.statut] || b.statut) + (ADMIN ? ' · par ' + E(b.auteur) : '') + '</small><div class="ap">' + b.texte + '</div>' +
+        (b.statut === 'publie' ? '<a class="btn ghost" href="' + E(b.lien) + '">Voir</a> ' : '') +
+        '<button type="button" class="btn ghost" data-m="' + b.id + '">Modifier</button> ' +
+        (ADMIN && b.statut !== 'publie' ? '<button type="button" class="btn" data-a="valider" data-id="' + b.id + '">Valider et publier</button> ' : '') +
+        (ADMIN && b.statut === 'attente' ? '<button type="button" class="btn ghost" data-a="refuser" data-id="' + b.id + '">Refuser</button> ' : '') +
+        (ADMIN && b.statut === 'publie' ? '<button type="button" class="btn ghost" data-a="retirer" data-id="' + b.id + '">Retirer du Journal</button> ' : '') +
+        '<button type="button" class="btn ghost" data-s="' + b.id + '">Supprimer</button></section>';
+    }).join('') : '<p class="empty">Aucun billet pour l\'instant.</p>';
+    document.querySelectorAll('[data-m]').forEach(function(x){ x.onclick = function(){
+      var b = LISTE.filter(function(y){ return y.id == x.getAttribute('data-m'); })[0]; if (!b) return;
+      EDIT = b.id; $('titre').value = b.titre; $('texte').innerHTML = b.texte; $('pub').textContent = 'Enregistrer la modification'; $('annuler').hidden = false; window.scrollTo(0, 0);
+    }; });
+    document.querySelectorAll('[data-a]').forEach(function(x){ x.onclick = function(){ post({action: x.getAttribute('data-a'), id: +x.getAttribute('data-id')}).then(charger).catch(function(e){ $('msg').className = 'msg err'; $('msg').textContent = e.message; }); }; });
+    document.querySelectorAll('[data-s]').forEach(function(x){ x.onclick = function(){
+      if (x.textContent !== 'Confirmer') { x.textContent = 'Confirmer'; return; }
+      post({action:'supprimer', id: +x.getAttribute('data-s')}).then(charger).catch(function(e){ $('msg').className = 'msg err'; $('msg').textContent = e.message; });
+    }; });
+  }).catch(function(){ $('refus').hidden = false; });
+}
+function vider(){ EDIT = null; $('titre').value = ''; $('texte').innerHTML = ''; $('pub').textContent = 'Envoyer'; $('annuler').hidden = true; }
+$('annuler').onclick = vider;
+$('pub').onclick = function(){
+  var m = $('msg'); m.className = 'msg'; m.textContent = 'Envoi…';
+  post({ id: EDIT, titre: $('titre').value, texte: $('texte').innerHTML })
+    .then(function(x){ m.className = 'msg ok'; m.textContent = x.statut === 'publie' ? 'Publié dans le Journal !' : 'Envoyé ! Il sera publié après validation.'; vider(); charger(); })
+    .catch(function(e){ m.className = 'msg err'; m.textContent = e.message; });
+};
+charger();
+</script>
+</body>
+</html>
