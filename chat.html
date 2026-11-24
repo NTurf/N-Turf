@@ -41,7 +41,7 @@ function dessiner(garderBas){
   var vis = S.ordre.filter(function(id){ return !S.msgs[id].supprime; });
   f.innerHTML = vis.length ? vis.map(function(id){
     var m = S.msgs[id], moi = S.moi && m.uid === S.moi.id;
-    return '<div class="cm'+(moi?' moi':'')+'" data-id="'+id+'"><div class="ct"><b class="'+(m.modo?'modo':'')+'">'+esc(m.pseudo)+'</b><small>'+heure(m.cree)+'</small></div><div class="cx">'+esc(m.texte).replace(/\n/g,'<br>')+'</div></div>';
+    return '<div class="cm'+(moi?' moi':'')+'" data-id="'+id+'"><div class="ct"><a class="pslink" href="/fiche.html?p='+encodeURIComponent(m.pseudo)+'" onclick="event.stopPropagation()"><b class="'+(m.modo?'modo':'')+'">'+esc(m.pseudo)+'</b></a><small>'+heure(m.cree)+'</small></div><div class="cx">'+esc(m.texte).replace(/\n/g,'<br>')+'</div></div>';
   }).join('') : '<p class="empty">Aucun message pour l\'instant. Lance la discussion !</p>';
   f.querySelectorAll('.cm').forEach(function(el){ el.onclick = function(){ menu(+el.getAttribute('data-id'), el); }; });
   if (bas) f.scrollTop = f.scrollHeight;

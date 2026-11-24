@@ -19,6 +19,18 @@
   <table class="st"><tr><td>Pseudo</td><td><b id="pPseudo"></b></td></tr><tr><td>E-mail</td><td id="pEmail"></td></tr><tr><td>Inscrit depuis le</td><td id="pDate"></td></tr></table>
   <p class="note2">Le pseudo est définitif : il ne peut pas être changé.</p>
 </section>
+<section class="card" id="fiche">
+  <h2>Ma fiche</h2>
+  <p class="note2">Ce que les autres membres voient en touchant ton pseudo. Tout est facultatif.</p>
+  <form id="fFiche">
+    <label for="fR">Région ou ville</label><input id="fR" maxlength="60" placeholder="ex. Corse, Normandie, Lyon…">
+    <label for="fD">Je joue depuis</label><input id="fD" maxlength="40" placeholder="ex. 1990, 10 ans…">
+    <label for="fJ">Mes jeux préférés</label><input id="fJ" maxlength="120" placeholder="ex. Quinté+, Simple placé, trot attelé…">
+    <label for="fB">Quelques mots sur moi</label><textarea id="fB" maxlength="1000" rows="4" style="width:100%;box-sizing:border-box;font:inherit"></textarea>
+    <p><button class="btn" type="submit">Enregistrer ma fiche</button> <a href="#" id="voirFiche">Voir ma fiche</a> · <a href="/messages.html">✉ Mes messages</a></p>
+    <p class="msg" id="msgF"></p>
+  </form>
+</section>
 <section class="card">
   <h2>Mon concours Quinté+</h2>
   <div id="bilan"></div>
@@ -84,6 +96,11 @@
     if (d.total.joues) h += '<p class="note2">Depuis le début : ' + d.total.joues + ' Quinté+ joué' + (d.total.joues > 1 ? 's' : '') + ', ' + F(d.total.gains) + ' fers gagnés pour ' + F(d.total.misesJouees) + ' fers misés.</p>';
     $('bilan').innerHTML = h;
   });
+  fetch('/api/social/fiche', {credentials:'same-origin', cache:'no-store'}).then(function(r){ return r.ok ? r.json() : null; }).then(function(f){
+    if (!f) return; $('fR').value = f.region; $('fD').value = f.depuis; $('fJ').value = f.jeux; $('fB').value = f.bio;
+    $('voirFiche').href = '/fiche.html?p=' + encodeURIComponent(f.pseudo);
+  });
+  $('fFiche').onsubmit = function(e){ e.preventDefault(); envoyer('/api/social/fiche', {region: $('fR').value, depuis: $('fD').value, jeux: $('fJ').value, bio: $('fB').value}, 'msgF', '✓ Fiche enregistrée.'); };
   $('mVoir').onchange = function(){ $('mA').type = $('mN').type = this.checked ? 'text' : 'password'; };
   $('fMdp').onsubmit = function(e){ e.preventDefault(); envoyer('/api/compte/motdepasse', {actuel: $('mA').value, nouveau: $('mN').value}, 'msgM', '✓ Mot de passe changé.').then(function(d){ if (d) { $('mA').value = ''; $('mN').value = ''; } }); };
   $('fMail').onsubmit = function(e){ e.preventDefault(); envoyer('/api/compte/email', {actuel: $('eA').value, email: $('eN').value}, 'msgE', '✓ E-mail changé.').then(function(d){ if (d) { $('pEmail').textContent = d.email; $('eA').value = ''; $('eN').value = ''; } }); };

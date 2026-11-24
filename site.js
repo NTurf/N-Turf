@@ -100,7 +100,29 @@
           e.preventDefault();
           fetch('/api/deconnexion',{method:'POST'}).then(function(){ location.href='/'; });
         };
+        // Messages privés : enveloppe avec le nombre de messages non lus et de demandes de contact
+        var mpl = document.createElement('a'); mpl.href = '/messages.html'; mpl.className = 'mpbadge'; mpl.title = 'Mes messages'; mpl.textContent = '✉';
+        w.insertBefore(mpl, w.firstChild); w.insertBefore(document.createTextNode(' '), mpl.nextSibling);
+        var majMp = function(){ fetch('/api/social/mp', {credentials:'same-origin'}).then(function(r){ return r.ok ? r.json() : null; }).then(function(d){
+          if (!d) return; var n = (d.nonlus || 0);
+          mpl.innerHTML = '✉' + (n ? '<sup>' + n + '</sup>' : '');
+        }).catch(function(){}); };
+        majMp(); setInterval(majMp, 60000);
       }
+      // Qui est en ligne : voyant vert et nombre ; la liste des pseudos (vers leur fiche) pour les membres
+      var enl = document.createElement('div'); enl.className = 'enligne'; enl.hidden = true;
+      enl.innerHTML = '<button type="button" id="enlB"><i></i><span></span></button><div id="enlL" hidden></div>';
+      h.appendChild(enl);
+      var majEnl = function(){ fetch('/api/social/enligne', {credentials:'same-origin'}).then(function(r){ return r.json(); }).then(function(d){
+        enl.hidden = false;
+        enl.querySelector('span').textContent = d.n + ' membre' + (d.n > 1 ? 's' : '') + ' en ligne';
+        var e = function(x){ return String(x).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); };
+        document.getElementById('enlL').innerHTML = m.connecte
+          ? (d.pseudos || []).map(function(p){ return '<a href="/fiche.html?p=' + encodeURIComponent(p.pseudo) + '"' + (p.modo ? ' style="color:#d8232f"' : '') + '>' + e(p.pseudo) + '</a>'; }).join('') || '<span>Personne pour l\'instant.</span>'
+          : '<span><a href="/inscription.html#connexion">Connecte-toi</a> pour voir qui est en ligne.</span>';
+      }).catch(function(){}); };
+      document.getElementById('enlB').onclick = function(){ var l = document.getElementById('enlL'); l.hidden = !l.hidden; };
+      majEnl(); setInterval(majEnl, 60000);
       return m;
     });
 })();

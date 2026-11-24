@@ -35,7 +35,7 @@ export async function initDb(db) {
     )`),
   ]);
   // colonnes ajoutées après coup : droits donnés par l'administrateur
-  for (const col of ['moderateur INTEGER NOT NULL DEFAULT 0', 'publier INTEGER NOT NULL DEFAULT 0', 'banni INTEGER NOT NULL DEFAULT 0', 'hippo INTEGER NOT NULL DEFAULT 0']) {
+  for (const col of ['moderateur INTEGER NOT NULL DEFAULT 0', 'publier INTEGER NOT NULL DEFAULT 0', 'banni INTEGER NOT NULL DEFAULT 0', 'hippo INTEGER NOT NULL DEFAULT 0', 'vu INTEGER']) {
     try { await db.prepare('ALTER TABLE users ADD COLUMN ' + col).run(); } catch (e) { /* déjà là */ }
   }
   ready = true;
@@ -78,9 +78,11 @@ export async function currentUser(db, request) {
   const token = readToken(request);
   if (!token) return null;
   const row = await db.prepare(
-    `SELECT u.id, u.pseudo, u.role, u.moderateur, u.publier, u.banni, u.hippo, s.expires_at FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token_hash = ?`
+    `SELECT u.id, u.pseudo, u.role, u.moderateur, u.publier, u.banni, u.hippo, u.vu, s.expires_at FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token_hash = ?`
   ).bind(await sha256(token)).first();
   if (!row || row.expires_at < Date.now() || row.banni) return null;
+  // présence : « vu » mis à jour au plus une fois par minute
+  if (!row.vu || Date.now() - row.vu > 60000) { try { await db.prepare('UPDATE users SET vu = ? WHERE id = ?').bind(Date.now(), row.id).run(); } catch (e) {} }
   const admin = row.role === 'admin';
   return { id: row.id, pseudo: row.pseudo, role: row.role, moderateur: admin || !!row.moderateur, publier: admin || !!row.publier, hippo: admin || !!row.publier || !!row.hippo };
 }

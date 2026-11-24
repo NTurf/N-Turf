@@ -14,9 +14,12 @@ export async function onRequestPost({ request, env }) {
     'DELETE FROM chat_signalements WHERE user_id = ?',
     'DELETE FROM chat_signalements WHERE message_id IN (SELECT id FROM chat_messages WHERE user_id = ?)',
     'DELETE FROM chat_messages WHERE user_id = ?',
+    'DELETE FROM profils WHERE user_id = ?',
+    'DELETE FROM mp WHERE de = ? OR a = ?',
+    'DELETE FROM contacts WHERE a = ? OR b = ?',
     'DELETE FROM users WHERE id = ?',
   ];
-  for (const s of q) { try { await db.prepare(s).bind(id).run(); } catch (e) { /* table absente */ } }
+  for (const s of q) { try { await db.prepare(s).bind(...Array((s.match(/\?/g) || []).length).fill(id)).run(); } catch (e) { /* table absente */ } }
   try { await db.prepare("DELETE FROM pmu_cache WHERE cle = 'bandeau'").run(); } catch (e) {}
   return json({ ok: true }, 200, { 'set-cookie': 'session=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0' });
 }

@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mes messages – N-TURF</title>
+<meta name="theme-color" content="#0D1E3D">
+<meta name="robots" content="noindex">
+<link rel="manifest" href="/manifest.webmanifest?v=2">
+<link rel="icon" href="/icone-nturf-192.png">
+<link rel="stylesheet" href="/style.css">
+<style>
+.cv{display:flex;align-items:center;gap:8px;padding:10px 12px;margin:6px 0;text-decoration:none;color:inherit}
+.cv .nb{background:#e5243b;color:#fff;border-radius:10px;padding:0 7px;font-size:.85em;font-weight:700}
+.fil{max-height:55vh;overflow:auto;padding:4px}
+.m{max-width:80%;margin:6px 0;padding:8px 10px;border-radius:12px;background:#fff;border:1px solid #c9d6ea;white-space:pre-wrap}
+.m.moi{margin-left:auto;background:#dce8f7}
+.m small{display:block;color:var(--soft);font-size:.75em}
+textarea{width:100%;box-sizing:border-box;min-height:80px;font:inherit}
+</style>
+</head>
+<body data-page="membres">
+<main>
+<h1 id="titre">Mes messages</h1>
+<div id="refus" class="note" hidden>🔒 <a href="/inscription.html#connexion">Connecte-toi</a> pour voir tes messages.</div>
+<div id="liste"></div>
+<section class="card" id="conv" hidden>
+<p><a href="/messages.html">← Toutes mes conversations</a> · <a id="lienFiche" href="#">Voir sa fiche</a></p>
+<div class="fil" id="fil"></div>
+<div id="dem"></div>
+<div id="ecr"><textarea id="tx" maxlength="2000" placeholder="Ton message…"></textarea><p><button type="button" class="btn" id="env">Envoyer</button> <span class="msg" id="msg"></span></p></div>
+</section>
+</main>
+<script src="/site.js"></script>
+<script>
+function $(i){ return document.getElementById(i); }
+function E(s){ return String(s||'').replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+function h(c){ return new Date(String(c).replace(' ', 'T') + 'Z').toLocaleString('fr-FR', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'}); }
+var AVEC = new URLSearchParams(location.search).get('avec');
+function post(b){ return fetch('/api/social/mp', {method:'POST', credentials:'same-origin', headers:{'content-type':'application/json'}, body: JSON.stringify(b)}).then(function(r){ return r.json().then(function(x){ if (!r.ok) throw new Error(x.erreur || 'Erreur'); return x; }); }); }
+function liste(){
+  fetch('/api/social/mp', {credentials:'same-origin'}).then(function(r){ if (!r.ok) throw 0; return r.json(); }).then(function(d){
+    var L = d.conversations || [];
+    $('liste').innerHTML = L.length ? L.map(function(c){
+      var et = c.statut === 'attente' ? (c.parMoi ? ' <small class="note2">· demande envoyée, en attente</small>' : ' <small style="color:#e5243b;font-weight:700">· demande de contact</small>') : '';
+      return '<a class="card cv" href="/messages.html?avec=' + encodeURIComponent(c.pseudo) + '"><b>' + E(c.pseudo) + '</b>' + et + '<span style="flex:1"></span>' + (c.nonlus && (c.statut === 'accepte' || !c.parMoi) ? '<span class="nb">' + c.nonlus + '</span>' : '') + '</a>';
+    }).join('') : '<p class="empty">Aucune conversation. Pour écrire à un membre, touche son pseudo (dans le chat ou la liste des connectés), puis « Lui écrire ».</p>';
+  }).catch(function(){ $('refus').hidden = false; });
+}
+function conv(){
+  $('conv').hidden = false; $('lienFiche').href = '/fiche.html?p=' + encodeURIComponent(AVEC);
+  fetch('/api/social/mp?avec=' + encodeURIComponent(AVEC), {credentials:'same-origin'}).then(function(r){ return r.json().then(function(d){ return {ok:r.ok, d:d}; }); }).then(function(x){
+    if (!x.ok) { $('conv').hidden = true; $('refus').hidden = false; $('refus').textContent = x.d.erreur || 'Erreur.'; return; }
+    var d = x.d; $('titre').textContent = 'Messages avec ' + d.pseudo;
+    $('fil').innerHTML = d.messages.map(function(m){ return '<div class="m' + (m.moi ? ' moi' : '') + '">' + E(m.texte) + '<small>' + h(m.cree) + '</small></div>'; }).join('') || '<p class="note2">Pas encore de message. Ton premier message sera envoyé comme demande de contact.</p>';
+    $('fil').scrollTop = 1e6;
+    var c = d.contact; $('dem').innerHTML = ''; $('ecr').hidden = false;
+    if (c && c.statut === 'attente' && !c.parMoi) {
+      $('dem').innerHTML = '<div class="note"><b>' + E(d.pseudo) + '</b> souhaite te contacter. <button type="button" class="btn" id="acc">Accepter</button> <button type="button" class="btn ghost" id="ref">Refuser</button></div>';
+      $('ecr').hidden = true;
+      $('acc').onclick = function(){ post({action:'repondre', pseudo: AVEC, accepte: true}).then(conv); };
+      $('ref').onclick = function(){ post({action:'repondre', pseudo: AVEC, accepte: false}).then(function(){ location.href = '/messages.html'; }); };
+    } else if (c && c.statut === 'attente') { $('dem').innerHTML = '<p class="note2">Ta demande de contact attend sa réponse.</p>'; $('ecr').hidden = true; }
+    else if (c && c.statut === 'refuse') { $('dem').innerHTML = '<p class="note2">Pas de conversation possible avec ce membre.</p>'; $('ecr').hidden = true; }
+  });
+}
+$('env').onclick = function(){
+  var t = $('tx').value.trim(); if (!t) return;
+  $('msg').className = 'msg'; $('msg').textContent = 'Envoi…';
+  post({pseudo: AVEC, texte: t}).then(function(r){ $('tx').value = ''; $('msg').className = 'msg ok'; $('msg').textContent = r.demande ? 'Demande de contact envoyée.' : ''; conv(); })
+    .catch(function(e){ $('msg').className = 'msg err'; $('msg').textContent = e.message; });
+};
+if (AVEC) { conv(); setInterval(conv, 20000); } else { liste(); }
+</script>
+</body>
+</html>

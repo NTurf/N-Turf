@@ -29,7 +29,7 @@
     var vis = S.ordre.filter(function (id) { return !S.msgs[id].supprime; });
     fil.innerHTML = vis.length ? vis.map(function (id) {
       var m = S.msgs[id];
-      return '<div class="cm' + (S.moi && m.uid === S.moi.id ? ' moi' : '') + '" data-id="' + id + '"><div class="ct"><b class="' + (m.modo ? 'modo' : '') + '">' + esc(m.pseudo) + '</b> <small>' + heure(m.cree) + '</small></div><div>' + esc(m.texte) + '</div></div>';
+      return '<div class="cm' + (S.moi && m.uid === S.moi.id ? ' moi' : '') + '" data-id="' + id + '"><div class="ct"><a class="pslink" href="/fiche.html?p=' + encodeURIComponent(m.pseudo) + '" onclick="event.stopPropagation()"><b class="' + (m.modo ? 'modo' : '') + '">' + esc(m.pseudo) + '</b></a> <small>' + heure(m.cree) + '</small></div><div>' + esc(m.texte) + '</div></div>';
     }).join('') : '<p class="empty">Pas encore de message dans ce salon.</p>';
     if (garder) fil.scrollTop = fil.scrollHeight;
   }
