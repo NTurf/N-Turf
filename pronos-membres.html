@@ -35,6 +35,14 @@
 .grille button small{display:block;color:var(--soft);font-size:.78em}
 .grille button:disabled{opacity:.45}
 .pjeux button{margin:2px}
+.mp{width:100%;border-collapse:collapse;margin:6px 0}.mp th,.mp td{padding:5px 3px;text-align:center;border-bottom:1px solid #e3eaf5}.mp th{font-size:.8em;color:var(--soft)}
+.mp td:first-child{font-weight:800;text-align:left}
+.tg{min-width:44px;padding:7px 6px;border-radius:8px;border:1px solid #c9d6ea;background:#fff;font:inherit;font-weight:700;cursor:pointer;color:#8a97ad}
+.tg.on{background:#1a8a3a;border-color:#13702f;color:#fff}.tg:disabled{opacity:.35}
+.blocp{margin:8px 0;padding:8px 10px;border:1px solid #e3eaf5;border-radius:8px}
+.lj{display:flex;justify-content:space-between;gap:8px;padding:3px 0;border-bottom:1px dashed #e3eaf5}.lj:last-child{border:0}
+.pos{color:#13702f}.neg{color:#b3121f}
+.tot{font-weight:800;margin-top:4px}
 .arrb{margin:6px 0}
 </style>
 </head>
@@ -45,19 +53,22 @@
 <div id="zone" hidden>
 <div class="pills"><button type="button" class="pill on" id="tP">Les pronos</button><button type="button" class="pill" id="tC">Classement</button></div>
 <div id="vP">
-<p class="lead">Chacun donne son prono (4 chevaux maximum) sur la course de son choix. Tout le monde le voit, et le site le vérifie après l'arrivée.</p>
+<p class="lead">Chacun donne son prono (4 chevaux maximum) sur la course de son choix et choisit lui-même ses paris. Tous les membres le voient, et le site le vérifie après l'arrivée.</p>
 <details class="card tuto" id="tuto" style="padding:12px 14px;margin:8px 0;border-color:var(--gold)">
 <summary style="font-weight:800;cursor:pointer;color:#0e2a5c">📘 Comment donner mon prono ? (2 minutes)</summary>
 <ol style="margin:10px 0 4px;padding-left:20px;line-height:1.6">
 <li><b>Choisis le jour</b> (Aujourd'hui ou Demain), puis <b>l'hippodrome</b>, puis <b>la course</b> (C1, C2…). La pastille rouge indique combien de pronos il y a déjà.</li>
 <li>Touche <b>« + Mon prono »</b>. La liste des partants s'affiche, avec leur musique.</li>
-<li><b>Choisis tes chevaux</b> (4 au maximum) en les touchant :
-<ul style="margin:4px 0"><li>1 fois = <b style="color:#1a5fb4">associé</b> (bleu)</li><li>2 fois = <b style="color:#b8860b">base ★</b> (doré)</li><li>3 fois = retiré</li></ul>
-Exemples : 1 base + 3 associés, ou 2 bases + 2 associés.</li>
-<li><b>Choisis ton jeu</b> : Simple, Couplé placé, Trio ou Multi en 4. Le site t'affiche ta mise (1 € par pari).</li>
+<li><b>Choisis tes chevaux</b> (4 au maximum) en les touchant. Touche encore pour le retirer.</li>
+<li><b>Choisis tes paris</b>, à 1 € chacun :
+<ul style="margin:4px 0"><li><b>Simple</b> : pour chaque cheval, « Gagnant », « Placé », les deux, ou rien.</li>
+<li><b>Couplé</b> : coche les chevaux à mettre dans ton couplé (2 à 4), puis gagnant, placé ou les deux.</li>
+<li><b>Trio</b> : coche 3 ou 4 de tes chevaux.</li>
+<li><b>Multi en 4</b> : avec tes 4 chevaux, si tu veux.</li></ul>
+Le site t'affiche ta mise totale avant de publier.</li>
 <li>Ajoute <b>un petit mot</b> si tu veux expliquer ton choix, puis touche <b>« Publier mon prono »</b>. Tu peux le modifier jusqu'au départ.</li>
 </ol>
-<p class="note2" style="margin:6px 0 0">Après l'arrivée, tes chevaux arrivés passent en <b style="color:#e5243b">rouge</b> et le site indique ce que tu as gagné, avec les vrais rapports PMU. Ton bilan apparaît dans l'onglet <b>Classement</b>. Sous chaque prono, « 💬 Réagir » permet d'en discuter.</p>
+<p class="note2" style="margin:6px 0 0">Après l'arrivée, tes chevaux arrivés passent en <b style="color:#e5243b">rouge</b> et le site indique, pari par pari, ta mise et ton gain mise déduite, avec les vrais rapports PMU. Ton bilan apparaît dans l'onglet <b>Classement</b>. Sous chaque prono, « 💬 Réagir » permet d'en discuter.</p>
 </details>
 
 <div class="pills" id="jours"></div>
@@ -67,7 +78,8 @@ Exemples : 1 base + 3 associés, ou 2 bases + 2 associés.</li>
 </div>
 <div id="vC" hidden>
 <div class="pills"><button type="button" class="pill on" data-cl="mois">Ce mois-ci</button><button type="button" class="pill" data-cl="tout">Depuis le début</button></div>
-<p class="note2">Bilan avec une mise de 1 € par pari, aux vrais rapports PMU (Simple : 1 € gagnant + 1 € placé sur chaque base).</p>
+<p class="note2">Mise de 1 € par pari, aux vrais rapports PMU. Le net est le gain mise déduite.</p>
+<div id="mb"></div>
 <div id="cl"></div>
 </div>
 </div>
@@ -80,8 +92,10 @@ function Fe(x){ return (Math.round(x * 100) / 100).toFixed(2).replace('.', ',') 
 function iso(k){ return new Date(Date.now() + k*86400000).toLocaleDateString('fr-CA', {timeZone:'Europe/Paris'}); }
 function frc(i){ return i.slice(8,10) + '/' + i.slice(5,7) + '/' + i.slice(0,4); }
 var Q = new URLSearchParams(location.search);
-var JOUR = Q.get('jour') || iso(0), R = +Q.get('r') || 0, C = +Q.get('c') || 0, PROG = [], COMPTES = {}, DATA = null, SEL = [], JEU = '', FORM = false;
-var JEUX = {simple:'Simple', couple:'Couplé placé', trio:'Trio', multi:'Multi en 4'}, MINI = {simple:1, couple:2, trio:3, multi:4};
+var JOUR = Q.get('jour') || iso(0), R = +Q.get('r') || 0, C = +Q.get('c') || 0, PROG = [], COMPTES = {}, DATA = null, SEL = [], CH = null, FORM = false;
+var TYPES = {SG:'Simple gagnant', SP:'Simple placé', CG:'Couplé gagnant', CP:'Couplé placé', TR:'Trio', M4:'Multi en 4'}, ORDRE = ['SG','SP','CG','CP','TR','M4'];
+function Fn(x){ return (x > 0 ? '+' : x < 0 ? '−' : '') + Fe(Math.abs(x)); }
+function cl(x){ return x > 0 ? 'pos' : x < 0 ? 'neg' : ''; }
 function post(b){ return fetch('/api/pm', {method:'POST', credentials:'same-origin', headers:{'content-type':'application/json'}, body: JSON.stringify(b)}).then(function(r){ return r.json().then(function(x){ if (!r.ok) throw new Error(x.erreur || 'Erreur'); return x; }); }); }
 function url(){ history.replaceState(null, '', '/pronos-membres.html?jour=' + JOUR + (R ? '&r=' + R : '') + (C ? '&c=' + C : '')); }
 
@@ -130,61 +144,109 @@ function dessiner(){
   h += '</section>';
   h += d.pronos.length ? d.pronos.map(carte).join('') : '<p class="empty">Pas encore de prono sur cette course. Sois le premier !</p>';
   $('course').innerHTML = h;
-  if ($('plus')) $('plus').onclick = function(){ FORM = true; SEL = mien ? mien.chevaux.map(function(x){ return {n:x.n, b:x.b}; }) : []; JEU = mien ? mien.jeu : ''; dessiner(); };
+  if ($('plus')) $('plus').onclick = function(){ FORM = true; SEL = mien ? mien.chevaux.slice() : []; CH = mien ? JSON.parse(JSON.stringify(mien.choix)) : {s:[], c:{ch:[], g:0, p:0}, t:{ch:[]}, m:0}; dessiner(); };
   if (FORM) brancherForm(mien);
   document.querySelectorAll('[data-sup]').forEach(function(b){ b.onclick = function(){ if (b.textContent !== 'Confirmer') { b.textContent = 'Confirmer'; return; } post({action:'supprimer', id:+b.getAttribute('data-sup')}).then(function(){ FORM = false; course(); charger(); }); }; });
   document.querySelectorAll('form[data-re]').forEach(function(f){ f.onsubmit = function(e){ e.preventDefault(); var i = f.querySelector('input'); if (!i.value.trim()) return; post({action:'reagir', id:+f.getAttribute('data-re'), texte:i.value}).then(course).catch(function(x){ alert(x.message); }); }; });
   document.querySelectorAll('[data-rr]').forEach(function(b){ b.onclick = function(e){ e.preventDefault(); post({action:'retirerReaction', id:+b.getAttribute('data-rr')}).then(course); }; });
 }
 function carte(p){
-  var arr = (DATA.course && DATA.course.arrivee || []).slice(0, p.jeu === 'multi' ? 4 : 3);
-  var h = '<section class="card pc"><div class="hd"><a href="/fiche.html?p='+encodeURIComponent(p.pseudo)+'"'+(p.modoAuteur ? ' style="color:#d8232f"' : '')+'>'+E(p.pseudo)+'</a><span class="jeu j-'+p.jeu+'">'+E(p.jeuNom)+'</span>';
-  var nb = p.chevaux.filter(function(x){ return x.b; }).length;
-  h += '<small class="note2">'+(nb ? nb + ' base'+(nb>1?'s':'')+' + '+(p.chevaux.length-nb) : p.chevaux.length + ' cheva' + (p.chevaux.length > 1 ? 'ux' : 'l'))+'</small></div>';
-  h += '<div class="rd">'+p.chevaux.map(function(x){ return '<span class="'+(x.b?'b':'')+(arr.indexOf(x.n)>=0?' hit':'')+'">'+x.n+'</span>'; }).join('')+'</div>';
+  var arr = (DATA.course && DATA.course.arrivee || []).slice(0, p.paris.some(function(x){ return x.t === 'M4'; }) ? 4 : 3);
+  var h = '<section class="card pc"><div class="hd"><a href="/fiche.html?p='+encodeURIComponent(p.pseudo)+'"'+(p.modoAuteur ? ' style="color:#d8232f"' : '')+'>'+E(p.pseudo)+'</a><span class="jeu j-couple">'+E(p.jeuNom)+'</span></div>';
+  h += '<div class="rd">'+p.chevaux.map(function(n){ return '<span class="'+(arr.indexOf(n)>=0?'hit':'')+'">'+n+'</span>'; }).join('')+'</div>';
   if (p.mot) h += '<p class="mot">'+E(p.mot)+'</p>';
-  if (p.statut === 'calcule') h += p.gains > 0 ? '<div class="res g">✓ Gagné : '+Fe(p.gains)+' pour '+Fe(p.mise)+' misés'+(p.detail.length ? '<br><small>'+p.detail.map(E).join(' · ')+'</small>' : '')+'</div>' : '<div class="res p">✗ Perdu ('+Fe(p.mise)+' misés)</div>';
+  h += '<div class="blocp">' + (p.statut === 'calcule' && p.detail.length ? resultat(p.detail) : jeuPrevu(p.paris)) + '</div>';
   if (p.moi && DATA.ouvert) h += '<p><button type="button" class="btn ghost" data-sup="'+p.id+'">Retirer mon prono</button></p>';
   else if (DATA.modo && !p.moi) h += '<p><button type="button" class="btn ghost" data-sup="'+p.id+'">Retirer (modération)</button></p>';
   h += '<div class="reac">'+p.reactions.map(function(r){ return '<p><a href="/fiche.html?p='+encodeURIComponent(r.pseudo)+'"><b>'+E(r.pseudo)+'</b></a> '+E(r.texte)+((r.moi || DATA.modo) ? ' <a href="#" data-rr="'+r.id+'" title="Retirer">✕</a>' : '')+'</p>'; }).join('')+
     '<form data-re="'+p.id+'"><input maxlength="500" placeholder="💬 Réagir…"><button class="btn ghost">Envoyer</button></form></div>';
   return h + '</section>';
 }
-function cout(){
-  if (!JEU) return '';
-  if (JEU === 'simple') { var b = SEL.filter(function(x){ return x.b; }).length || (SEL.length ? 1 : 0); return b ? b * 2 + ' €' : ''; }
-  var k = {couple:2, trio:3, multi:4}[JEU], tous = SEL.map(function(x){ return x.n; }), bases = SEL.filter(function(x){ return x.b; }).map(function(x){ return x.n; }), n = 0;
-  (function rec(d, cur){ if (cur.length === k) { if (!bases.length || (bases.length <= k ? bases.every(function(b){ return cur.indexOf(b) >= 0; }) : cur.every(function(x){ return bases.indexOf(x) >= 0; }))) n++; return; } for (var i = d; i < tous.length; i++) rec(i + 1, cur.concat(tous[i])); })(0, []);
-  return n ? n + ' pari' + (n > 1 ? 's' : '') + ' de 1 € = ' + n + ' €' : '';
+// avant la course : les paris joués, type par type
+function jeuPrevu(paris){
+  var h = '';
+  ORDRE.forEach(function(t){ var L = paris.filter(function(x){ return x.t === t; }); if (!L.length) return;
+    h += '<div class="lj"><span><b>'+TYPES[t]+'</b> '+L.map(function(x){ return x.c.join('-'); }).join(' · ')+'</span><span>'+Fe(L.length)+'</span></div>'; });
+  return h + '<div class="tot">Mise : '+Fe(paris.length)+' ('+paris.length+' pari'+(paris.length > 1 ? 's' : '')+' de 1 €)</div>';
+}
+// après l'arrivée : mise, retour et net (mise déduite) type par type, avec les paris gagnants
+function resultat(det){
+  var h = '', M = 0, G = 0;
+  ORDRE.forEach(function(t){ var L = det.filter(function(x){ return x.t === t; }); if (!L.length) return;
+    var jo = L.filter(function(x){ return !x.np; }), m = jo.length, g = jo.reduce(function(s, x){ return s + (x.r || 0); }, 0); M += m; G += g;
+    var gg = jo.filter(function(x){ return x.r > 0; }).map(function(x){ return x.c.join('-') + ' : ' + Fe(x.r); });
+    var rb = L.filter(function(x){ return x.np; }).map(function(x){ return x.c.join('-'); });
+    h += '<div class="lj"><span><b>'+TYPES[t]+'</b> · mise '+Fe(m)+(gg.length ? '<br><small>✓ '+gg.join(' · ')+'</small>' : '')+(rb.length ? '<br><small>Non-partant, remboursé : '+rb.join(' · ')+'</small>' : '')+'</span><span class="'+cl(g - m)+'"><b>'+Fn(Math.round((g - m) * 100) / 100)+'</b></span></div>'; });
+  var n = Math.round((G - M) * 100) / 100;
+  return h + '<div class="tot">Total : mise '+Fe(M)+' · retour '+Fe(G)+' · net <span class="'+cl(n)+'">'+Fn(n)+'</span></div>';
+}
+function petit(){ return ((DATA.course && DATA.course.partants) || []).filter(function(p){ return !p.np; }).length <= 7; }
+// les paris que donnent les choix du formulaire (même calcul que le site)
+function parisChoisis(){
+  var P = [], ok = function(n){ return SEL.indexOf(n) >= 0; };
+  CH.s.forEach(function(x){ if (!ok(x.n)) return; if (x.g) P.push({t:'SG', c:[x.n]}); if (x.p) P.push({t:'SP', c:[x.n]}); });
+  function comb(L, k){ var o = []; (function rec(d, cur){ if (cur.length === k) { o.push(cur.slice()); return; } for (var i = d; i < L.length; i++) rec(i + 1, cur.concat(L[i])); })(0, []); return o; }
+  var cc = CH.c.ch.filter(ok).sort(function(a, b){ return a - b; }), tc = CH.t.ch.filter(ok).sort(function(a, b){ return a - b; });
+  if (cc.length >= 2) comb(cc, 2).forEach(function(c){ if (CH.c.g) P.push({t:'CG', c:c}); if (CH.c.p) P.push({t:'CP', c:c}); });
+  if (tc.length >= 3) comb(tc, 3).forEach(function(c){ P.push({t:'TR', c:c}); });
+  if (CH.m && SEL.length === 4) P.push({t:'M4', c:SEL.slice().sort(function(a, b){ return a - b; })});
+  return P;
 }
 function formulaire(mien){
   var parts = (DATA.course && DATA.course.partants) || [];
-  return '<div id="frm"><p class="note2"><b>Touche un cheval</b> : 1 fois = associé (bleu), 2 fois = base (doré ★), 3 fois = retiré. 4 chevaux maximum.</p>' +
+  return '<div id="frm"><p class="note2"><b>1. Touche tes chevaux</b> (4 au maximum). Touche encore pour retirer.</p>' +
     '<div class="grille">'+parts.map(function(p){ return '<button type="button" data-n="'+p.n+'"'+(p.np?' disabled':'')+'><b>'+p.n+'</b><span>'+E(p.nom)+'<small>'+(p.np ? 'non-partant' : E(p.musique))+'</small></span></button>'; }).join('')+'</div>' +
-    '<p><b>Mon jeu :</b></p><div class="pjeux">'+Object.keys(JEUX).map(function(k){ return '<button type="button" class="pill" data-jeu="'+k+'">'+JEUX[k]+'</button>'; }).join('')+'</div>' +
+    '<p class="note2"><b>2. Choisis tes paris</b> (1 € chacun)</p><div id="mesparis"></div>' +
     '<p class="note2" id="cout"></p>' +
     '<textarea id="mot" maxlength="500" rows="3" style="width:100%;box-sizing:border-box;font:inherit" placeholder="Un petit mot pour expliquer ton choix (facultatif)">'+E(mien ? mien.mot : '')+'</textarea>' +
     '<p><button type="button" class="btn" id="pub">Publier mon prono</button> <button type="button" class="btn ghost" id="ann">Annuler</button> <span class="msg" id="msg"></span></p></div>';
 }
 function brancherForm(){
+  function sx(n){ var x = CH.s.filter(function(y){ return y.n === n; })[0]; if (!x) { x = {n:n, g:0, p:0}; CH.s.push(x); } return x; }
+  function bascule(L, n){ var i = L.indexOf(n); if (i >= 0) L.splice(i, 1); else L.push(n); }
+  function tg(on, att, txt, dis){ return '<button type="button" class="tg'+(on ? ' on' : '')+'" '+att+(dis ? ' disabled' : '')+'>'+txt+'</button>'; }
   function maj(){
-    document.querySelectorAll('.grille [data-n]').forEach(function(b){ var n = +b.getAttribute('data-n'), x = SEL.filter(function(s){ return s.n === n; })[0]; b.className = x ? (x.b ? 'b' : 'a') : ''; });
-    document.querySelectorAll('[data-jeu]').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-jeu') === JEU); });
-    var c = cout(); $('cout').textContent = SEL.length + '/4 chevaux' + (c ? ' · mise : ' + c : '');
+    document.querySelectorAll('.grille [data-n]').forEach(function(b){ b.className = SEL.indexOf(+b.getAttribute('data-n')) >= 0 ? 'a' : ''; });
+    var pt = petit(), h = '';
+    if (!SEL.length) h = '<p class="empty">Choisis d\'abord tes chevaux.</p>';
+    else {
+      h += '<table class="mp"><tr><th>Cheval</th><th>Gagnant</th><th>Placé</th><th>Couplé</th><th>Trio</th></tr>' + SEL.map(function(n){ var x = sx(n);
+        return '<tr><td>'+n+'</td><td>'+tg(x.g, 'data-sg="'+n+'"', x.g ? '✓' : '—')+'</td><td>'+tg(x.p, 'data-sp="'+n+'"', x.p ? '✓' : '—')+'</td><td>'+tg(CH.c.ch.indexOf(n) >= 0, 'data-cc="'+n+'"', CH.c.ch.indexOf(n) >= 0 ? '✓' : '—', pt || SEL.length < 2)+'</td><td>'+tg(CH.t.ch.indexOf(n) >= 0, 'data-tc="'+n+'"', CH.t.ch.indexOf(n) >= 0 ? '✓' : '—', pt || SEL.length < 3)+'</td></tr>'; }).join('') + '</table>';
+      if (pt) h += '<p class="note2">Course de 7 partants ou moins : pas de couplé ni de trio au PMU sur cette course.</p>';
+      else if (SEL.length >= 2) h += '<p style="margin:6px 0"><b>Mon couplé :</b> '+tg(CH.c.g, 'data-cg', 'en gagnant')+' '+tg(CH.c.p, 'data-cp', 'en placé')+'</p>';
+      if (SEL.length === 4) h += '<p style="margin:6px 0">'+tg(CH.m, 'data-m4', 'Multi en 4 avec mes 4 chevaux')+'</p>';
+    }
+    $('mesparis').innerHTML = h;
+    $('mesparis').querySelectorAll('[data-sg]').forEach(function(b){ b.onclick = function(){ var x = sx(+b.getAttribute('data-sg')); x.g = x.g ? 0 : 1; maj(); }; });
+    $('mesparis').querySelectorAll('[data-sp]').forEach(function(b){ b.onclick = function(){ var x = sx(+b.getAttribute('data-sp')); x.p = x.p ? 0 : 1; maj(); }; });
+    $('mesparis').querySelectorAll('[data-cc]').forEach(function(b){ b.onclick = function(){ bascule(CH.c.ch, +b.getAttribute('data-cc')); if (CH.c.ch.length >= 2 && !CH.c.g && !CH.c.p) CH.c.p = 1; maj(); }; });
+    $('mesparis').querySelectorAll('[data-tc]').forEach(function(b){ b.onclick = function(){ bascule(CH.t.ch, +b.getAttribute('data-tc')); maj(); }; });
+    $('mesparis').querySelectorAll('[data-cg]').forEach(function(b){ b.onclick = function(){ CH.c.g = CH.c.g ? 0 : 1; maj(); }; });
+    $('mesparis').querySelectorAll('[data-cp]').forEach(function(b){ b.onclick = function(){ CH.c.p = CH.c.p ? 0 : 1; maj(); }; });
+    $('mesparis').querySelectorAll('[data-m4]').forEach(function(b){ b.onclick = function(){ CH.m = CH.m ? 0 : 1; maj(); }; });
+    var P = parisChoisis(), cpt = {};
+    P.forEach(function(x){ cpt[x.t] = (cpt[x.t] || 0) + 1; });
+    var av = [];
+    var cc = CH.c.ch.filter(function(n){ return SEL.indexOf(n) >= 0; }).length, tc = CH.t.ch.filter(function(n){ return SEL.indexOf(n) >= 0; }).length;
+    if (cc === 1) av.push('couplé : coche au moins 2 chevaux');
+    if (cc >= 2 && !CH.c.g && !CH.c.p) av.push('couplé : choisis gagnant ou placé');
+    if (tc && tc < 3) av.push('trio : coche 3 ou 4 chevaux');
+    $('cout').innerHTML = SEL.length + '/4 chevaux' + (P.length ? ' · <b>mise : ' + Fe(P.length) + '</b> (' + ORDRE.filter(function(t){ return cpt[t]; }).map(function(t){ return TYPES[t] + ' ' + cpt[t]; }).join(', ') + ')' : '') + (av.length ? '<br><span class="neg">' + av.join(' · ') + '</span>' : '');
   }
   document.querySelectorAll('.grille [data-n]').forEach(function(b){ b.onclick = function(){
-    var n = +b.getAttribute('data-n'), i = -1; SEL.forEach(function(s, k){ if (s.n === n) i = k; });
-    if (i < 0) { if (SEL.length >= 4) return; SEL.push({n:n, b:0}); } else if (!SEL[i].b) SEL[i].b = 1; else SEL.splice(i, 1);
+    var n = +b.getAttribute('data-n'), i = SEL.indexOf(n);
+    if (i < 0) { if (SEL.length >= 4) return; SEL.push(n); } else { SEL.splice(i, 1); [CH.c.ch, CH.t.ch].forEach(function(L){ var k = L.indexOf(n); if (k >= 0) L.splice(k, 1); }); CH.s = CH.s.filter(function(x){ return x.n !== n; }); }
+    if (SEL.length < 4) CH.m = 0;
     maj();
   }; });
-  document.querySelectorAll('[data-jeu]').forEach(function(b){ b.onclick = function(){ JEU = b.getAttribute('data-jeu'); maj(); }; });
   $('ann').onclick = function(){ FORM = false; dessiner(); };
   $('pub').onclick = function(){
     var m = $('msg'); m.className = 'msg';
-    if (!JEU) { m.className = 'msg err'; m.textContent = 'Choisis ton jeu.'; return; }
-    if (SEL.length < MINI[JEU]) { m.className = 'msg err'; m.textContent = 'Il faut au moins ' + MINI[JEU] + ' chevaux pour le ' + JEUX[JEU] + '.'; return; }
+    if (!SEL.length) { m.className = 'msg err'; m.textContent = 'Choisis tes chevaux.'; return; }
+    if (!parisChoisis().length) { m.className = 'msg err'; m.textContent = 'Choisis au moins un pari.'; return; }
+    if (petit()) { CH.c = {ch:[], g:0, p:0}; CH.t = {ch:[]}; }
     m.textContent = 'Envoi…';
-    post({jour:JOUR, r:R, c:C, chevaux:SEL, jeu:JEU, mot:$('mot').value}).then(function(){ FORM = false; COMPTES[R + '-' + C] = (COMPTES[R + '-' + C] || 0); course(); fetch('/api/pm?jour=' + JOUR, {credentials:'same-origin'}).then(function(r){ return r.json(); }).then(function(t){ COMPTES = {}; (t.comptes || []).forEach(function(x){ COMPTES[x.r + '-' + x.c] = x.n; }); reunions(); }); })
+    post({jour:JOUR, r:R, c:C, chevaux:SEL, choix:CH, mot:$('mot').value}).then(function(){ FORM = false; course(); fetch('/api/pm?jour=' + JOUR, {credentials:'same-origin'}).then(function(r){ return r.json(); }).then(function(t){ COMPTES = {}; (t.comptes || []).forEach(function(x){ COMPTES[x.r + '-' + x.c] = x.n; }); reunions(); }); })
       .catch(function(e){ m.className = 'msg err'; m.textContent = e.message; });
   };
   maj();
@@ -192,7 +254,9 @@ function brancherForm(){
 function classement(k){
   document.querySelectorAll('[data-cl]').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-cl') === k); });
   fetch('/api/pm?classement=' + k, {credentials:'same-origin'}).then(function(r){ return r.json(); }).then(function(d){
-    var L = d.classement || [];
+    var L = d.classement || [], MB = d.moi || [];
+    var tm = MB.reduce(function(s, x){ return {m: s.m + x.mise, g: s.g + x.gains}; }, {m:0, g:0}), tn = Math.round((tm.g - tm.m) * 100) / 100;
+    $('mb').innerHTML = '<section class="card" style="padding:10px 14px"><h3 style="margin:0 0 6px">Mon bilan, pari par pari</h3>' + (MB.length ? '<table class="st"><tr><th>Jeu</th><th>Paris</th><th>Gagnés</th><th>Mise</th><th>Net</th></tr>' + MB.map(function(x){ return '<tr><td>'+TYPES[x.t]+'</td><td>'+x.paris+'</td><td>'+x.gagnes+'</td><td>'+Fe(x.mise)+'</td><td class="'+cl(x.net)+'"><b>'+Fn(x.net)+'</b></td></tr>'; }).join('') + '<tr><td><b>Total</b></td><td></td><td></td><td><b>'+Fe(tm.m)+'</b></td><td class="'+cl(tn)+'"><b>'+Fn(tn)+'</b></td></tr></table>' : '<p class="empty">Pas encore de prono vérifié sur cette période.</p>') + '</section>';
     $('cl').innerHTML = L.length ? '<table class="st"><tr><th>#</th><th>Membre</th><th>Pronos</th><th>Gagnés</th><th>Mise</th><th>Net</th></tr>'+L.map(function(x, i){ return '<tr><td>'+(i+1)+'</td><td><a href="/fiche.html?p='+encodeURIComponent(x.pseudo)+'">'+E(x.pseudo)+'</a></td><td>'+x.n+'</td><td>'+x.gagnes+'</td><td>'+Fe(x.mise)+'</td><td class="'+(x.net >= 0 ? 'pos' : 'neg')+'"><b>'+(x.net >= 0 ? '+' : '')+Fe(x.net)+'</b></td></tr>'; }).join('')+'</table>' : '<p class="empty">Pas encore de prono vérifié sur cette période.</p>';
   });
 }
