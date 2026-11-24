@@ -532,5 +532,6 @@ header .bar .compte,header .bar .who{justify-self:end;grid-column:3}
 .pslink{text-decoration:none;color:inherit}
 
 /* Lien vers les pronos des membres, au-dessus de la synthèse */
-.pmlien{display:inline-block;margin:4px 0 6px;font-size:13px;font-weight:700;text-decoration:none;color:#1a5fb4;background:#e6effb;border:1px solid #9fbbe0;border-radius:14px;padding:3px 10px}
-.pmlien.pmn{color:#fff;background:#1a5fb4}
+.pmlien{display:inline-block;margin:8px 0 10px;font-size:16px;font-weight:800;text-decoration:none;color:#fff;background:#0e2a5c;border:2px solid #0e2a5c;border-radius:20px;padding:8px 16px;box-shadow:0 2px 6px rgba(14,42,92,.25)}
+.pmlien:hover{background:#1a3f7e}
+.pmlien.pmn{background:#0e2a5c;color:#fff}
