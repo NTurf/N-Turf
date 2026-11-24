@@ -34,7 +34,7 @@ fetch('/api/membres/tickets', {credentials:'same-origin'})
       }
       return { arrivee: arr, rapports: raps, partants: part };
     }
-    function dessiner(){ el.innerHTML = NTT.rendu(T && Q && T.date === Q.date ? T : (T || null), ctx()); }
+    function dessiner(){ el.innerHTML = NTT.rendu(T && (!Q || !T.date || !Q.date || T.date === Q.date) ? T : null, ctx()); }
     dessiner();
     function maj(){ if (!Q || !Q.date) return; fetch('/api/pmu/quinte?date=' + encodeURIComponent(Q.date)).then(function(r){ return r.json(); }).then(function(l){ LIVE = l; dessiner(); }).catch(function(){}); }
     maj(); setInterval(maj, 60000);

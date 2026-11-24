@@ -5,5 +5,7 @@ export async function onRequestGet({ request, env }) {
   await initDb(env.DB);
   const u = await currentUser(env.DB, request);
   if (!u) return json({ erreur: 'Connectez-vous pour voir cette page.' }, 401);
-  return json({ tickets: await lireContenu(env.DB, 'tickets'), quinte: await lireContenu(env.DB, 'quinte') });
+  const t = await lireContenu(env.DB, 'tickets'), q = await lireContenu(env.DB, 'quinte');
+  // Les tickets d'un autre jour que le Quinté+ affiché ne se montrent plus (ils restent gardés par date pour les bilans)
+  return json({ tickets: t && q && t.date && q.date && t.date !== q.date ? null : t, quinte: q });
 }
