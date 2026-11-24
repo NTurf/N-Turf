@@ -1,17 +1,20 @@
 {
  "etquinte": {
-  "titre": "Étude Quinté+ du mardi 24/11 – Deauville",
+  "titre": "Étude Quinté+ du mercredi 25/11 – Deauville",
   "n": 1,
-  "v": "mwtkqr7s"
+  "v": "mwv6rxhk",
+  "date": "25/11/2026"
  },
  "etr1": {
-  "titre": "Études des réunions du mardi 24/11 – Deauville et Paris-Vincennes",
+  "titre": "Études presse du mercredi 25/11 – Deauville et Paris-Vincennes",
   "n": 2,
-  "v": "mwtkqr7s"
+  "v": "mwv6rxhk",
+  "date": "25/11/2026"
  },
  "etout": {
-  "titre": "Outsiders du mardi 24/11",
-  "n": 1,
-  "v": "mwtkqr7s"
+  "titre": "Outsiders du mercredi 25/11 – Deauville et Paris-Vincennes",
+  "n": 2,
+  "v": "mwv6rxhk",
+  "date": "25/11/2026"
  }
 }
