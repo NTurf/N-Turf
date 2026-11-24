@@ -535,3 +535,10 @@ header .bar .compte,header .bar .who{justify-self:end;grid-column:3}
 .pmlien{display:inline-block;margin:8px 0 10px;font-size:16px;font-weight:800;text-decoration:none;color:#fff;background:#0e2a5c;border:2px solid #0e2a5c;border-radius:20px;padding:8px 16px;box-shadow:0 2px 6px rgba(14,42,92,.25)}
 .pmlien:hover{background:#1a3f7e}
 .pmlien.pmn{background:#0e2a5c;color:#fff}
+
+/* « N-TURF » de l'accueil, dans le style de la bannière : italique, métal argenté, contour bleu */
+h1.nlogo{display:inline-flex;flex-direction:column;align-items:flex-end;margin:6px 0 8px}
+h1.nlogo span{display:inline-block;font-family:'Barlow Condensed',sans-serif;font-style:italic;font-weight:900;font-size:52px;line-height:1;letter-spacing:.05em;transform:skewX(-10deg);
+  background:linear-gradient(180deg,#f4f7fb 0%,#c3ccd9 38%,#6f7d93 52%,#aeb9c9 70%,#e6ebf2 100%);-webkit-background-clip:text;background-clip:text;color:transparent;
+  -webkit-text-stroke:1.6px #1d3a7a;filter:drop-shadow(1px 2px 0 rgba(14,42,92,.35))}
+h1.nlogo small{font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:.42em;color:#6f7d93;margin-top:2px}
