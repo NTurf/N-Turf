@@ -10,6 +10,16 @@ export const MISE_JOUR = 171.5;
 const r2 = (x) => Math.round(x * 100) / 100;
 
 export const parisJour = () => new Date().toLocaleDateString('fr-CA', { timeZone: 'Europe/Paris' }); // AAAA-MM-JJ
+// Jour du concours : celui du Quinté+ d'aujourd'hui tant qu'il n'est pas calculé ;
+// dès que ses rapports définitifs sont tombés (ou s'il n'y a pas de Quinté+ aujourd'hui), le concours passe au lendemain
+export async function jourConcours(db) {
+  const auj = parisJour();
+  let j = null;
+  try { j = await calculerSiPret(db, auj); } catch (e) {}
+  if (j && j.statut !== 'calcule') return auj;
+  const t = new Date(auj + 'T12:00:00Z'); t.setUTCDate(t.getUTCDate() + 1);
+  return t.toISOString().slice(0, 10);
+}
 export const isoVersPmu = (iso) => iso.split('-').reverse().join('');
 export const isoVersFr = (iso) => iso.split('-').reverse().join('/');
 

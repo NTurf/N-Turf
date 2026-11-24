@@ -90,7 +90,7 @@
 
   function dessinerJeu(){
     var c = D.course, s = document.getElementById('cSaisie');
-    if (!c) { s.innerHTML = '<p class="empty">' + (D.erreurPmu ? 'Le programme du PMU ne répond pas pour le moment, réessaie dans un instant.' : "Pas de Quinté+ trouvé aujourd'hui.") + '</p>'; return; }
+    if (!c) { s.innerHTML = '<p class="empty">' + (D.erreurPmu ? 'Le programme du PMU ne répond pas pour le moment, réessaie dans un instant.' : 'Pas de Quinté+ trouvé pour le ' + D.dateFr + '.') + '</p>'; return; }
     var np = {}; c.partants.forEach(function(p){ if (p.np) np[p.n] = 1; });
     var ok = ouvert();
     document.getElementById('pgrid').innerHTML = PL.map(function(l, i){
@@ -109,7 +109,7 @@
     if (!ok) {
       var m = document.getElementById('msg');
       m.className = 'msg';
-      m.textContent = c.calcule ? '' : (D.moi ? 'Pronostics fermés. Ton pronostic est enregistré, résultat dès l\'arrivée validée.' : 'Pronostics fermés pour aujourd\'hui.');
+      m.textContent = c.calcule ? '' : (D.moi ? 'Pronostics fermés. Ton pronostic est enregistré, résultat dès l\'arrivée validée.' : 'Pronostics fermés pour le Quinté+ du ' + D.dateFr + '.');
       if (!D.moi && !c.calcule) document.getElementById('pgrid').innerHTML = '';
     }
     dessinerResultat();

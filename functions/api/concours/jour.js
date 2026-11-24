@@ -1,5 +1,5 @@
 import { json, initDb, currentUser, noDb } from '../../_auth.js';
-import { initConcours, calculerSiPret, courseDuJour, ajouterRobots, parisJour, isoVersFr, MISE, MISE_JOUR, classementJour } from '../../_concours.js';
+import { initConcours, calculerSiPret, courseDuJour, ajouterRobots, jourConcours, isoVersFr, MISE, MISE_JOUR, classementJour } from '../../_concours.js';
 
 // Le concours Quinté+ d'un jour : la course, mon pronostic ; après la course, les pronostics de tous
 export async function onRequestGet({ request, env }) {
@@ -9,7 +9,7 @@ export async function onRequestGet({ request, env }) {
   const u = await currentUser(db, request);
   if (!u) return json({ erreur: 'Réservé aux membres.' }, 401);
   const q = new URL(request.url).searchParams.get('date');
-  const iso = /^\d{4}-\d{2}-\d{2}$/.test(q || '') ? q : parisJour();
+  const iso = /^\d{4}-\d{2}-\d{2}$/.test(q || '') ? q : await jourConcours(db);
   let j = null, erreurPmu = false;
   try { j = (await calculerSiPret(db, iso)) || (await courseDuJour(db, iso)); } catch (e) { erreurPmu = true; }
   if (j && j.statut !== 'calcule') { try { await ajouterRobots(db, iso, j); } catch (e) {} }
