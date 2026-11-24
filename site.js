@@ -21,6 +21,7 @@
     ['/outils.html', 'Outils'],
     null,
     ['/stats.html', 'Statistiques'],
+    ['/arrivees', 'Arrivées et rapports'],
     ['/archives.html', 'Archives'],
     ['/rejoindre.html', 'Rejoindre N-TURF'],
     ['/membres.html', 'Espace membres']
