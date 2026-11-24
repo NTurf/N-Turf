@@ -282,6 +282,9 @@ var NT = (function(){
           h += '<div class="prixc">'+(x.lc.libelle ? '<b>'+esc(x.lc.libelle)+'</b>' : '')+(inf.length ? '<span>'+esc(inf.join(' · '))+'</span>' : '')+
             (x.lc.conditions ? '<details><summary>Conditions de la course</summary><p>'+esc(x.lc.conditions)+'</p></details>' : '')+'</div>';
         }
+        // Lien vers les pronos des membres de cette course (le nombre est rempli après l'affichage)
+        var ncrs = parseInt(String(c.course).replace(/\D/g,''), 10), jIso = String(d.date || '').split('/').reverse().join('-');
+        if (L && L.reunion && /^\d{4}-\d{2}-\d{2}$/.test(jIso)) h += '<a class="pmlien" data-pm="'+L.reunion+'-'+ncrs+'" data-j="'+jIso+'" href="/pronos-membres.html?jour='+jIso+'&r='+L.reunion+'&c='+ncrs+'">👥 Pronos des membres : donne le tien</a>';
         if (!c.synthese.length) h += '<p class="empty">La synthèse arrive.</p>';
         else h += '<div class="sel">'+c.synthese.map(function(n, k){
           return '<span class="ch '+(k < 3 ? 'piv' : '')+(top.indexOf(n)>=0?' hit':'')+'">'+esc(n)+marques(n)+'</span>';
@@ -340,5 +343,13 @@ var NT = (function(){
       };
     });
   }
-  return { lire: lire, afficher: afficher, chargerQuinte: chargerQuinte, lireCpc: lireCpc, afficherCpc: afficherCpc, brancherOnglets: brancherOnglets, chargerLive: chargerLive };
+  // Remplit « 👥 X pronos de membres » au-dessus de chaque synthèse
+  function majPm(el){
+    var a = el.querySelector('.pmlien'); if (!a) return;
+    fetch('/api/pm?jour=' + a.getAttribute('data-j'), {credentials:'same-origin'}).then(function(r){ return r.ok ? r.json() : null; }).then(function(t){
+      if (!t) return; var C = {}; (t.comptes || []).forEach(function(x){ C[x.r + '-' + x.c] = x.n; });
+      el.querySelectorAll('.pmlien').forEach(function(l){ var n = C[l.getAttribute('data-pm')] || 0; l.textContent = n ? '👥 ' + n + ' prono' + (n > 1 ? 's' : '') + ' de membres' : '👥 Pronos des membres : donne le tien'; l.classList.toggle('pmn', n > 0); });
+    }).catch(function(){});
+  }
+  return { lire: lire, afficher: afficher, chargerQuinte: chargerQuinte, lireCpc: lireCpc, afficherCpc: afficherCpc, brancherOnglets: brancherOnglets, chargerLive: chargerLive, majPm: majPm };
 })();

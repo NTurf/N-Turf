@@ -9,6 +9,7 @@
     ['/pronostics.html#cpc', 'Pronos course par course'],
     ['/pronostics.html#fanny', 'Repérés de Fanny'],
     ['/hippodrome.html', 'Pronos Hippodrome'],
+    ['/pronos-membres.html', 'Pronos des membres'],
     ['/analyses.html', 'Analyses'],
     ['/lives.html', 'Nos lives'],
     ['/etudes.html', 'Études'],

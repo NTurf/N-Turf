@@ -530,3 +530,7 @@ header .bar .compte,header .bar .who{justify-self:end;grid-column:3}
 .mpbadge{position:relative;text-decoration:none;font-size:18px}
 .mpbadge sup{background:#e5243b;color:#fff;border-radius:9px;padding:0 5px;font-size:11px;font-weight:700;margin-left:1px}
 .pslink{text-decoration:none;color:inherit}
+
+/* Lien vers les pronos des membres, au-dessus de la synthèse */
+.pmlien{display:inline-block;margin:4px 0 6px;font-size:13px;font-weight:700;text-decoration:none;color:#1a5fb4;background:#e6effb;border:1px solid #9fbbe0;border-radius:14px;padding:3px 10px}
+.pmlien.pmn{color:#fff;background:#1a5fb4}

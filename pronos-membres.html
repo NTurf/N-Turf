@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pronos des membres – N-TURF</title>
+<meta name="theme-color" content="#0D1E3D">
+<link rel="manifest" href="/manifest.webmanifest?v=2">
+<link rel="icon" href="/icone-nturf-192.png">
+<link rel="stylesheet" href="/style.css">
+<style>
+.cbt{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.cbt a{display:inline-flex;align-items:center;gap:4px;padding:6px 10px;border-radius:8px;border:1px solid #c9d6ea;background:#fff;text-decoration:none;color:inherit;font-weight:700}
+.cbt a.on{background:#0e2a5c;color:#fff}.cbt a small{font-weight:600;font-size:.75em;background:#e5243b;color:#fff;border-radius:8px;padding:0 5px}
+.pc{padding:12px 14px;margin:10px 0}
+.pc .hd{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.pc .hd a{font-weight:800;text-decoration:none}
+.jeu{font-size:.8em;font-weight:700;color:#fff;border-radius:10px;padding:2px 9px}
+.j-simple{background:#1a8a3a}.j-couple{background:#1a5fb4}.j-trio{background:#7b3fb3}.j-multi{background:#e07a10}
+.rd{display:flex;gap:8px;margin:10px 0;align-items:center}
+.rd span{width:38px;height:38px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-weight:800;background:#dce8f7;color:#0e2a5c;border:2px solid #9fbbe0;position:relative}
+.rd span.b{width:46px;height:46px;background:#f6d77a;border-color:#b8860b;font-size:1.1em}
+.rd span.b:after{content:'★';position:absolute;top:-8px;right:-6px;font-size:.75em;color:#b8860b}
+.rd span.hit{background:#e5243b;border-color:#a3121f;color:#fff}
+.res{padding:6px 10px;border-radius:8px;font-weight:700;margin:6px 0}
+.res.g{background:#e3f6e8;color:#13702f}.res.p{background:#f3f4f6;color:#5a6a85}
+.mot{white-space:pre-wrap;margin:6px 0}
+.reac{border-top:1px solid #e3eaf5;margin-top:8px;padding-top:6px;font-size:.92em}
+.reac p{margin:4px 0}.reac form{display:flex;gap:6px;margin-top:6px}.reac input{flex:1}
+.grille{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px;margin:8px 0}
+.grille button{display:flex;gap:8px;align-items:center;text-align:left;padding:8px;border-radius:8px;border:1px solid #c9d6ea;background:#fff;font:inherit;cursor:pointer}
+.grille button b{min-width:26px;height:26px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;background:#eef3fa}
+.grille button.a{border-color:#1a5fb4;background:#e6effb}.grille button.a b{background:#9fbbe0}
+.grille button.b{border-color:#b8860b;background:#fdf3d6}.grille button.b b{background:#f6d77a}
+.grille button small{display:block;color:var(--soft);font-size:.78em}
+.grille button:disabled{opacity:.45}
+.pjeux button{margin:2px}
+.arrb{margin:6px 0}
+</style>
+</head>
+<body data-page="membres">
+<main>
+<h1>Pronos des membres</h1>
+<div id="refus" class="note" hidden>🔒 Réservé aux membres. <a href="/inscription.html">S'inscrire gratuitement</a> ou <a href="/inscription.html#connexion">se connecter</a>.</div>
+<div id="zone" hidden>
+<div class="pills"><button type="button" class="pill on" id="tP">Les pronos</button><button type="button" class="pill" id="tC">Classement</button></div>
+<div id="vP">
+<p class="lead">Chacun donne son prono (4 chevaux maximum) sur la course de son choix. Tout le monde le voit, et le site le vérifie après l'arrivée.</p>
+<div class="pills" id="jours"></div>
+<div class="pills" id="reus" style="margin-top:6px"></div>
+<div class="cbt" id="crs"></div>
+<div id="course"></div>
+</div>
+<div id="vC" hidden>
+<div class="pills"><button type="button" class="pill on" data-cl="mois">Ce mois-ci</button><button type="button" class="pill" data-cl="tout">Depuis le début</button></div>
+<p class="note2">Bilan avec une mise de 1 € par pari, aux vrais rapports PMU (Simple : 1 € gagnant + 1 € placé sur chaque base).</p>
+<div id="cl"></div>
+</div>
+</div>
+</main>
+<script src="/site.js"></script>
+<script>
+function $(i){ return document.getElementById(i); }
+function E(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+function Fe(x){ return (Math.round(x * 100) / 100).toFixed(2).replace('.', ',') + ' €'; }
+function iso(k){ return new Date(Date.now() + k*86400000).toLocaleDateString('fr-CA', {timeZone:'Europe/Paris'}); }
+function frc(i){ return i.slice(8,10) + '/' + i.slice(5,7) + '/' + i.slice(0,4); }
+var Q = new URLSearchParams(location.search);
+var JOUR = Q.get('jour') || iso(0), R = +Q.get('r') || 0, C = +Q.get('c') || 0, PROG = [], COMPTES = {}, DATA = null, SEL = [], JEU = '', FORM = false;
+var JEUX = {simple:'Simple', couple:'Couplé placé', trio:'Trio', multi:'Multi en 4'}, MINI = {simple:1, couple:2, trio:3, multi:4};
+function post(b){ return fetch('/api/pm', {method:'POST', credentials:'same-origin', headers:{'content-type':'application/json'}, body: JSON.stringify(b)}).then(function(r){ return r.json().then(function(x){ if (!r.ok) throw new Error(x.erreur || 'Erreur'); return x; }); }); }
+function url(){ history.replaceState(null, '', '/pronos-membres.html?jour=' + JOUR + (R ? '&r=' + R : '') + (C ? '&c=' + C : '')); }
+
+function jours(){
+  $('jours').innerHTML = [[-1,'Hier'],[0,'Aujourd\'hui'],[1,'Demain']].map(function(x){ var j = iso(x[0]); return '<button type="button" class="pill'+(j===JOUR?' on':'')+'" data-j="'+j+'">'+x[1]+'</button>'; }).join('');
+  document.querySelectorAll('[data-j]').forEach(function(b){ b.onclick = function(){ JOUR = b.getAttribute('data-j'); R = 0; C = 0; charger(); }; });
+}
+function charger(){
+  jours(); url();
+  Promise.all([
+    fetch('/api/pmu/programme?date=' + encodeURIComponent(frc(JOUR))).then(function(r){ return r.json(); }),
+    fetch('/api/pm?jour=' + JOUR, {credentials:'same-origin'}).then(function(r){ if (!r.ok) throw 0; return r.json(); })
+  ]).then(function(t){
+    $('zone').hidden = false;
+    PROG = t[0].reunions || []; COMPTES = {};
+    (t[1].comptes || []).forEach(function(x){ COMPTES[x.r + '-' + x.c] = x.n; });
+    if (!R && PROG.length) { R = PROG[0].r; var best = 0; PROG.forEach(function(re){ var n = re.courses.reduce(function(s, c){ return s + (COMPTES[re.r + '-' + c] || 0); }, 0); if (n > best) { best = n; R = re.r; } }); }
+    reunions();
+  }).catch(function(){ $('refus').hidden = false; });
+}
+function reunions(){
+  $('reus').innerHTML = PROG.map(function(re){ var n = re.courses.reduce(function(s, c){ return s + (COMPTES[re.r + '-' + c] || 0); }, 0); return '<button type="button" class="pill'+(re.r===R?' on':'')+'" data-r="'+re.r+'">'+E(re.h)+(n ? ' ('+n+')' : '')+'</button>'; }).join('') || '<p class="empty">Pas de programme ce jour-là.</p>';
+  document.querySelectorAll('[data-r]').forEach(function(b){ b.onclick = function(){ R = +b.getAttribute('data-r'); C = 0; reunions(); }; });
+  var re = PROG.filter(function(x){ return x.r === R; })[0];
+  if (!re) { $('crs').innerHTML = ''; $('course').innerHTML = ''; return; }
+  if (!C) C = re.courses[0];
+  $('crs').innerHTML = re.courses.map(function(c){ var n = COMPTES[R + '-' + c] || 0; return '<a href="#" data-c="'+c+'" class="'+(c===C?'on':'')+'">C'+c+(n ? ' <small>'+n+'</small>' : '')+'</a>'; }).join('');
+  document.querySelectorAll('#crs [data-c]').forEach(function(a){ a.onclick = function(e){ e.preventDefault(); C = +a.getAttribute('data-c'); FORM = false; reunions(); }; });
+  url(); course();
+}
+function course(){
+  $('course').innerHTML = '<p class="note2">Chargement…</p>';
+  fetch('/api/pm?jour=' + JOUR + '&r=' + R + '&c=' + C, {credentials:'same-origin'}).then(function(r){ return r.json(); }).then(function(d){ DATA = d; dessiner(); });
+}
+function dessiner(){
+  var d = DATA, c = d.course || {}, arr = (c.arrivee || []).slice(0, 5), h = '';
+  var heure = c.heure ? new Date(c.heure).toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit', timeZone:'Europe/Paris'}) : '';
+  h += '<section class="card"><h2 style="margin:0">'+E(c.hippo || '')+' – C'+C+(c.libelle ? ' · '+E(c.libelle) : '')+'</h2><p class="note2">'+[heure, c.distance ? c.distance+' m' : ''].filter(Boolean).join(' · ')+'</p>';
+  if (arr.length) h += '<p class="arrb"><b>Arrivée'+(c.definitive ? '' : ' <span class="prov">(provisoire)</span>')+' :</b> '+arr.join(' - ')+'</p>';
+  var mien = d.pronos.filter(function(p){ return p.moi; })[0];
+  if (d.ouvert) h += FORM ? formulaire(mien) : '<p><button type="button" class="btn" id="plus">'+(mien ? '✏ Modifier mon prono' : '+ Mon prono')+'</button></p>';
+  else if (!arr.length) h += '<p class="note2">Les pronos sont fermés pour cette course.</p>';
+  h += '</section>';
+  h += d.pronos.length ? d.pronos.map(carte).join('') : '<p class="empty">Pas encore de prono sur cette course. Sois le premier !</p>';
+  $('course').innerHTML = h;
+  if ($('plus')) $('plus').onclick = function(){ FORM = true; SEL = mien ? mien.chevaux.map(function(x){ return {n:x.n, b:x.b}; }) : []; JEU = mien ? mien.jeu : ''; dessiner(); };
+  if (FORM) brancherForm(mien);
+  document.querySelectorAll('[data-sup]').forEach(function(b){ b.onclick = function(){ if (b.textContent !== 'Confirmer') { b.textContent = 'Confirmer'; return; } post({action:'supprimer', id:+b.getAttribute('data-sup')}).then(function(){ FORM = false; course(); charger(); }); }; });
+  document.querySelectorAll('form[data-re]').forEach(function(f){ f.onsubmit = function(e){ e.preventDefault(); var i = f.querySelector('input'); if (!i.value.trim()) return; post({action:'reagir', id:+f.getAttribute('data-re'), texte:i.value}).then(course).catch(function(x){ alert(x.message); }); }; });
+  document.querySelectorAll('[data-rr]').forEach(function(b){ b.onclick = function(e){ e.preventDefault(); post({action:'retirerReaction', id:+b.getAttribute('data-rr')}).then(course); }; });
+}
+function carte(p){
+  var arr = (DATA.course && DATA.course.arrivee || []).slice(0, p.jeu === 'multi' ? 4 : 3);
+  var h = '<section class="card pc"><div class="hd"><a href="/fiche.html?p='+encodeURIComponent(p.pseudo)+'"'+(p.modoAuteur ? ' style="color:#d8232f"' : '')+'>'+E(p.pseudo)+'</a><span class="jeu j-'+p.jeu+'">'+E(p.jeuNom)+'</span>';
+  var nb = p.chevaux.filter(function(x){ return x.b; }).length;
+  h += '<small class="note2">'+(nb ? nb + ' base'+(nb>1?'s':'')+' + '+(p.chevaux.length-nb) : p.chevaux.length + ' cheva' + (p.chevaux.length > 1 ? 'ux' : 'l'))+'</small></div>';
+  h += '<div class="rd">'+p.chevaux.map(function(x){ return '<span class="'+(x.b?'b':'')+(arr.indexOf(x.n)>=0?' hit':'')+'">'+x.n+'</span>'; }).join('')+'</div>';
+  if (p.mot) h += '<p class="mot">'+E(p.mot)+'</p>';
+  if (p.statut === 'calcule') h += p.gains > 0 ? '<div class="res g">✓ Gagné : '+Fe(p.gains)+' pour '+Fe(p.mise)+' misés'+(p.detail.length ? '<br><small>'+p.detail.map(E).join(' · ')+'</small>' : '')+'</div>' : '<div class="res p">✗ Perdu ('+Fe(p.mise)+' misés)</div>';
+  if (p.moi && DATA.ouvert) h += '<p><button type="button" class="btn ghost" data-sup="'+p.id+'">Retirer mon prono</button></p>';
+  else if (DATA.modo && !p.moi) h += '<p><button type="button" class="btn ghost" data-sup="'+p.id+'">Retirer (modération)</button></p>';
+  h += '<div class="reac">'+p.reactions.map(function(r){ return '<p><a href="/fiche.html?p='+encodeURIComponent(r.pseudo)+'"><b>'+E(r.pseudo)+'</b></a> '+E(r.texte)+((r.moi || DATA.modo) ? ' <a href="#" data-rr="'+r.id+'" title="Retirer">✕</a>' : '')+'</p>'; }).join('')+
+    '<form data-re="'+p.id+'"><input maxlength="500" placeholder="💬 Réagir…"><button class="btn ghost">Envoyer</button></form></div>';
+  return h + '</section>';
+}
+function cout(){
+  if (!JEU) return '';
+  if (JEU === 'simple') { var b = SEL.filter(function(x){ return x.b; }).length || (SEL.length ? 1 : 0); return b ? b * 2 + ' €' : ''; }
+  var k = {couple:2, trio:3, multi:4}[JEU], tous = SEL.map(function(x){ return x.n; }), bases = SEL.filter(function(x){ return x.b; }).map(function(x){ return x.n; }), n = 0;
+  (function rec(d, cur){ if (cur.length === k) { if (!bases.length || (bases.length <= k ? bases.every(function(b){ return cur.indexOf(b) >= 0; }) : cur.every(function(x){ return bases.indexOf(x) >= 0; }))) n++; return; } for (var i = d; i < tous.length; i++) rec(i + 1, cur.concat(tous[i])); })(0, []);
+  return n ? n + ' pari' + (n > 1 ? 's' : '') + ' de 1 € = ' + n + ' €' : '';
+}
+function formulaire(mien){
+  var parts = (DATA.course && DATA.course.partants) || [];
+  return '<div id="frm"><p class="note2"><b>Touche un cheval</b> : 1 fois = associé (bleu), 2 fois = base (doré ★), 3 fois = retiré. 4 chevaux maximum.</p>' +
+    '<div class="grille">'+parts.map(function(p){ return '<button type="button" data-n="'+p.n+'"'+(p.np?' disabled':'')+'><b>'+p.n+'</b><span>'+E(p.nom)+'<small>'+(p.np ? 'non-partant' : E(p.musique))+'</small></span></button>'; }).join('')+'</div>' +
+    '<p><b>Mon jeu :</b></p><div class="pjeux">'+Object.keys(JEUX).map(function(k){ return '<button type="button" class="pill" data-jeu="'+k+'">'+JEUX[k]+'</button>'; }).join('')+'</div>' +
+    '<p class="note2" id="cout"></p>' +
+    '<textarea id="mot" maxlength="500" rows="3" style="width:100%;box-sizing:border-box;font:inherit" placeholder="Un petit mot pour expliquer ton choix (facultatif)">'+E(mien ? mien.mot : '')+'</textarea>' +
+    '<p><button type="button" class="btn" id="pub">Publier mon prono</button> <button type="button" class="btn ghost" id="ann">Annuler</button> <span class="msg" id="msg"></span></p></div>';
+}
+function brancherForm(){
+  function maj(){
+    document.querySelectorAll('.grille [data-n]').forEach(function(b){ var n = +b.getAttribute('data-n'), x = SEL.filter(function(s){ return s.n === n; })[0]; b.className = x ? (x.b ? 'b' : 'a') : ''; });
+    document.querySelectorAll('[data-jeu]').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-jeu') === JEU); });
+    var c = cout(); $('cout').textContent = SEL.length + '/4 chevaux' + (c ? ' · mise : ' + c : '');
+  }
+  document.querySelectorAll('.grille [data-n]').forEach(function(b){ b.onclick = function(){
+    var n = +b.getAttribute('data-n'), i = -1; SEL.forEach(function(s, k){ if (s.n === n) i = k; });
+    if (i < 0) { if (SEL.length >= 4) return; SEL.push({n:n, b:0}); } else if (!SEL[i].b) SEL[i].b = 1; else SEL.splice(i, 1);
+    maj();
+  }; });
+  document.querySelectorAll('[data-jeu]').forEach(function(b){ b.onclick = function(){ JEU = b.getAttribute('data-jeu'); maj(); }; });
+  $('ann').onclick = function(){ FORM = false; dessiner(); };
+  $('pub').onclick = function(){
+    var m = $('msg'); m.className = 'msg';
+    if (!JEU) { m.className = 'msg err'; m.textContent = 'Choisis ton jeu.'; return; }
+    if (SEL.length < MINI[JEU]) { m.className = 'msg err'; m.textContent = 'Il faut au moins ' + MINI[JEU] + ' chevaux pour le ' + JEUX[JEU] + '.'; return; }
+    m.textContent = 'Envoi…';
+    post({jour:JOUR, r:R, c:C, chevaux:SEL, jeu:JEU, mot:$('mot').value}).then(function(){ FORM = false; COMPTES[R + '-' + C] = (COMPTES[R + '-' + C] || 0); course(); fetch('/api/pm?jour=' + JOUR, {credentials:'same-origin'}).then(function(r){ return r.json(); }).then(function(t){ COMPTES = {}; (t.comptes || []).forEach(function(x){ COMPTES[x.r + '-' + x.c] = x.n; }); reunions(); }); })
+      .catch(function(e){ m.className = 'msg err'; m.textContent = e.message; });
+  };
+  maj();
+}
+function classement(k){
+  document.querySelectorAll('[data-cl]').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-cl') === k); });
+  fetch('/api/pm?classement=' + k, {credentials:'same-origin'}).then(function(r){ return r.json(); }).then(function(d){
+    var L = d.classement || [];
+    $('cl').innerHTML = L.length ? '<table class="st"><tr><th>#</th><th>Membre</th><th>Pronos</th><th>Gagnés</th><th>Mise</th><th>Net</th></tr>'+L.map(function(x, i){ return '<tr><td>'+(i+1)+'</td><td><a href="/fiche.html?p='+encodeURIComponent(x.pseudo)+'">'+E(x.pseudo)+'</a></td><td>'+x.n+'</td><td>'+x.gagnes+'</td><td>'+Fe(x.mise)+'</td><td class="'+(x.net >= 0 ? 'pos' : 'neg')+'"><b>'+(x.net >= 0 ? '+' : '')+Fe(x.net)+'</b></td></tr>'; }).join('')+'</table>' : '<p class="empty">Pas encore de prono vérifié sur cette période.</p>';
+  });
+}
+document.querySelectorAll('[data-cl]').forEach(function(b){ b.onclick = function(){ classement(b.getAttribute('data-cl')); }; });
+$('tP').onclick = function(){ $('tP').classList.add('on'); $('tC').classList.remove('on'); $('vP').hidden = false; $('vC').hidden = true; };
+$('tC').onclick = function(){ $('tC').classList.add('on'); $('tP').classList.remove('on'); $('vC').hidden = false; $('vP').hidden = true; classement('mois'); };
+charger();
+</script>
+</body>
+</html>

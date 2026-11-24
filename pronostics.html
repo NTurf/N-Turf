@@ -38,7 +38,7 @@ fetch('/api/membres/quinte', {credentials:'same-origin'})
       function dessiner(live){
         var on = el.querySelector('nav.inner a.on'), ong = on ? parseInt(on.getAttribute('data-r'), 10) : 0;
         var ouverts = [].map.call(el.querySelectorAll('details[open]'), function(x){ return x.parentNode.id; });
-        el.innerHTML = NT.afficherCpc(cpc, ong, live); NT.brancherOnglets(el);
+        el.innerHTML = NT.afficherCpc(cpc, ong, live); NT.brancherOnglets(el); NT.majPm(el);
         ouverts.forEach(function(id){ var x = document.getElementById(id); if (x) { var dt = x.querySelector('details'); if (dt) dt.open = true; } });
       }
       dessiner();
