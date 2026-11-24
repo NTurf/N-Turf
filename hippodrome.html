@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#0D1E3D">
 <link rel="manifest" href="/manifest.webmanifest?v=2">
 <link rel="icon" href="/icone-nturf-192.png">
-<link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/style.css?v=20261124b">
 </head>
 <body data-page="membres">
 <main>
@@ -22,7 +22,7 @@
 </div>
 </main>
 <div id="lb" hidden><img alt=""></div>
-<script src="/site.js"></script>
+<script src="/site.js?v=20261124b"></script>
 <script>
 NTURF_MOI.then(function(m){ if (m.connecte && m.hippo) document.getElementById('pubH').hidden = false; });
 fetch('/api/membres/hippo', {credentials:'same-origin'})

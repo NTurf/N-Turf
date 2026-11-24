@@ -22,7 +22,7 @@ function page(titre, desc, canon, corps, type = 'website') {
 <meta name="theme-color" content="#0D1E3D">
 <link rel="manifest" href="/manifest.webmanifest?v=2">
 <link rel="icon" href="/icone-nturf-192.png">
-<link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/style.css?v=20261124b">
 <style>.billet .txt{line-height:1.6;overflow-wrap:anywhere}.billet .par{color:var(--soft);font-size:14px;margin:-4px 0 10px}.blist h2{margin-bottom:2px}.blist h2 a{text-decoration:none}</style>
 </head>
 <body data-page="journal">
@@ -31,7 +31,7 @@ ${corps}
 <p class="note2" id="ecrire" hidden><a href="/ecrire-billet.html">✍ Écrire un billet</a></p>
 <section class="card"><h2>Vous aussi, racontez les courses</h2><p>Pronostiqueur, passionné, lad, éleveur, entraîneur : vous pouvez écrire dans le Journal N-TURF. <a href="/rejoindre.html">Contactez-nous</a>. L'inscription au site est gratuite.</p><p><a class="btn" href="/inscription.html">S'inscrire gratuitement</a></p></section>
 </main>
-<script src="/site.js"></script>
+<script src="/site.js?v=20261124b"></script>
 <script>fetch('/api/journal',{credentials:'same-origin'}).then(function(r){ if (r.ok) document.getElementById('ecrire').hidden = false; }).catch(function(){});</script>
 </body>
 </html>`;

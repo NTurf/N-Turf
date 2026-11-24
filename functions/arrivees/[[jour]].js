@@ -27,14 +27,14 @@ function page(titre, desc, canon, corps) {
 <meta name="theme-color" content="#0D1E3D">
 <link rel="manifest" href="/manifest.webmanifest?v=2">
 <link rel="icon" href="/icone-nturf-192.png">
-<link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/style.css?v=20261124b">
 </head>
 <body data-page="arrivees">
 <main>
 ${corps}
 <section class="card"><h2>Envie d'aller plus loin ?</h2><p>Les membres voient chaque jour la synthèse complète, les tickets, les études, les concours et le Tchat. L'inscription est gratuite.</p><p><a class="btn" href="/inscription.html">S'inscrire gratuitement</a></p></section>
 </main>
-<script src="/site.js"></script>
+<script src="/site.js?v=20261124b"></script>
 </body>
 </html>`;
 }
