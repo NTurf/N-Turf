@@ -53,8 +53,8 @@
 <div id="zone" hidden>
 <div class="pills"><button type="button" class="pill on" id="tP">Les pronos</button><button type="button" class="pill" id="tC">Classement</button></div>
 <div id="vP">
-<p class="lead">Chacun donne son prono (4 chevaux maximum) sur la course de son choix et choisit lui-même ses paris. Tous les membres le voient, et le site le vérifie après l'arrivée.</p>
-<p class="note" style="border-color:#e5243b"><b>📣 Nouveau : donne au moins 3 pronos par jour</b> pour voir le classement et les stats de chaque membre, jeu par jeu (simple gagnant, simple placé, couplé, trio…).</p>
+<p class="lead">Chacun donne son prono (4 chevaux maximum) sur la course de son choix et choisit lui-même ses paris. Les membres qui participent le voient, et le site le vérifie après l'arrivée.</p>
+<p class="note" style="border-color:#e5243b"><b>📣 Nouveau : donne au moins 3 pronos par jour</b> pour voir les pronos des autres membres, le classement et les stats de chacun, jeu par jeu (simple gagnant, simple placé, couplé, trio…).</p>
 <details class="card tuto" id="tuto" style="padding:12px 14px;margin:8px 0;border-color:var(--gold)">
 <summary style="font-weight:800;cursor:pointer;color:#0e2a5c">📘 Comment donner mon prono ? (2 minutes)</summary>
 <ol style="margin:10px 0 4px;padding-left:20px;line-height:1.6">
@@ -70,7 +70,7 @@
 Le site t'affiche ta mise totale avant de publier.</li>
 <li>Ajoute <b>un petit mot</b> si tu veux expliquer ton choix, puis touche <b>« Publier mon prono »</b>. Tu peux le modifier jusqu'au départ.</li>
 </ol>
-<p class="note2" style="margin:6px 0 0">Après l'arrivée, tes chevaux arrivés passent en <b style="color:#e5243b">rouge</b> et le site indique, pari par pari, ta mise et ton gain mise déduite, avec les vrais rapports PMU. Ton bilan apparaît dans l'onglet <b>Classement</b>. <b>Pour voir le classement et les stats des autres membres, il faut donner au moins 3 pronos par jour.</b> Sous chaque prono, « 💬 Réagir » permet d'en discuter.</p>
+<p class="note2" style="margin:6px 0 0">Après l'arrivée, tes chevaux arrivés passent en <b style="color:#e5243b">rouge</b> et le site indique, pari par pari, ta mise et ton gain mise déduite, avec les vrais rapports PMU. Ton bilan apparaît dans l'onglet <b>Classement</b>. <b>Pour voir les pronos des autres membres, le classement et leurs stats, il faut donner au moins 3 pronos par jour.</b> Sous chaque prono, « 💬 Réagir » permet d'en discuter.</p>
 </details>
 
 <div class="pills" id="jours"></div>
@@ -144,7 +144,8 @@ function dessiner(){
   if (d.ouvert) h += FORM ? formulaire(mien) : '<p><button type="button" class="btn" id="plus">'+(mien ? '✏ Modifier mon prono' : '+ Mon prono')+'</button></p>';
   else if (!arr.length) h += '<p class="note2">Les pronos sont fermés pour cette course.</p>';
   h += '</section>';
-  h += d.pronos.length ? d.pronos.map(carte).join('') : '<p class="empty">Pas encore de prono sur cette course. Sois le premier !</p>';
+  if (d.verrou) h += '<div class="note">🔒 <b>Les pronos des autres membres sont réservés à ceux qui participent : au moins ' + d.verrou.min + ' pronos par jour.</b><br>' + (d.verrou.caches ? d.verrou.caches + ' prono' + (d.verrou.caches > 1 ? 's' : '') + ' d\'autres membres sur cette course. ' : '') + 'Aujourd\'hui, tu en as donné ' + d.verrou.n + ' sur ' + d.verrou.min + '. Encore ' + (d.verrou.min - d.verrou.n) + ' et tu y as accès.</div>';
+  h += d.pronos.length ? d.pronos.map(carte).join('') : (d.verrou ? '' : '<p class="empty">Pas encore de prono sur cette course. Sois le premier !</p>');
   $('course').innerHTML = h;
   if ($('plus')) $('plus').onclick = function(){ FORM = true; SEL = mien ? mien.chevaux.slice() : []; CH = mien ? JSON.parse(JSON.stringify(mien.choix)) : {s:[], c:{ch:[], g:0, p:0, to:0}, t:{ch:[], to:0}, m:0, mto:0}; dessiner(); };
   if (FORM) brancherForm(mien);

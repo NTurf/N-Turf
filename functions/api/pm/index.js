@@ -78,12 +78,15 @@ export async function onRequestGet({ request, env }) {
   try { info = await coursePm(db, jour, R, C); } catch (e) { info = null; }
   const pr = await db.prepare(`SELECT p.id, p.user_id, u.pseudo, u.role, u.moderateur, p.chevaux, p.jeu, p.paris, p.mot, p.statut, p.mise, p.gains, p.detail, p.cree
     FROM pm_pronos p JOIN users u ON u.id = p.user_id WHERE p.jour = ? AND p.reunion = ? AND p.course = ? AND u.banni = 0 ORDER BY p.cree`).bind(jour, R, C).all();
-  const L = pr.results || [];
+  const ac = await acces();
+  // pas 3 pronos aujourd'hui : il ne voit que le sien
+  const L = (pr.results || []).filter((p) => ac.ok || p.user_id === u.id);
+  const caches = (pr.results || []).length - L.length;
   const reac = L.length ? await db.prepare(`SELECT r.id, r.prono_id, r.user_id, u.pseudo, r.texte, r.cree FROM pm_reactions r JOIN users u ON u.id = r.user_id
     WHERE r.prono_id IN (${L.map(() => '?').join(',')}) AND u.banni = 0 ORDER BY r.id`).bind(...L.map((x) => x.id)).all() : { results: [] };
   const modo = u.role === 'admin' || u.moderateur;
   return json({
-    course: info, moi: u.pseudo, modo,
+    course: info, moi: u.pseudo, modo, verrou: ac.ok ? null : { n: ac.n, min: ac.min, caches },
     ouvert: !!(info && info.heure && Date.now() < info.heure && !(info.arrivee || []).length),
     pronos: L.map((p) => {
       const chevaux = JSON.parse(p.chevaux).map((x) => (typeof x === 'object' ? +x.n : +x));
