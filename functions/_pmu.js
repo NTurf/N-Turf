@@ -90,7 +90,7 @@ export async function detailCourse(db, d, R, c) {
   const arrivee = Array.isArray(c.ordreArrivee) ? c.ordreArrivee.map((x) => Array.isArray(x) ? x[0] : x) : [];
   let rapports = [];
   if (arrivee.length) {
-    const cle = `rap-${d}-R${R}C${C}`;
+    const cle = `rap2-${d}-R${R}C${C}`; // (nouvelle clé : l'ancienne a pu garder des rapports incomplets)
     try {
       const rap = await cache(db, cle, 60, () => get(`${BASE}/${d}/R${R}/C${C}/rapports-definitifs`));
       rapports = lireRapports(rap);
