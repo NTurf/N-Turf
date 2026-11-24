@@ -2,7 +2,7 @@ import { json, initDb, lireContenu, noDb } from '../_auth.js';
 import { BASE, norm, cache, get, preparer, lireRapports } from '../_pmu.js';
 import { resultatsFanny } from '../_fanny.js';
 import { cpcAvecCoeurs } from '../_coeurs.js';
-import { initConcours, calculerSiPret, parisJour, dernierJourCalcule, classementJour, isoVersFr } from '../_concours.js';
+import { initConcours, calculerSiPret, courseDuJour, parisJour, dernierJourCalcule, classementJour, isoVersFr } from '../_concours.js';
 
 const eur = (v) => (Math.round(v * 100) / 100).toFixed(2).replace('.', ',') + ' €';
 const rang = (r) => (r + 1) + (r ? 'e' : 'er');
@@ -79,22 +79,27 @@ export async function onRequestGet({ env }) {
   try {
     bandeau = await cache(db, 'bandeau', 60, async () => {
       const b = [];
-      if (q && q.arrivee && q.arrivee.length) {
-        b.push(`Quinté+ du ${q.date} : arrivée ${q.arrivee.join(' - ')}`);
-        const dans = (q.synthese || []).slice(0, 3).filter((n) => q.arrivee.includes(n));
-        if (dans.length) b.push(`Quinté+ : ${dans.length} de nos 3 premiers à l'arrivée (${dans.join(', ')})`);
-      }
-      else {
-        // Pas encore d'arrivée aujourd'hui : on rappelle le Quinté+ de la veille
-        const auj = 'quinte-' + aujourdhui().split('/').reverse().join('-');
-        const r = await db.prepare("SELECT data FROM contenu WHERE cle LIKE 'quinte-%' AND cle < ? ORDER BY cle DESC LIMIT 1").bind(auj).first();
-        const v = r ? JSON.parse(r.data) : null;
-        if (v && v.arrivee && v.arrivee.length) {
-          b.push(`Hier, Quinté+ du ${v.date} : arrivée ${v.arrivee.join(' - ')}`);
-          const dans = (v.synthese || []).slice(0, 5).filter((n) => v.arrivee.includes(n));
-          if (dans.length) b.push(`Quinté+ du ${v.date} : ${dans.length} des 5 premiers de notre synthèse à l'arrivée (${dans.join(', ')})`);
+      // Arrivée du Quinté+ : celle du jour dès qu'elle est connue (PMU), sinon la dernière courue
+      try {
+        await initConcours(db);
+        const auj = parisJour();
+        try { await calculerSiPret(db, auj); } catch (e) {}
+        // la veille : on va chercher son arrivée au PMU si elle n'est pas encore enregistrée
+        const veille = new Date(Date.parse(auj + 'T12:00:00Z') - 86400000).toISOString().slice(0, 10);
+        try { const v = await db.prepare('SELECT arrivee FROM concours_jours WHERE date = ?').bind(veille).first(); if (!v || JSON.parse(v.arrivee || '[]').length < 3) await courseDuJour(db, veille); } catch (e) {}
+        const cj = await db.prepare("SELECT date, arrivee FROM concours_jours WHERE date <= ? AND arrivee IS NOT NULL AND length(arrivee) > 4 ORDER BY date DESC LIMIT 1").bind(auj).first();
+        const arr = cj ? JSON.parse(cj.arrivee || '[]').slice(0, 5) : [];
+        let dq = null, syn = [];
+        if (arr.length >= 3) { dq = cj.date; const v = await lireContenu(db, 'quinte-' + dq); syn = (v && v.synthese) || []; }
+        else if (q && q.arrivee && q.arrivee.length && /^\d{2}\/\d{2}\/\d{4}$/.test(q.date || '')) { dq = q.date.split('/').reverse().join('-'); arr.push(...q.arrivee.slice(0, 5)); syn = q.synthese || []; }
+        if (dq) {
+          const hier = new Date(Date.parse(auj + 'T12:00:00Z') - 86400000).toISOString().slice(0, 10);
+          const quand = dq === auj ? 'Quinté+ du jour' : dq === hier ? 'Hier, Quinté+ du ' + isoVersFr(dq) : 'Quinté+ du ' + isoVersFr(dq);
+          b.push(`${quand} : arrivée ${arr.join(' - ')}`);
+          const dans = syn.slice(0, 5).filter((n) => arr.includes(n));
+          if (dans.length) b.push(`${quand} : ${dans.length} des 5 premiers de notre synthèse à l'arrivée (${dans.join(', ')})`);
         }
-      }
+      } catch (e) {}
       // Concours Quinté+ : calcul dès l'arrivée validée, puis le podium du jour dans le bandeau
       try {
         await initConcours(db); await calculerSiPret(db, parisJour());
