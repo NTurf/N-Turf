@@ -269,13 +269,19 @@ function brancherForm(){
   };
   maj();
 }
+// détail d'un membre, jeu par jeu : paris, gagnés, mise, net
+function detailTypes(T){
+  if (!T || !T.length) return '<p class="empty">Pas encore de pari vérifié.</p>';
+  return '<table class="st" style="margin:4px 0"><tr><th>Jeu</th><th>Paris</th><th>Gagnés</th><th>Mise</th><th>Net</th></tr>' + T.map(function(x){ return '<tr><td>'+TYPES[x.t]+'</td><td>'+x.paris+'</td><td>'+x.gagnes+'</td><td>'+Fe(x.mise)+'</td><td class="'+cl(x.net)+'"><b>'+Fn(x.net)+'</b></td></tr>'; }).join('') + '</table>';
+}
 function classement(k){
   document.querySelectorAll('[data-cl]').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-cl') === k); });
   fetch('/api/pm?classement=' + k, {credentials:'same-origin'}).then(function(r){ return r.json(); }).then(function(d){
     var L = d.classement || [], MB = d.moi || [];
     var tm = MB.reduce(function(s, x){ return {m: s.m + x.mise, g: s.g + x.gains}; }, {m:0, g:0}), tn = Math.round((tm.g - tm.m) * 100) / 100;
     $('mb').innerHTML = '<section class="card" style="padding:10px 14px"><h3 style="margin:0 0 6px">Mon bilan, pari par pari</h3>' + (MB.length ? '<table class="st"><tr><th>Jeu</th><th>Paris</th><th>Gagnés</th><th>Mise</th><th>Net</th></tr>' + MB.map(function(x){ return '<tr><td>'+TYPES[x.t]+'</td><td>'+x.paris+'</td><td>'+x.gagnes+'</td><td>'+Fe(x.mise)+'</td><td class="'+cl(x.net)+'"><b>'+Fn(x.net)+'</b></td></tr>'; }).join('') + '<tr><td><b>Total</b></td><td></td><td></td><td><b>'+Fe(tm.m)+'</b></td><td class="'+cl(tn)+'"><b>'+Fn(tn)+'</b></td></tr></table>' : '<p class="empty">Pas encore de prono vérifié sur cette période.</p>') + '</section>';
-    $('cl').innerHTML = L.length ? '<table class="st"><tr><th>#</th><th>Membre</th><th>Pronos</th><th>Gagnés</th><th>Mise</th><th>Net</th></tr>'+L.map(function(x, i){ return '<tr><td>'+(i+1)+'</td><td><a href="/fiche.html?p='+encodeURIComponent(x.pseudo)+'">'+E(x.pseudo)+'</a></td><td>'+x.n+'</td><td>'+x.gagnes+'</td><td>'+Fe(x.mise)+'</td><td class="'+(x.net >= 0 ? 'pos' : 'neg')+'"><b>'+(x.net >= 0 ? '+' : '')+Fe(x.net)+'</b></td></tr>'; }).join('')+'</table>' : '<p class="empty">Pas encore de prono vérifié sur cette période.</p>';
+    $('cl').innerHTML = L.length ? '<p class="note2">Touche un membre pour voir son détail jeu par jeu.</p><table class="st"><tr><th>#</th><th>Membre</th><th>Pronos</th><th>Gagnés</th><th>Mise</th><th>Net</th></tr>'+L.map(function(x, i){ return '<tr data-dt="'+i+'" style="cursor:pointer"><td>'+(i+1)+'</td><td><b>'+E(x.pseudo)+'</b> ▾</td><td>'+x.n+'</td><td>'+x.gagnes+'</td><td>'+Fe(x.mise)+'</td><td class="'+(x.net >= 0 ? 'pos' : 'neg')+'"><b>'+(x.net >= 0 ? '+' : '')+Fe(x.net)+'</b></td></tr><tr id="dt'+i+'" hidden><td colspan="6">'+detailTypes(x.types)+'<p style="margin:4px 0"><a href="/fiche.html?p='+encodeURIComponent(x.pseudo)+'">Voir la fiche de '+E(x.pseudo)+'</a></p></td></tr>'; }).join('')+'</table>' : '<p class="empty">Pas encore de prono vérifié sur cette période.</p>';
+    document.querySelectorAll('[data-dt]').forEach(function(t){ t.onclick = function(){ var z = $('dt' + t.getAttribute('data-dt')); z.hidden = !z.hidden; }; });
   });
 }
 document.querySelectorAll('[data-cl]').forEach(function(b){ b.onclick = function(){ classement(b.getAttribute('data-cl')); }; });

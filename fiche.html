@@ -9,7 +9,7 @@
 <link rel="manifest" href="/manifest.webmanifest?v=2">
 <link rel="icon" href="/icone-nturf-192.png">
 <link rel="stylesheet" href="/style.css?v=20261124b">
-<style>.fl{display:inline-block;width:10px;height:10px;border-radius:50%;background:#b9c3d3;margin-right:6px}.fl.on{background:#1fa54a}.bio{white-space:pre-wrap}</style>
+<style>.fl{display:inline-block;width:10px;height:10px;border-radius:50%;background:#b9c3d3;margin-right:6px}.fl.on{background:#1fa54a}.bio{white-space:pre-wrap}.pos{color:#13702f}.neg{color:#b3121f}</style>
 </head>
 <body data-page="membres">
 <main>
@@ -21,6 +21,7 @@
 <p class="bio" id="bio"></p>
 <p id="act"></p>
 </section>
+<section class="card" id="pmz" hidden><h2 style="margin:0 0 6px">Ses pronos, jeu par jeu</h2><div class="pills"><button type="button" class="pill on" data-pp="mois">Ce mois-ci</button><button type="button" class="pill" data-pp="tout">Depuis le début</button></div><div id="pmb"></div><p class="note2">Mise de 1 € par pari, aux vrais rapports PMU. Le net est le gain mise déduite.</p><p><a href="/pronos-membres.html">Voir les pronos des membres</a></p></section>
 </main>
 <script src="/site.js?v=20261124b"></script>
 <script>
@@ -43,6 +44,20 @@ fetch('/api/social/fiche?pseudo=' + encodeURIComponent(P), {credentials:'same-or
   else if (d.contact.statut === 'attente' && d.contact.parMoi) a = '<span class="note2">Ta demande de contact attend sa réponse.</span>';
   else if (d.contact.statut === 'attente') a = '<a class="btn" href="/messages.html?avec=' + encodeURIComponent(d.pseudo) + '">Voir sa demande de contact</a>';
   $('act').innerHTML = a;
+  fetch('/api/pm?bilan=' + encodeURIComponent(d.pseudo), {credentials:'same-origin'}).then(function(r){ return r.ok ? r.json() : null; }).then(function(b){
+    if (!b) return;
+    var TYPES = {SG:'Simple gagnant', SP:'Simple placé', CG:'Couplé gagnant', CP:'Couplé placé', CO:'Couplé ordre', TR:'Trio', TO:'Trio ordre', M4:'Multi en 4', S4:'Super 4 ordre'};
+    function Fe(x){ return (Math.round(x * 100) / 100).toFixed(2).replace('.', ',') + ' €'; }
+    function Fn(x){ return (x > 0 ? '+' : x < 0 ? '−' : '') + Fe(Math.abs(x)); }
+    function cl(x){ return x > 0 ? 'pos' : x < 0 ? 'neg' : ''; }
+    function voir(k){
+      document.querySelectorAll('[data-pp]').forEach(function(x){ x.classList.toggle('on', x.getAttribute('data-pp') === k); });
+      var B = b[k], T = B.types, m = 0, g = 0; T.forEach(function(x){ m += x.mise; g += x.gains; }); var n = Math.round((g - m) * 100) / 100;
+      $('pmb').innerHTML = T.length ? '<p class="note2">' + B.pronos + ' prono' + (B.pronos > 1 ? 's' : '') + ' vérifié' + (B.pronos > 1 ? 's' : '') + '</p><table class="st"><tr><th>Jeu</th><th>Paris</th><th>Gagnés</th><th>Mise</th><th>Net</th></tr>' + T.map(function(x){ return '<tr><td>'+TYPES[x.t]+'</td><td>'+x.paris+'</td><td>'+x.gagnes+'</td><td>'+Fe(x.mise)+'</td><td class="'+cl(x.net)+'"><b>'+Fn(x.net)+'</b></td></tr>'; }).join('') + '<tr><td><b>Total</b></td><td></td><td></td><td><b>'+Fe(m)+'</b></td><td class="'+cl(n)+'"><b>'+Fn(n)+'</b></td></tr></table>' : '<p class="empty">Pas encore de prono vérifié sur cette période.</p>';
+    }
+    document.querySelectorAll('[data-pp]').forEach(function(x){ x.onclick = function(){ voir(x.getAttribute('data-pp')); }; });
+    $('pmz').hidden = false; voir('mois');
+  }).catch(function(){});
 });
 </script>
 </body>

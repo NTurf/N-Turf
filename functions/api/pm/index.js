@@ -5,7 +5,8 @@ import { prepPm, coursePm, construire, choixDepuisParis, resume, verifierEnAtten
 // Pronos des membres
 // GET ?jour=AAAA-MM-JJ                 : nombre de pronos par course
 // GET ?jour=…&r=1&c=3                  : la course (partants, arrivée) et tous ses pronos, avec réactions
-// GET ?classement=mois|tout            : bilan des membres (+ mon bilan pari par pari)
+// GET ?classement=mois|tout            : bilan des membres, chacun détaillé jeu par jeu (+ mon bilan)
+// GET ?bilan=pseudo                    : bilan d'un membre jeu par jeu (ce mois-ci et depuis le début), pour sa fiche
 // POST {jour, r, c, chevaux:[n…], choix:{s,c,t,m}, mot} : publier / modifier mon prono (jusqu'au départ)
 // POST {action:'supprimer', id} · {action:'reagir', id, texte} · {action:'retirerReaction', id}
 const isoOk = (j) => /^\d{4}-\d{2}-\d{2}$/.test(j || '');
@@ -21,14 +22,11 @@ async function base(env, request) {
 export async function onRequestGet({ request, env }) {
   const { err, db, u } = await base(env, request); if (err) return err;
   const q = new URL(request.url).searchParams;
-  if (q.get('classement')) {
-    await verifierEnAttente(db);
-    const mois = q.get('classement') === 'mois' ? new Date().toLocaleDateString('fr-CA', { timeZone: 'Europe/Paris' }).slice(0, 7) : null;
-    const r = await db.prepare(`SELECT u.pseudo, COUNT(*) AS n, SUM(CASE WHEN p.gains > 0 THEN 1 ELSE 0 END) AS gagnes, SUM(p.mise) AS mise, SUM(p.gains) AS gains
-      FROM pm_pronos p JOIN users u ON u.id = p.user_id WHERE p.statut = 'calcule' AND u.banni = 0 ${mois ? 'AND substr(p.jour, 1, 7) = ?' : ''}
-      GROUP BY p.user_id ORDER BY (SUM(p.gains) - SUM(p.mise)) DESC`).bind(...(mois ? [mois] : [])).all();
-    // mon bilan, pari par pari, regroupé par type de jeu
-    const m = await db.prepare(`SELECT detail FROM pm_pronos WHERE user_id = ? AND statut = 'calcule' ${mois ? 'AND substr(jour, 1, 7) = ?' : ''}`).bind(u.id, ...(mois ? [mois] : [])).all();
+  const moisCourant = () => new Date().toLocaleDateString('fr-CA', { timeZone: 'Europe/Paris' }).slice(0, 7);
+  const R2 = (v) => Math.round(v * 100) / 100;
+  // bilan d'un membre, pari par pari, regroupé par type de jeu
+  async function bilan(uid, mois) {
+    const m = await db.prepare(`SELECT detail FROM pm_pronos WHERE user_id = ? AND statut = 'calcule' ${mois ? 'AND substr(jour, 1, 7) = ?' : ''}`).bind(uid, ...(mois ? [mois] : [])).all();
     const T = {};
     for (const x of m.results || []) {
       let d = []; try { d = JSON.parse(x.detail || '[]'); } catch (e) { d = []; }
@@ -38,9 +36,24 @@ export async function onRequestGet({ request, env }) {
         k.paris++; k.mise += 1; k.gains += Number(p.r) || 0; if (p.r > 0) k.gagnes++;
       }
     }
-    const R2 = (v) => Math.round(v * 100) / 100;
-    const moi = ORDRE_TYPES.filter((t) => T[t]).map((t) => ({ ...T[t], gains: R2(T[t].gains), net: R2(T[t].gains - T[t].mise) }));
-    return json({ moiPseudo: u.pseudo, moi, classement: (r.results || []).map((x) => ({ pseudo: x.pseudo, n: x.n, gagnes: x.gagnes, mise: R2(x.mise), gains: R2(x.gains), net: R2(x.gains - x.mise) })) });
+    return { pronos: (m.results || []).length, types: ORDRE_TYPES.filter((t) => T[t]).map((t) => ({ ...T[t], gains: R2(T[t].gains), net: R2(T[t].gains - T[t].mise) })) };
+  }
+  if (q.get('bilan')) {
+    await verifierEnAttente(db);
+    const m = await db.prepare('SELECT id, pseudo FROM users WHERE pseudo = ? COLLATE NOCASE AND banni = 0').bind(q.get('bilan')).first();
+    if (!m) return json({ erreur: 'Membre introuvable.' }, 404);
+    return json({ pseudo: m.pseudo, mois: await bilan(m.id, moisCourant()), tout: await bilan(m.id, null) });
+  }
+  if (q.get('classement')) {
+    await verifierEnAttente(db);
+    const mois = q.get('classement') === 'mois' ? moisCourant() : null;
+    const r = await db.prepare(`SELECT u.id, u.pseudo, COUNT(*) AS n, SUM(CASE WHEN p.gains > 0 THEN 1 ELSE 0 END) AS gagnes, SUM(p.mise) AS mise, SUM(p.gains) AS gains
+      FROM pm_pronos p JOIN users u ON u.id = p.user_id WHERE p.statut = 'calcule' AND u.banni = 0 ${mois ? 'AND substr(p.jour, 1, 7) = ?' : ''}
+      GROUP BY p.user_id ORDER BY (SUM(p.gains) - SUM(p.mise)) DESC`).bind(...(mois ? [mois] : [])).all();
+    const L = r.results || [];
+    const det = await Promise.all(L.map((x) => bilan(x.id, mois)));
+    const moi = (await bilan(u.id, mois)).types;
+    return json({ moiPseudo: u.pseudo, moi, classement: L.map((x, i) => ({ pseudo: x.pseudo, n: x.n, gagnes: x.gagnes, mise: R2(x.mise), gains: R2(x.gains), net: R2(x.gains - x.mise), types: det[i].types })) });
   }
   const jour = q.get('jour');
   if (!isoOk(jour)) return json({ erreur: 'Jour invalide.' }, 400);
