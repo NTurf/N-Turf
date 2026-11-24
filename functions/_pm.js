@@ -3,11 +3,14 @@
 //  - Couplé : 2 à 4 de ses chevaux (toutes les paires), en gagnant, en placé ou les deux
 //  - Trio : 3 ou 4 de ses chevaux (toutes les combinaisons de 3)
 //  - Multi en 4 : ses 4 chevaux
+//  - Courses de 7 partants ou moins : couplé ordre, trio ordre, Super 4 ordre, dans l'ordre où il a choisi ses chevaux
+//    (8 puis 5 = 8-5 ; s'il a mis 5-8 et que l'arrivée est 8-5, il perd), ou « tout ordre » (toutes les permutations, plus cher)
 // Chaque pari est stocké un par un (colonne paris) et vérifié après l'arrivée avec les rapports définitifs PMU.
 import { BASE, cache, get } from './_pmu.js';
 
-export const TYPES = { SG: 'Simple gagnant', SP: 'Simple placé', CG: 'Couplé gagnant', CP: 'Couplé placé', TR: 'Trio', M4: 'Multi en 4' };
-export const ORDRE_TYPES = ['SG', 'SP', 'CG', 'CP', 'TR', 'M4'];
+export const TYPES = { SG: 'Simple gagnant', SP: 'Simple placé', CG: 'Couplé gagnant', CP: 'Couplé placé', CO: 'Couplé ordre', TR: 'Trio', TO: 'Trio ordre', M4: 'Multi en 4', S4: 'Super 4 ordre' };
+export const ORDRE_TYPES = ['SG', 'SP', 'CG', 'CP', 'CO', 'TR', 'TO', 'M4', 'S4'];
+const EN_ORDRE = ['CO', 'TO', 'S4'];
 const TAILLE = { SG: 1, SP: 1, CG: 2, CP: 2, TR: 3, M4: 4 };
 // anciens pronos (avant le 24/11/26 au soir) : un seul jeu
 const ANCIENS = { simple: 'Simple', couple: 'Couplé placé', trio: 'Trio', multi: 'Multi en 4' };
@@ -30,6 +33,14 @@ export async function prepPm(db) {
   const vieux = await db.prepare('SELECT id, chevaux, jeu FROM pm_pronos WHERE paris IS NULL LIMIT 300').all();
   const q = (vieux.results || []).map((p) => db.prepare("UPDATE pm_pronos SET paris = ?, statut = 'attente', essai = NULL WHERE id = ?").bind(JSON.stringify(convertirAncien(p)), p.id));
   if (q.length) await db.batch(q);
+}
+
+// sous-ensembles de k chevaux en gardant l'ordre du membre ; tout = toutes les permutations
+function ordonnes(nums, k, tout) {
+  const sous = combis(nums, k);
+  if (!tout) return sous;
+  const perm = (L) => L.length <= 1 ? [L] : L.flatMap((x, i) => perm(L.filter((_, j) => j !== i)).map((r) => [x, ...r]));
+  return sous.flatMap(perm);
 }
 
 export const isoVersPmu = (iso) => iso.slice(8, 10) + iso.slice(5, 7) + iso.slice(0, 4);
@@ -60,8 +71,9 @@ export function convertirAncien(p) {
 }
 
 // choix du membre → liste des paris. Renvoie { paris } ou { erreur }
-// choix = { s: [{n, g, p}], c: {ch:[..], g, p}, t: {ch:[..]}, m: 0|1 }
-export function construire(choix, chevaux) {
+// choix = { s: [{n, g, p}], c: {ch:[..], g, p, to}, t: {ch:[..], to}, m: 0|1, mto: 0|1 }
+// chevaux = dans l'ordre choisi par le membre ; petit = course de 7 partants ou moins (paris en ordre)
+export function construire(choix, chevaux, petit) {
   const mes = new Set(chevaux);
   const paris = [];
   const s = Array.isArray(choix && choix.s) ? choix.s : [];
@@ -70,22 +82,27 @@ export function construire(choix, chevaux) {
     if (x.g) paris.push({ t: 'SG', c: [n] });
     if (x.p) paris.push({ t: 'SP', c: [n] });
   }
-  const pris = (L) => [...new Set((Array.isArray(L) ? L : []).map(Number).filter((n) => mes.has(n)))].sort((a, b) => a - b);
+  // chevaux cochés, rangés dans l'ordre du membre (pour les paris en ordre) ou par numéro
+  const pris = (L) => { const v = new Set((Array.isArray(L) ? L : []).map(Number)); const o = chevaux.filter((n) => v.has(n)); return petit ? o : o.sort((a, b) => a - b); };
   const c = (choix && choix.c) || {};
-  if (c.g || c.p) {
-    const ch = pris(c.ch);
-    if (ch.length < 2) return { erreur: 'Pour le couplé, choisis au moins 2 de tes chevaux.' };
-    for (const paire of combis(ch, 2)) { if (c.g) paris.push({ t: 'CG', c: paire }); if (c.p) paris.push({ t: 'CP', c: paire }); }
+  const cch = pris(c.ch);
+  if (petit) {
+    if (cch.length === 1) return { erreur: 'Pour le couplé ordre, choisis au moins 2 de tes chevaux.' };
+    for (const paire of ordonnes(cch, 2, c.to)) paris.push({ t: 'CO', c: paire });
+  } else if (c.g || c.p) {
+    if (cch.length < 2) return { erreur: 'Pour le couplé, choisis au moins 2 de tes chevaux.' };
+    for (const paire of combis(cch, 2)) { if (c.g) paris.push({ t: 'CG', c: paire }); if (c.p) paris.push({ t: 'CP', c: paire }); }
   }
   const t = (choix && choix.t) || {};
   const tch = pris(t.ch);
   if (tch.length) {
-    if (tch.length < 3) return { erreur: 'Pour le trio, choisis 3 ou 4 de tes chevaux.' };
-    for (const tr of combis(tch, 3)) paris.push({ t: 'TR', c: tr });
+    if (tch.length < 3) return { erreur: `Pour le trio${petit ? ' ordre' : ''}, choisis 3 ou 4 de tes chevaux.` };
+    for (const tr of (petit ? ordonnes(tch, 3, t.to) : combis(tch, 3))) paris.push({ t: petit ? 'TO' : 'TR', c: tr });
   }
   if (choix && choix.m) {
-    if (chevaux.length !== 4) return { erreur: 'Le Multi en 4 se joue avec tes 4 chevaux.' };
-    paris.push({ t: 'M4', c: [...chevaux].sort((a, b) => a - b) });
+    if (chevaux.length !== 4) return { erreur: `Le ${petit ? 'Super 4 ordre' : 'Multi en 4'} se joue avec tes 4 chevaux.` };
+    if (petit) for (const o of ordonnes(chevaux, 4, choix.mto)) paris.push({ t: 'S4', c: o });
+    else paris.push({ t: 'M4', c: [...chevaux].sort((a, b) => a - b) });
   }
   if (!paris.length) return { erreur: 'Choisis au moins un pari (simple, couplé, trio ou multi).' };
   return { paris };
@@ -95,7 +112,12 @@ export function construire(choix, chevaux) {
 export function choixDepuisParis(paris, chevaux) {
   const s = chevaux.map((n) => ({ n, g: paris.some((p) => p.t === 'SG' && p.c[0] === n) ? 1 : 0, p: paris.some((p) => p.t === 'SP' && p.c[0] === n) ? 1 : 0 }));
   const dans = (ts) => [...new Set(paris.filter((p) => ts.includes(p.t)).flatMap((p) => p.c))].sort((a, b) => a - b);
-  return { s, c: { ch: dans(['CG', 'CP']), g: paris.some((p) => p.t === 'CG') ? 1 : 0, p: paris.some((p) => p.t === 'CP') ? 1 : 0 }, t: { ch: dans(['TR']) }, m: paris.some((p) => p.t === 'M4') ? 1 : 0 };
+  // « tout ordre » : la même combinaison existe dans un autre ordre
+  const tout = (t) => { const L = paris.filter((p) => p.t === t).map((p) => p.c.join('-')); const v = new Set(L); return paris.some((p) => p.t === t && v.has([...p.c].reverse().join('-')) && p.c.length > 1) ? 1 : 0; };
+  return {
+    s, c: { ch: dans(['CG', 'CP', 'CO']), g: paris.some((p) => p.t === 'CG') ? 1 : 0, p: paris.some((p) => p.t === 'CP') ? 1 : 0, to: tout('CO') },
+    t: { ch: dans(['TR', 'TO']), to: tout('TO') }, m: paris.some((p) => p.t === 'M4' || p.t === 'S4') ? 1 : 0, mto: paris.filter((p) => p.t === 'S4').length > 1 ? 1 : 0,
+  };
 }
 
 // Résumé court du jeu, ex. « Simple G+P · Couplé G · Trio »
@@ -105,8 +127,11 @@ export function resume(paris, jeu) {
   const L = [];
   if (a('SG') || a('SP')) L.push('Simple ' + [a('SG') ? 'G' : '', a('SP') ? 'P' : ''].filter(Boolean).join('+'));
   if (a('CG') || a('CP')) L.push('Couplé ' + [a('CG') ? 'G' : '', a('CP') ? 'P' : ''].filter(Boolean).join('+'));
+  if (a('CO')) L.push('Couplé ordre');
   if (a('TR')) L.push('Trio');
+  if (a('TO')) L.push('Trio ordre');
   if (a('M4')) L.push('Multi en 4');
+  if (a('S4')) L.push('Super 4 ordre');
   return L.join(' · ');
 }
 
@@ -115,11 +140,12 @@ function blocs(raw, re) {
   return L.find((b) => b.audience === 'NATIONAL') || L[0] || null;
 }
 const memes = (a, b) => a.length === b.length && a.every((x) => b.includes(x));
-function rapport(bloc, combo) {
+const exact = (a, b) => a.length === b.length && a.every((x, i) => x === b[i]);
+function rapport(bloc, combo, ordre) {
   if (!bloc) return 0;
   for (const r of bloc.rapports || []) {
     const c = String(r.combinaison || '').split(/[-\s]+/).map(Number).filter(Boolean);
-    if (c.length && memes(c, combo)) return (Number(r.dividendePourUnEuro) || 0) / 100;
+    if (c.length && (ordre ? exact(c, combo) : memes(c, combo))) return (Number(r.dividendePourUnEuro) || 0) / 100;
   }
   return 0;
 }
@@ -130,6 +156,7 @@ export function evaluer(paris, raw, np, arrivee) {
   const B = {
     SG: blocs(raw, /^SIMPLE_GAGNANT$/), SP: blocs(raw, /^SIMPLE_PLACE$/), CG: blocs(raw, /^COUPLE_GAGNANT$/),
     CP: blocs(raw, /^COUPLE_PLACE$/), TR: blocs(raw, /^TRIO$/), M4: blocs(raw, /^MULTI$|^E_MULTI$/),
+    CO: blocs(raw, /^COUPLE_ORDRE$/), TO: blocs(raw, /^TRIO_ORDRE$/), S4: blocs(raw, /^SUPER_QUATRE$/),
   };
   // Multi en 4 : le PMU ne donne pas de combinaison, on compare aux 4 premiers de l'arrivée
   const m4 = B.M4 ? ((B.M4.rapports || []).find((r) => /en\s*4$/i.test(String(r.libelle || '').trim())) || null) : null;
@@ -138,7 +165,7 @@ export function evaluer(paris, raw, np, arrivee) {
   for (const p of paris) {
     if (p.c.some((n) => np.includes(n))) { out.detail.push({ t: p.t, c: p.c, r: 0, np: 1 }); continue; }
     out.mise += 1;
-    const r = p.t === 'M4' ? (m4 && top4.length === 4 && memes(p.c, top4) ? (Number(m4.dividendePourUnEuro) || 0) / 100 : 0) : rapport(B[p.t], p.c);
+    const r = p.t === 'M4' ? (m4 && top4.length === 4 && memes(p.c, top4) ? (Number(m4.dividendePourUnEuro) || 0) / 100 : 0) : rapport(B[p.t], p.c, EN_ORDRE.includes(p.t));
     out.gains += r;
     out.detail.push({ t: p.t, c: p.c, r: Math.round(r * 100) / 100 });
   }

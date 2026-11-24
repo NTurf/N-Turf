@@ -110,7 +110,7 @@ export async function onRequestPost({ request, env }) {
   for (const x of Array.isArray(b.chevaux) ? b.chevaux : []) { const n = +(typeof x === 'object' && x ? x.n : x); if (ok.has(n) && !vus.has(n)) { vus.add(n); ch.push(n); } }
   if (!ch.length) return json({ erreur: 'Choisis au moins un cheval.' }, 400);
   if (ch.length > 4) return json({ erreur: '4 chevaux au maximum.' }, 400);
-  const res = construire(b.choix || {}, ch);
+  const res = construire(b.choix || {}, ch, ok.size <= 7);
   if (res.erreur) return json({ erreur: res.erreur }, 400);
   const mot = String(b.mot || '').trim().slice(0, 500);
   await db.prepare(`INSERT INTO pm_pronos (jour, reunion, course, hippo, user_id, chevaux, jeu, paris, mot) VALUES (?, ?, ?, ?, ?, ?, 'perso', ?, ?)
