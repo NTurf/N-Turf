@@ -149,10 +149,10 @@ export async function courseDuJour(db, iso) {
   return ligne || null;
 }
 
-// ---------- Les joueurs du site (TCR, ALGO, Études Quinté, Formule du membre) ----------
+// ---------- Les joueurs du site (TCR, ALGO, PERSO, Études Quinté, Formule du membre) ----------
 // Ils jouent automatiquement, sont classés comme les membres, mais ne montent jamais sur le podium.
 export const ROBOTS = [
-  { cle: 'tcr', pseudo: 'TCR' }, { cle: 'algo', pseudo: 'ALGO' },
+  { cle: 'tcr', pseudo: 'TCR' }, { cle: 'algo', pseudo: 'ALGO' }, { cle: 'perso', pseudo: 'PERSO' },
   { cle: 'etudes', pseudo: 'Études Quinté' }, { cle: 'formule', pseudo: 'Formule du membre' },
 ];
 async function idsRobots(db) {
@@ -178,6 +178,7 @@ async function listesRobots(db, iso, j) {
   const ap = (q && q.approches) || {};
   out.tcr = huit(ap.TCR && ap.TCR.selection);
   out.algo = huit(ap.ALGO && ap.ALGO.selection);
+  out.perso = huit((ap.PERSO && ap.PERSO.selection) || (q && q.perso));
   out.etudes = huit(ETUDES[iso]);
   try {
     // Formule du membre : seulement si le Quinté est au trot ; limite du recul s'il y en a un, sinon recul fictif
