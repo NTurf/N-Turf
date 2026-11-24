@@ -54,6 +54,7 @@
 <div class="pills"><button type="button" class="pill on" id="tP">Les pronos</button><button type="button" class="pill" id="tC">Classement</button></div>
 <div id="vP">
 <p class="lead">Chacun donne son prono (4 chevaux maximum) sur la course de son choix et choisit lui-même ses paris. Tous les membres le voient, et le site le vérifie après l'arrivée.</p>
+<p class="note" style="border-color:#e5243b"><b>📣 Nouveau : donne au moins 3 pronos par jour</b> pour voir le classement et les stats de chaque membre, jeu par jeu (simple gagnant, simple placé, couplé, trio…).</p>
 <details class="card tuto" id="tuto" style="padding:12px 14px;margin:8px 0;border-color:var(--gold)">
 <summary style="font-weight:800;cursor:pointer;color:#0e2a5c">📘 Comment donner mon prono ? (2 minutes)</summary>
 <ol style="margin:10px 0 4px;padding-left:20px;line-height:1.6">
@@ -69,7 +70,7 @@
 Le site t'affiche ta mise totale avant de publier.</li>
 <li>Ajoute <b>un petit mot</b> si tu veux expliquer ton choix, puis touche <b>« Publier mon prono »</b>. Tu peux le modifier jusqu'au départ.</li>
 </ol>
-<p class="note2" style="margin:6px 0 0">Après l'arrivée, tes chevaux arrivés passent en <b style="color:#e5243b">rouge</b> et le site indique, pari par pari, ta mise et ton gain mise déduite, avec les vrais rapports PMU. Ton bilan apparaît dans l'onglet <b>Classement</b>. Sous chaque prono, « 💬 Réagir » permet d'en discuter.</p>
+<p class="note2" style="margin:6px 0 0">Après l'arrivée, tes chevaux arrivés passent en <b style="color:#e5243b">rouge</b> et le site indique, pari par pari, ta mise et ton gain mise déduite, avec les vrais rapports PMU. Ton bilan apparaît dans l'onglet <b>Classement</b>. <b>Pour voir le classement et les stats des autres membres, il faut donner au moins 3 pronos par jour.</b> Sous chaque prono, « 💬 Réagir » permet d'en discuter.</p>
 </details>
 
 <div class="pills" id="jours"></div>
@@ -79,7 +80,7 @@ Le site t'affiche ta mise totale avant de publier.</li>
 </div>
 <div id="vC" hidden>
 <div class="pills"><button type="button" class="pill on" data-cl="mois">Ce mois-ci</button><button type="button" class="pill" data-cl="tout">Depuis le début</button></div>
-<p class="note2">Mise de 1 € par pari, aux vrais rapports PMU. Le net est le gain mise déduite.</p>
+<p class="note2">Mise de 1 € par pari, aux vrais rapports PMU. Le net est le gain mise déduite. 🔒 Le classement et les stats des autres membres sont réservés à ceux qui donnent au moins 3 pronos par jour.</p>
 <div id="mb"></div>
 <div id="cl"></div>
 </div>
@@ -280,6 +281,7 @@ function classement(k){
     var L = d.classement || [], MB = d.moi || [];
     var tm = MB.reduce(function(s, x){ return {m: s.m + x.mise, g: s.g + x.gains}; }, {m:0, g:0}), tn = Math.round((tm.g - tm.m) * 100) / 100;
     $('mb').innerHTML = '<section class="card" style="padding:10px 14px"><h3 style="margin:0 0 6px">Mon bilan, pari par pari</h3>' + (MB.length ? '<table class="st"><tr><th>Jeu</th><th>Paris</th><th>Gagnés</th><th>Mise</th><th>Net</th></tr>' + MB.map(function(x){ return '<tr><td>'+TYPES[x.t]+'</td><td>'+x.paris+'</td><td>'+x.gagnes+'</td><td>'+Fe(x.mise)+'</td><td class="'+cl(x.net)+'"><b>'+Fn(x.net)+'</b></td></tr>'; }).join('') + '<tr><td><b>Total</b></td><td></td><td></td><td><b>'+Fe(tm.m)+'</b></td><td class="'+cl(tn)+'"><b>'+Fn(tn)+'</b></td></tr></table>' : '<p class="empty">Pas encore de prono vérifié sur cette période.</p>') + '</section>';
+    if (d.verrou) { $('cl').innerHTML = '<div class="note">🔒 <b>Le classement et les stats des autres membres sont réservés à ceux qui participent : au moins ' + d.verrou.min + ' pronos par jour.</b><br>Aujourd\'hui, tu en as donné ' + d.verrou.n + ' sur ' + d.verrou.min + '. Encore ' + (d.verrou.min - d.verrou.n) + ' et tu y as accès.</div>'; return; }
     $('cl').innerHTML = L.length ? '<p class="note2">Touche un membre pour voir son détail jeu par jeu.</p><table class="st"><tr><th>#</th><th>Membre</th><th>Pronos</th><th>Gagnés</th><th>Mise</th><th>Net</th></tr>'+L.map(function(x, i){ return '<tr data-dt="'+i+'" style="cursor:pointer"><td>'+(i+1)+'</td><td><b>'+E(x.pseudo)+'</b> ▾</td><td>'+x.n+'</td><td>'+x.gagnes+'</td><td>'+Fe(x.mise)+'</td><td class="'+(x.net >= 0 ? 'pos' : 'neg')+'"><b>'+(x.net >= 0 ? '+' : '')+Fe(x.net)+'</b></td></tr><tr id="dt'+i+'" hidden><td colspan="6">'+detailTypes(x.types)+'<p style="margin:4px 0"><a href="/fiche.html?p='+encodeURIComponent(x.pseudo)+'">Voir la fiche de '+E(x.pseudo)+'</a></p></td></tr>'; }).join('')+'</table>' : '<p class="empty">Pas encore de prono vérifié sur cette période.</p>';
     document.querySelectorAll('[data-dt]').forEach(function(t){ t.onclick = function(){ var z = $('dt' + t.getAttribute('data-dt')); z.hidden = !z.hidden; }; });
   });

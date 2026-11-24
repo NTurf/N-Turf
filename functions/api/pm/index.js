@@ -38,15 +38,26 @@ export async function onRequestGet({ request, env }) {
     }
     return { pronos: (m.results || []).length, types: ORDRE_TYPES.filter((t) => T[t]).map((t) => ({ ...T[t], gains: R2(T[t].gains), net: R2(T[t].gains - T[t].mise) })) };
   }
+  // Stats des autres membres : réservées à ceux qui ont donné au moins 3 pronos aujourd'hui (admin et modérateurs toujours)
+  const MIN_JOUR = 3;
+  async function acces() {
+    const auj = new Date().toLocaleDateString('fr-CA', { timeZone: 'Europe/Paris' });
+    const n = (await db.prepare('SELECT COUNT(*) AS n FROM pm_pronos WHERE user_id = ? AND jour = ?').bind(u.id, auj).first()).n || 0;
+    return { ok: u.role === 'admin' || !!u.moderateur || n >= MIN_JOUR, n, min: MIN_JOUR };
+  }
   if (q.get('bilan')) {
     await verifierEnAttente(db);
+    const ac = await acces();
     const m = await db.prepare('SELECT id, pseudo FROM users WHERE pseudo = ? COLLATE NOCASE AND banni = 0').bind(q.get('bilan')).first();
     if (!m) return json({ erreur: 'Membre introuvable.' }, 404);
+    if (m.id !== u.id && !ac.ok) return json({ pseudo: m.pseudo, verrou: ac });
     return json({ pseudo: m.pseudo, mois: await bilan(m.id, moisCourant()), tout: await bilan(m.id, null) });
   }
   if (q.get('classement')) {
     await verifierEnAttente(db);
     const mois = q.get('classement') === 'mois' ? moisCourant() : null;
+    const ac = await acces();
+    if (!ac.ok) return json({ moiPseudo: u.pseudo, moi: (await bilan(u.id, mois)).types, verrou: ac, classement: [] });
     const r = await db.prepare(`SELECT u.id, u.pseudo, COUNT(*) AS n, SUM(CASE WHEN p.gains > 0 THEN 1 ELSE 0 END) AS gagnes, SUM(p.mise) AS mise, SUM(p.gains) AS gains
       FROM pm_pronos p JOIN users u ON u.id = p.user_id WHERE p.statut = 'calcule' AND u.banni = 0 ${mois ? 'AND substr(p.jour, 1, 7) = ?' : ''}
       GROUP BY p.user_id ORDER BY (SUM(p.gains) - SUM(p.mise)) DESC`).bind(...(mois ? [mois] : [])).all();
