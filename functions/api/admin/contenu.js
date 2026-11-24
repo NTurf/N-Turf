@@ -34,12 +34,15 @@ export async function onRequestPost({ request, env }) {
   if (new URL(request.url).searchParams.get('attente') === '1') {
     if (!EN_ATTENTE.includes(b.cle) || b.cle === 'quinte' || b.cle === 'cpc') return json({ erreur: 'Contenu inconnu.' }, 400);
     if (JSON.stringify(b.data || {}).length > 200000) return json({ erreur: 'Trop volumineux.' }, 400);
+    if (/^hippo_et/.test(b.cle) && b.data && !b.data.date) { const q = await lireContenu(env.DB, 'quinte_attente'); if (q && q.date) b.data.date = q.date; }
     await ecrireContenu(env.DB, b.cle + '_attente', b.data || {});
     return json({ ok: true, attente: true });
   }
   const historique = /^(tickets|quinte|cpc|fanny|coeurs)-\d{4}-\d{2}-\d{2}$/.test(b.cle || '');
   if (!AUTORISES.includes(b.cle) && !historique) return json({ erreur: 'Contenu inconnu.' }, 400);
   if (JSON.stringify(b.data || {}).length > (b.cle === 'cpc_archive' ? 1500000 : 200000)) return json({ erreur: 'Trop volumineux.' }, 400);
+  // une étude publiée porte la date du Quinté+ en ligne
+  if (/^hippo_et/.test(b.cle) && b.data && !b.data.date) { const q = await lireContenu(env.DB, 'quinte'); if (q && q.date) b.data.date = q.date; }
   await ecrireContenu(env.DB, b.cle, b.data || {});
   // les tickets publiés sont aussi gardés par date, pour les bilans
   if (b.cle === 'tickets' && b.data && /^\d{2}\/\d{2}\/\d{4}$/.test(b.data.date || '')) {

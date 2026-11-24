@@ -69,6 +69,15 @@ fetch('/api/membres/etudes', {credentials:'same-origin'})
       .then(function(c){ Object.keys(c || {}).forEach(function(g){ if (vv(c[g]) > vv(d[g])) { c[g].depot = 1; d[g] = c[g]; } }); return d; });
   })
   .then(function(d){
+    // une étude d'un autre jour que le Quinté+ en ligne ne s'affiche plus
+    var QD = d.quinteDate || '', qIso = /^\d{2}\/\d{2}\/\d{4}$/.test(QD) ? QD.split('/').reverse().join('-') : '';
+    function jourEtude(h){
+      if (h.date && /^\d{2}\/\d{2}\/\d{4}$/.test(h.date)) return { iso: h.date.split('/').reverse().join('-'), sur: 1 };
+      var m = String(h.titre || '').match(/(\d{1,2})\/(\d{1,2})(?:\/(\d{4}))?/);
+      if (m) return { iso: (m[3] || qIso.slice(0, 4)) + '-' + ('0' + m[2]).slice(-2) + '-' + ('0' + m[1]).slice(-2) };
+      var t = parseInt(h.v, 36); return t ? { iso: new Date(t).toLocaleDateString('fr-CA', {timeZone:'Europe/Paris'}) } : null;
+    }
+    if (qIso) ['etquinte', 'etr1', 'etout', 'ettrot'].forEach(function(g){ var h = d[g]; if (!h || !h.n) return; var j = jourEtude(h); if (j && (j.sur ? j.iso !== qIso : j.iso < qIso)) d[g] = null; });
     document.getElementById('zone').hidden = false;
     var el = document.getElementById('pages'), lb = document.getElementById('lb');
     function montrer(g){

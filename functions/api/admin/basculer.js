@@ -33,6 +33,7 @@ export async function onRequestPost({ request, env }) {
   if (!env.DB) return noDb();
   if (!(await droit(env, request))) return json({ erreur: 'Réservé à l\'administration.' }, 403);
   const db = env.DB, fait = [];
+  const qa = await lireContenu(db, 'quinte_attente');
   for (const k of LISTE) {
     const d = await lireContenu(db, k + '_attente');
     if (!d) continue;
@@ -45,6 +46,7 @@ export async function onRequestPost({ request, env }) {
       }
       await db.prepare("DELETE FROM contenu WHERE cle LIKE ?").bind(`hippo-img-att-${g}-%`).run();
     }
+    if (/^hippo_et/.test(k) && !d.date && qa && qa.date) d.date = qa.date;
     await ecrireContenu(db, k, d);
     const iso = isoDe(d.date);
     if (iso && ['quinte', 'cpc', 'tickets', 'coeurs', 'fanny'].includes(k)) await ecrireContenu(db, k + '-' + iso, d);
