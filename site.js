@@ -4,20 +4,24 @@
   // Barre de navigation principale
   var tabs = [
     ['/', 'Accueil'],
+    null,
     ['/pronostics.html#quinte', 'Pronos Quinté+'],
     ['/tickets.html', 'Tickets'],
+    ['/etudes.html', 'Études'],
+    ['/concours.html', 'Concours Quinté+'],
+    null,
     ['/pronostics.html#cpc', 'Pronos course par course'],
-    ['/pronostics.html#fanny', 'Repérés de Fanny'],
     ['/hippodrome.html', 'Pronos Hippodrome'],
     ['/pronos-membres.html', 'Pronos des membres'],
-    ['/analyses.html', 'Analyses'],
+    ['/pronostics.html#fanny', 'Repérés de Fanny'],
+    null,
+    ['/chat.html', 'Tchat'],
     ['/lives.html', 'Nos lives'],
-    ['/etudes.html', 'Études'],
     ['/outils.html', 'Outils'],
-    ['/concours.html', 'Concours Quinté+'],
+    null,
+    ['/analyses.html', 'Analyses'],
     ['/stats.html', 'Statistiques'],
     ['/archives.html', 'Archives'],
-    ['/chat.html', 'Tchat'],
     ['/rejoindre.html', 'Rejoindre N-TURF'],
     ['/membres.html', 'Espace membres']
   ];
@@ -40,7 +44,7 @@
   // Menu en barre latérale à gauche (toujours visible sur ordinateur, tiroir sur téléphone)
   var side = document.createElement('aside');
   side.className = 'sidenav'; side.id = 'sidenav';
-  side.innerHTML = '<nav class="mainnav">' + tabs.map(function(t){ return '<a href="'+t[0]+'">'+t[1]+'</a>'; }).join('') + '</nav>';
+  side.innerHTML = '<nav class="mainnav">' + tabs.map(function(t){ return t ? '<a href="'+t[0]+'">'+t[1]+'</a>' : '<hr class="navsep">'; }).join('') + '</nav>';
   document.body.insertBefore(side, h.nextSibling);
   var voile = document.createElement('div'); voile.className = 'voile'; document.body.appendChild(voile);
   document.body.classList.add('avec-side');
