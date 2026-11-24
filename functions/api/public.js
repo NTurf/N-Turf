@@ -100,7 +100,7 @@ export async function onRequestGet({ env }) {
         await initConcours(db); await calculerSiPret(db, parisJour());
         const dj = await dernierJourCalcule(db);
         if (dj) {
-          const L = await classementJour(db, dj);
+          const L = (await classementJour(db, dj)).filter((x) => !x.robot);
           if (L.length) b.push(`Concours Quinté+ du ${isoVersFr(dj)} : ` + L.slice(0, 3).map((x, i) => `${i + 1}${i ? 'e' : 'er'} ${x.pseudo} (${x.net >= 0 ? '+' : ''}${eur(x.net).replace(' €', ' fers')})`).join(', '));
         }
       } catch (e) {}
@@ -117,6 +117,9 @@ export async function onRequestGet({ env }) {
       b.push(...jour);
       if (!jour.length) b.push(...bilanVeille(await lireContenu(db, 'cpc_archive')));
       b.push('N-TURF : pronostics Quinté+ et course par course, mises et résultats en toute transparence');
+      // Appel au concours, en rouge (« !! » devant = affiché en rouge), au début et à la fin du bandeau
+      const pub = '!!🏆 CONCOURS QUINTÉ+ GRATUIT : saurez-vous battre TCR, ALGO, PERSO et les pronostics du site ? Faites votre prono avant le départ, le podium vous attend !';
+      b.unshift(pub); b.push(pub);
       return b;
     });
   } catch (e) { bandeau = ['N-TURF : pronostics Quinté+ et course par course, mises et résultats en toute transparence']; }

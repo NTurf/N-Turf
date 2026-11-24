@@ -54,7 +54,7 @@
   fetch('/api/public', { cache: 'no-store' }).then(function(r){ return r.json(); }).then(function(d){
     if (!d.bandeau || !d.bandeau.length) return;
     var e = function(s){ return String(s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); };
-    document.getElementById('tickerText').innerHTML = d.bandeau.map(e).join(' &nbsp;<b>•</b>&nbsp; ');
+    document.getElementById('tickerText').innerHTML = d.bandeau.map(function(t){ t = String(t); return t.indexOf('!!') === 0 ? '<a href="/concours.html" style="color:#e5243b;font-weight:800;text-decoration:none">' + e(t.slice(2)) + '</a>' : e(t); }).join(' &nbsp;<b>•</b>&nbsp; ');
     document.getElementById('ticker').hidden = false;
     // vitesse constante, quelle que soit la longueur du texte : environ 55 pixels par seconde
     var sp = document.getElementById('tickerText');
