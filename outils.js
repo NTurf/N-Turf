@@ -49,7 +49,29 @@
   }
 
   // ---------- 1. Répartition simple gagnant ----------
-  var rep = { mode: 'mise' };
+  var rep = { mode: 'mise', src: null }; // src : la course d'où viennent les chevaux (pour les cotes PMU en direct)
+  function aujFr(){ return new Date().toLocaleDateString('fr-FR', {timeZone:'Europe/Paris', day:'2-digit', month:'2-digit', year:'numeric'}); }
+  // Va chercher au PMU la cote en direct de chaque cheval de la course choisie et la met dans le tableau
+  function repCotes(){
+    var m = $('repCoteMsg');
+    if (!rep.src) { m.textContent = 'Choisis d\'abord une course (ou une liste du Quinté) pour avoir les cotes en direct.'; return; }
+    m.textContent = 'Cotes PMU…';
+    var url = rep.src.quinte ? '/api/pmu/quinte?date=' + encodeURIComponent(aujFr()) : '/api/pmu/reunion?date=' + encodeURIComponent(aujFr()) + '&hippo=' + encodeURIComponent(rep.src.hippo);
+    fetch(url).then(function(r){ return r.json(); }).then(function(d){
+      var parts = null;
+      if (rep.src.quinte) parts = d.trouve ? d.partants : null;
+      else if (d.trouve) { var num = parseInt(String(rep.src.course).replace(/\D/g, ''), 10); var c = (d.courses || []).filter(function(x){ return x.num === num; })[0]; parts = c ? c.partants : null; }
+      if (!parts) { m.textContent = 'Cotes indisponibles pour cette course.'; return; }
+      var C = {}; parts.forEach(function(p){ if (!p.np && p.cote) C[p.n] = p.cote; });
+      var nb = 0;
+      $('repRows').querySelectorAll('tr').forEach(function(r){
+        var n = parseInt(r.querySelector('.rn').value, 10);
+        if (n && C[n]) { r.querySelector('.rc').value = String(C[n]).replace('.', ','); nb++; }
+      });
+      m.textContent = nb ? '✓ Cotes PMU en direct à ' + new Date().toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'}) + '. Elles bougent jusqu\'au départ : actualise juste avant de jouer.' : 'Pas encore de cote ouverte pour ces chevaux.';
+      repCalc();
+    }).catch(function(){ m.textContent = 'Cotes indisponibles pour le moment.'; });
+  }
   function repLignes(chevaux){
     var t = $('repRows'); t.innerHTML = '';
     for (var i = 0; i < 4; i++){
@@ -58,6 +80,7 @@
     }
     t.querySelectorAll('input').forEach(function(x){ x.oninput = repCalc; });
     repCalc();
+    if (chevaux && rep.src) repCotes();
   }
   function repCalc(){
     var rows = [].slice.call($('repRows').querySelectorAll('tr')), ch = [];
@@ -216,8 +239,9 @@
     });
     // Répartition
     var srcRep = listesCourses().map(function(l){ return { nom: l.nom, hippo: l.hippo, course: l.course, chevaux: l.chevaux.slice(0,3) }; });
-    boutonsCourses($('repSrcC'), srcRep, function(l){ repLignes(l.chevaux); });
-    boutons($('repSrcQ'), listesQuinte().map(function(l){ return { nom: l.nom, chevaux: l.chevaux.slice(0,3) }; }), function(l){ repLignes(l.chevaux); });
+    boutonsCourses($('repSrcC'), srcRep, function(l){ rep.src = { hippo: l.hippo, course: l.course }; repLignes(l.chevaux); });
+    boutons($('repSrcQ'), listesQuinte().map(function(l){ return { nom: l.nom, chevaux: l.chevaux.slice(0,3) }; }), function(l){ rep.src = { quinte: true }; repLignes(l.chevaux); });
+    $('repMaj').onclick = repCotes;
     $('repMise').onclick = function(){ rep.mode = 'mise'; this.classList.add('on'); $('repBen').classList.remove('on'); $('repLab').textContent = 'Mise totale (€)'; repCalc(); };
     $('repBen').onclick = function(){ rep.mode = 'ben'; this.classList.add('on'); $('repMise').classList.remove('on'); $('repLab').textContent = 'Bénéfice voulu (€)'; repCalc(); };
     $('repVal').oninput = repCalc;
