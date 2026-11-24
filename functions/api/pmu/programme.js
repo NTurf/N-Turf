@@ -13,6 +13,7 @@ export async function onRequestGet({ request, env }) {
     const reunions = ((prog && prog.programme && prog.programme.reunions) || []).map((r) => ({
       r: r.numOfficiel, h: (r.hippodrome && (r.hippodrome.libelleCourt || r.hippodrome.libelleLong)) || ('R' + r.numOfficiel),
       courses: (r.courses || []).map((c) => c.numOrdre),
+      fin: Math.max(0, ...(r.courses || []).map((c) => Number(c.heureDepart) || 0)),
     }));
     return json({ reunions });
   } catch (e) { return json({ erreur: 'Données PMU indisponibles pour le moment.' }, 502); }

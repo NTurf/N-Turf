@@ -94,7 +94,7 @@ function Fe(x){ return (Math.round(x * 100) / 100).toFixed(2).replace('.', ',') 
 function iso(k){ return new Date(Date.now() + k*86400000).toLocaleDateString('fr-CA', {timeZone:'Europe/Paris'}); }
 function frc(i){ return i.slice(8,10) + '/' + i.slice(5,7) + '/' + i.slice(0,4); }
 var Q = new URLSearchParams(location.search);
-var JOUR = Q.get('jour') || iso(0), R = +Q.get('r') || 0, C = +Q.get('c') || 0, PROG = [], COMPTES = {}, DATA = null, SEL = [], CH = null, FORM = false;
+var JOURAUTO = !Q.get('jour'), JOUR = Q.get('jour') || iso(0), R = +Q.get('r') || 0, C = +Q.get('c') || 0, PROG = [], COMPTES = {}, DATA = null, SEL = [], CH = null, FORM = false;
 var TYPES = {SG:'Simple gagnant', SP:'Simple placé', CG:'Couplé gagnant', CP:'Couplé placé', CO:'Couplé ordre', TR:'Trio', TO:'Trio ordre', M4:'Multi en 4', S4:'Super 4 ordre'}, ORDRE = ['SG','SP','CG','CP','CO','TR','TO','M4','S4'];
 function Fn(x){ return (x > 0 ? '+' : x < 0 ? '−' : '') + Fe(Math.abs(x)); }
 function cl(x){ return x > 0 ? 'pos' : x < 0 ? 'neg' : ''; }
@@ -111,6 +111,10 @@ function charger(){
     fetch('/api/pmu/programme?date=' + encodeURIComponent(frc(JOUR))).then(function(r){ return r.json(); }),
     fetch('/api/pm?jour=' + JOUR, {credentials:'same-origin'}).then(function(r){ if (!r.ok) throw 0; return r.json(); })
   ]).then(function(t){
+    // le soir, quand la dernière course du jour est partie depuis 30 minutes, on passe tout seul à demain
+    var fin = Math.max.apply(null, [0].concat((t[0].reunions || []).map(function(r){ return r.fin || 0; })));
+    if (JOURAUTO && JOUR === iso(0) && fin && Date.now() > fin + 30 * 60000) { JOURAUTO = false; JOUR = iso(1); R = 0; C = 0; charger(); return; }
+    JOURAUTO = false;
     $('zone').hidden = false;
     PROG = t[0].reunions || []; COMPTES = {};
     (t[1].comptes || []).forEach(function(x){ COMPTES[x.r + '-' + x.c] = x.n; });
