@@ -88,7 +88,7 @@ export async function coursePm(db, jour, R, C) {
   const parts = await cache(db, `part-${d}-R${R}C${C}`, 600, () => get(`${BASE}/${d}/R${R}/C${C}/participants`));
   const partants = ((parts && parts.participants) || []).map((p) => ({ n: p.numPmu, nom: p.nom, musique: p.musique || '', np: p.statut === 'NON_PARTANT' })).sort((a, b) => a.n - b.n);
   const arrivee = Array.isArray(c.ordreArrivee) ? c.ordreArrivee.map((x) => Array.isArray(x) ? x[0] : x) : [];
-  const info = { hippo: (reu.hippodrome && (reu.hippodrome.libelleCourt || reu.hippodrome.libelleLong)) || 'R' + R, libelle: c.libelle || '', heure: c.heureDepart || null, discipline: c.discipline || '', distance: c.distance || null, partants, arrivee, definitive: false };
+  const info = { hippo: (reu.hippodrome && (reu.hippodrome.libelleCourt || reu.hippodrome.libelleLong)) || 'R' + R, libelle: c.libelle || '', heure: c.heureDepart || null, discipline: c.discipline || '', specialite: c.specialite || '', distance: c.distance || null, allocation: c.montantPrix || null, corde: c.corde || '', conditions: c.conditions || '', partants, arrivee, definitive: false };
   const attente = await db.prepare("SELECT id, chevaux, jeu FROM pm_pronos WHERE jour = ? AND reunion = ? AND course = ? AND statut = 'attente'").bind(jour, R, C).all();
   if (arrivee.length) {
     let raw = null;

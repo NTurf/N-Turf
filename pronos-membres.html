@@ -105,7 +105,10 @@ function course(){
 function dessiner(){
   var d = DATA, c = d.course || {}, arr = (c.arrivee || []).slice(0, 5), h = '';
   var heure = c.heure ? new Date(c.heure).toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit', timeZone:'Europe/Paris'}) : '';
-  h += '<section class="card"><h2 style="margin:0">'+E(c.hippo || '')+' – C'+C+(c.libelle ? ' · '+E(c.libelle) : '')+'</h2><p class="note2">'+[heure, c.distance ? c.distance+' m' : ''].filter(Boolean).join(' · ')+'</p>';
+  var DISC = {ATTELE:'Trot attelé', MONTE:'Trot monté', PLAT:'Plat', HAIE:'Haies', STEEPLECHASE:'Steeple-chase', CROSS:'Cross'}, CORDE = {CORDE_GAUCHE:'corde à gauche', CORDE_DROITE:'corde à droite'};
+  var nbp = (c.partants || []).filter(function(p){ return !p.np; }).length;
+  var inf = [heure, DISC[c.discipline] || c.discipline || '', c.distance ? c.distance+' m' : '', CORDE[c.corde] || '', c.allocation ? Math.round(c.allocation).toLocaleString('fr-FR')+' €' : '', nbp ? nbp+' partants' : ''].filter(Boolean);
+  h += '<section class="card"><h2 style="margin:0">'+E(c.hippo || '')+' – C'+C+(c.libelle ? ' · '+E(c.libelle) : '')+'</h2><p style="margin:4px 0"><b>'+E(inf.join(' · '))+'</b></p>'+(c.conditions ? '<details><summary>Conditions de la course</summary><p>'+E(c.conditions)+'</p></details>' : '');
   if (arr.length) h += '<p class="arrb"><b>Arrivée'+(c.definitive ? '' : ' <span class="prov">(provisoire)</span>')+' :</b> '+arr.join(' - ')+'</p>';
   var mien = d.pronos.filter(function(p){ return p.moi; })[0];
   if (d.ouvert) h += FORM ? formulaire(mien) : '<p><button type="button" class="btn" id="plus">'+(mien ? '✏ Modifier mon prono' : '+ Mon prono')+'</button></p>';
