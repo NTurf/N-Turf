@@ -17,7 +17,7 @@
     ['/concours.html', 'Concours Quinté+'],
     ['/stats.html', 'Statistiques'],
     ['/archives.html', 'Archives'],
-    ['/chat.html', 'Chat'],
+    ['/chat.html', 'Tchat'],
     ['/rejoindre.html', 'Rejoindre N-TURF'],
     ['/membres.html', 'Espace membres']
   ];

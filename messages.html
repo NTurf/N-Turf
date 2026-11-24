@@ -44,7 +44,7 @@ function liste(){
     $('liste').innerHTML = L.length ? L.map(function(c){
       var et = c.statut === 'attente' ? (c.parMoi ? ' <small class="note2">· demande envoyée, en attente</small>' : ' <small style="color:#e5243b;font-weight:700">· demande de contact</small>') : '';
       return '<a class="card cv" href="/messages.html?avec=' + encodeURIComponent(c.pseudo) + '"><b>' + E(c.pseudo) + '</b>' + et + '<span style="flex:1"></span>' + (c.nonlus && (c.statut === 'accepte' || !c.parMoi) ? '<span class="nb">' + c.nonlus + '</span>' : '') + '</a>';
-    }).join('') : '<p class="empty">Aucune conversation. Pour écrire à un membre, touche son pseudo (dans le chat ou la liste des connectés), puis « Lui écrire ».</p>';
+    }).join('') : '<p class="empty">Aucune conversation. Pour écrire à un membre, touche son pseudo (dans le tchat ou la liste des connectés), puis « Lui écrire ».</p>';
   }).catch(function(){ $('refus').hidden = false; });
 }
 function conv(){

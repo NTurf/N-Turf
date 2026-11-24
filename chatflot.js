@@ -7,11 +7,11 @@
   var heure = function (t) { var d = new Date(t); return d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }); };
 
   var bulle = document.createElement('button');
-  bulle.type = 'button'; bulle.className = 'cf-bulle'; bulle.setAttribute('aria-label', 'Ouvrir le chat');
+  bulle.type = 'button'; bulle.className = 'cf-bulle'; bulle.setAttribute('aria-label', 'Ouvrir le tchat');
   bulle.innerHTML = '💬<span class="cf-nb" hidden></span>';
   var fen = document.createElement('div');
   fen.className = 'cf-fen'; fen.hidden = true;
-  fen.innerHTML = '<div class="cf-tete"><select class="cf-sal" aria-label="Salon"></select><a href="/chat.html" class="cf-grand" title="Ouvrir la page Chat">⤢</a><button type="button" class="cf-red" aria-label="Réduire">–</button></div>' +
+  fen.innerHTML = '<div class="cf-tete"><select class="cf-sal" aria-label="Salon"></select><a href="/chat.html" class="cf-grand" title="Ouvrir la page Tchat">⤢</a><button type="button" class="cf-red" aria-label="Réduire">–</button></div>' +
     '<div class="cf-fil"><p class="empty">Chargement…</p></div>' +
     '<form class="cf-env"><textarea rows="1" maxlength="500" placeholder="Ton message…"></textarea><button type="submit" class="btn">Envoyer</button></form><p class="cf-msg"></p>';
   document.body.appendChild(fen); document.body.appendChild(bulle);
