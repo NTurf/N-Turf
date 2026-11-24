@@ -18,8 +18,25 @@
   function listesCourses(){
     var d = DATA.cpc, L = [];
     if (!d || !d.reunions) return L;
-    d.reunions.forEach(function(re){ re.courses.forEach(function(c){ if (c.synthese.length) L.push({ nom: re.hippodrome + ' ' + c.course, chevaux: c.synthese }); }); });
+    d.reunions.forEach(function(re){ re.courses.forEach(function(c){ if (c.synthese.length) L.push({ nom: re.hippodrome + ' ' + c.course, hippo: re.hippodrome, course: c.course, chevaux: c.synthese }); }); });
     return L;
+  }
+  // Courses du jour : d'abord la réunion (boutons), puis la course dans une liste déroulante
+  function boutonsCourses(conteneur, listes, clic){
+    if (!listes.length) { conteneur.innerHTML = '<span class="empty">Pas encore de liste aujourd\'hui.</span>'; return; }
+    var hippos = []; listes.forEach(function(l){ if (hippos.indexOf(l.hippo) < 0) hippos.push(l.hippo); });
+    conteneur.innerHTML = hippos.map(function(h, i){ return '<button type="button" class="pill" data-h="'+i+'">'+esc(h)+'</button>'; }).join('') +
+      '<select class="crsSel" hidden style="margin:6px 0 0;padding:8px 10px;border-radius:8px;font:inherit;font-weight:700;min-width:180px"></select>';
+    var sel = conteneur.querySelector('select');
+    conteneur.querySelectorAll('[data-h]').forEach(function(b){
+      b.onclick = function(){
+        conteneur.querySelectorAll('[data-h]').forEach(function(x){ x.classList.toggle('on', x === b); });
+        var h = hippos[+b.getAttribute('data-h')];
+        sel.innerHTML = '<option value="">Choisis la course…</option>' + listes.map(function(l, i){ return l.hippo === h ? '<option value="'+i+'">'+esc(l.course)+'</option>' : ''; }).join('');
+        sel.hidden = false; sel.focus();
+      };
+    });
+    sel.onchange = function(){ if (sel.value !== '') clic(listes[+sel.value]); };
   }
   function boutons(conteneur, listes, clic){
     conteneur.innerHTML = listes.length ? listes.map(function(l, i){ return '<button type="button" class="pill" data-i="'+i+'">'+esc(l.nom)+'</button>'; }).join('') : '<span class="empty">Pas encore de liste aujourd\'hui.</span>';
@@ -198,8 +215,8 @@
       };
     });
     // Répartition
-    var srcRep = listesCourses().map(function(l){ return { nom: l.nom, chevaux: l.chevaux.slice(0,3) }; });
-    boutons($('repSrcC'), srcRep, function(l){ repLignes(l.chevaux); });
+    var srcRep = listesCourses().map(function(l){ return { nom: l.nom, hippo: l.hippo, course: l.course, chevaux: l.chevaux.slice(0,3) }; });
+    boutonsCourses($('repSrcC'), srcRep, function(l){ repLignes(l.chevaux); });
     boutons($('repSrcQ'), listesQuinte().map(function(l){ return { nom: l.nom, chevaux: l.chevaux.slice(0,3) }; }), function(l){ repLignes(l.chevaux); });
     $('repMise').onclick = function(){ rep.mode = 'mise'; this.classList.add('on'); $('repBen').classList.remove('on'); $('repLab').textContent = 'Mise totale (€)'; repCalc(); };
     $('repBen').onclick = function(){ rep.mode = 'ben'; this.classList.add('on'); $('repMise').classList.remove('on'); $('repLab').textContent = 'Bénéfice voulu (€)'; repCalc(); };
@@ -207,13 +224,13 @@
     repLignes([]);
     // Champ libre
     boutons($('clSrc'), listesQuinte(), function(l){ clCharger(l.chevaux); });
-    boutons($('clSrcC'), listesCourses(), function(l){ clCharger(l.chevaux); });
+    boutonsCourses($('clSrcC'), listesCourses(), function(l){ clCharger(l.chevaux); });
     $('clAdd').onclick = function(){ nums($('clNum').value).forEach(function(n){ if (cl.chevaux.indexOf(n) < 0) { cl.chevaux.push(n); cl.places[n] = [1,2,3,4,5]; } }); $('clNum').value = ''; if (!cl.depart) cl.depart = prix(); clRendu(); };
     $('clVider').onclick = function(){ cl.chevaux = []; cl.places = {}; cl.depart = null; clRendu(); };
     clRendu();
     // Réducteur
     boutons($('rdSrcQ'), listesQuinte(), function(l){ rdCharger(l.chevaux); });
-    boutons($('rdSrcC'), listesCourses(), function(l){ rdCharger(l.chevaux); });
+    boutonsCourses($('rdSrcC'), listesCourses(), function(l){ rdCharger(l.chevaux); });
     $('rdNums').oninput = function(){ rd.chevaux = nums(this.value).slice(0, 11); rd.bases = rd.bases.filter(function(b){ return rd.chevaux.indexOf(b) >= 0; }); rdRendu(); };
     ['multi','q45'].forEach(function(m){ $('rdM_'+m).onclick = function(){ rd.mode = m; rdRendu(); }; });
     $('rdFixe').onclick = function(){ rd.ordre = 'fixe'; this.classList.add('on'); $('rdMel').classList.remove('on'); rdFabriquer(); };
