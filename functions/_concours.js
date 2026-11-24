@@ -1,6 +1,9 @@
 // Concours Quinté+ N-TURF : règles validées par Bruno le 23/11/2026
 // Monnaie : fers à cheval. Gain = rapport PMU pour 1 € × mise d'une combinaison.
 import { BASE, cache, get, preparer } from './_pmu.js';
+import { lireContenu } from './_auth.js';
+import { limites, classer, chevauxFormule, estTrot } from './_formule.js';
+import ETUDES from './_etude_liste.js';
 
 export const MISE = { sgp: 40, couple: 12, tierce: 10, quarte: 22.5, multi: 45, quinte: 42 };
 export const MISE_JOUR = 171.5;
@@ -146,6 +149,71 @@ export async function courseDuJour(db, iso) {
   return ligne || null;
 }
 
+// ---------- Les joueurs du site (TCR, ALGO, Études Quinté, Formule du membre) ----------
+// Ils jouent automatiquement, sont classés comme les membres, mais ne montent jamais sur le podium.
+export const ROBOTS = [
+  { cle: 'tcr', pseudo: 'TCR' }, { cle: 'algo', pseudo: 'ALGO' },
+  { cle: 'etudes', pseudo: 'Études Quinté' }, { cle: 'formule', pseudo: 'Formule du membre' },
+];
+async function idsRobots(db) {
+  const out = {};
+  for (const r of ROBOTS) {
+    const mail = `robot-${r.cle}@n-turf.site`;
+    let u = await db.prepare('SELECT id FROM users WHERE email = ?').bind(mail).first();
+    if (!u) {
+      // compte sans mot de passe utilisable : personne ne peut s'y connecter
+      await db.prepare("INSERT OR IGNORE INTO users (pseudo, pseudo_lc, email, pass_hash, pass_salt, role) VALUES (?, ?, ?, '!', '!', 'robot')")
+        .bind(r.pseudo, 'robot:' + r.cle, mail).run();
+      u = await db.prepare('SELECT id FROM users WHERE email = ?').bind(mail).first();
+    }
+    if (u) out[r.cle] = u.id;
+  }
+  return out;
+}
+async function listesRobots(db, iso, j) {
+  const partants = JSON.parse(j.partants || '[]').filter((p) => !p.np).map((p) => p.n);
+  const huit = (L) => { const x = (L || []).map(Number).filter((n) => partants.includes(n)); return [...new Set(x)].slice(0, 8); };
+  const out = {};
+  const q = await lireContenu(db, 'quinte-' + iso);
+  const ap = (q && q.approches) || {};
+  out.tcr = huit(ap.TCR && ap.TCR.selection);
+  out.algo = huit(ap.ALGO && ap.ALGO.selection);
+  out.etudes = huit(ETUDES[iso]);
+  try {
+    // Formule du membre : seulement si le Quinté est au trot ; limite du recul s'il y en a un, sinon recul fictif
+    const d = isoVersPmu(iso);
+    const prog = await cache(db, 'prog-' + d, 600, () => get(`${BASE}/${d}`));
+    const reu = ((prog && prog.programme && prog.programme.reunions) || []).find((r) => r.numOfficiel === j.reunion);
+    const c = reu && (reu.courses || []).find((x) => x.numOrdre === j.course);
+    if (c && estTrot(c)) {
+      const parts = await cache(db, `part-${d}-R${j.reunion}C${j.course}`, 600, () => get(`${BASE}/${d}/R${j.reunion}/C${j.course}/participants`));
+      const ch = chevauxFormule(parts);
+      if (ch.length) {
+        const lim = limites(c.conditions);
+        const g = ch.map((h) => h.gains);
+        const L = lim.recul ? lim.recul : Math.round((Math.min(...g) + Math.max(...g)) / 2);
+        out.formule = huit(classer(ch, L).map((x) => x.n));
+      }
+    }
+  } catch (e) {}
+  return out;
+}
+// Inscrit (ou met à jour jusqu'à la clôture) le pronostic des joueurs du site
+export async function ajouterRobots(db, iso, j) {
+  if (!j) return;
+  const ids = await idsRobots(db);
+  const L = await listesRobots(db, iso, j);
+  const ouvert = j.statut !== 'calcule' && j.heure && Date.now() < j.heure - 5 * 60000;
+  const q = [];
+  for (const r of ROBOTS) {
+    const ch = L[r.cle];
+    if (!ids[r.cle] || !ch || ch.length !== 8) continue;
+    q.push(db.prepare(`INSERT INTO concours_pronos (date, user_id, chevaux, saisi) VALUES (?, ?, ?, datetime('now'))
+      ON CONFLICT(date, user_id) DO ${ouvert ? 'UPDATE SET chevaux = excluded.chevaux, saisi = excluded.saisi' : 'NOTHING'}`).bind(iso, ids[r.cle], JSON.stringify(ch)));
+  }
+  if (q.length) await db.batch(q);
+}
+
 // Calcule tous les pronostics du jour dès que les rapports définitifs sont publiés
 export async function calculerSiPret(db, iso) {
   let j;
@@ -158,6 +226,7 @@ export async function calculerSiPret(db, iso) {
   const R = lireRapportsConcours(blocs);
   if (!R.qi.d && !R.qi.o) return j; // rapports pas encore définitifs
   const np = JSON.parse(j.partants || '[]').filter((p) => p.np).map((p) => p.n);
+  try { await ajouterRobots(db, iso, j); } catch (e) {}
   const pr = await db.prepare('SELECT user_id, chevaux FROM concours_pronos WHERE date = ?').bind(iso).all();
   const maj = [];
   for (const p of pr.results || []) {
@@ -180,7 +249,7 @@ export function bornesMois(iso) { const [a, m] = iso.split('-').map(Number); con
 
 export async function classement(db, du, au, depuisDebutPeriode) {
   const jours = ((await db.prepare("SELECT date FROM concours_jours WHERE statut = 'calcule' AND date BETWEEN ? AND ? ORDER BY date").bind(du, au).all()).results || []).map((x) => x.date);
-  const rows = (await db.prepare(`SELECT p.user_id, u.pseudo, p.date, p.gains FROM concours_pronos p JOIN users u ON u.id = p.user_id
+  const rows = (await db.prepare(`SELECT p.user_id, u.pseudo, u.role, p.date, p.gains FROM concours_pronos p JOIN users u ON u.id = p.user_id
     WHERE p.date BETWEEN ? AND ?`).bind(depuisDebutPeriode ? du : '0000', au).all()).results || [];
   const premiers = new Map();
   const tous = (await db.prepare('SELECT user_id, MIN(date) AS d FROM concours_pronos GROUP BY user_id').all()).results || [];
@@ -189,7 +258,7 @@ export async function classement(db, du, au, depuisDebutPeriode) {
   for (const r of rows) {
     if (r.date < du) continue;
     let x = J.get(r.user_id);
-    if (!x) { x = { id: r.user_id, pseudo: r.pseudo, gains: 0, joues: 0 }; J.set(r.user_id, x); }
+    if (!x) { x = { id: r.user_id, pseudo: r.pseudo, robot: r.role === 'robot', gains: 0, joues: 0 }; J.set(r.user_id, x); }
     if (jours.includes(r.date)) { x.gains += r.gains || 0; x.joues++; }
   }
   const out = [];
@@ -201,15 +270,15 @@ export async function classement(db, du, au, depuisDebutPeriode) {
     const compte = jours.filter((d) => d >= debut).length;
     if (!compte) continue;
     const mises = r2(compte * MISE_JOUR);
-    out.push({ pseudo: x.pseudo, id: x.id, joues: x.joues, jours: compte, mises, gains: r2(x.gains), net: r2(x.gains - mises) });
+    out.push({ pseudo: x.pseudo, id: x.id, robot: x.robot, joues: x.joues, jours: compte, mises, gains: r2(x.gains), net: r2(x.gains - mises) });
   }
   out.sort((a, b) => b.net - a.net || b.gains - a.gains || a.pseudo.localeCompare(b.pseudo));
   return { jours, liste: out };
 }
 
 export async function classementJour(db, iso) {
-  const rows = (await db.prepare(`SELECT u.id, u.pseudo, p.gains FROM concours_pronos p JOIN users u ON u.id = p.user_id WHERE p.date = ?`).bind(iso).all()).results || [];
-  return rows.map((r) => ({ id: r.id, pseudo: r.pseudo, joues: 1, jours: 1, mises: MISE_JOUR, gains: r2(r.gains || 0), net: r2((r.gains || 0) - MISE_JOUR) }))
+  const rows = (await db.prepare(`SELECT u.id, u.pseudo, u.role, p.gains FROM concours_pronos p JOIN users u ON u.id = p.user_id WHERE p.date = ?`).bind(iso).all()).results || [];
+  return rows.map((r) => ({ id: r.id, pseudo: r.pseudo, robot: r.role === 'robot', joues: 1, jours: 1, mises: MISE_JOUR, gains: r2(r.gains || 0), net: r2((r.gains || 0) - MISE_JOUR) }))
     .sort((a, b) => b.net - a.net || a.pseudo.localeCompare(b.pseudo));
 }
 

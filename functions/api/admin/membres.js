@@ -8,7 +8,7 @@ export async function onRequestGet({ request, env }) {
   const u = await currentUser(env.DB, request);
   if (!u || u.role !== 'admin') return json({ erreur: 'Réservé à l\'administrateur.' }, 403);
   await prepAnalyses(env.DB);
-  const r = await env.DB.prepare('SELECT u.id, u.pseudo, u.email, u.role, u.moderateur, u.publier, u.banni, u.hippo, u.created_at, u.last_login, a.auteur AS analyste FROM users u LEFT JOIN analystes a ON a.user_id = u.id ORDER BY u.created_at DESC').all();
+  const r = await env.DB.prepare(`SELECT u.id, u.pseudo, u.email, u.role, u.moderateur, u.publier, u.banni, u.hippo, u.created_at, u.last_login, a.auteur AS analyste FROM users u LEFT JOIN analystes a ON a.user_id = u.id WHERE u.role != 'robot' ORDER BY u.created_at DESC`).all();
   return json({ membres: r.results || [], auteurs: AUTEURS });
 }
 

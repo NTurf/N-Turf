@@ -59,6 +59,7 @@
 <li><b>Gains</b> : exactement les rapports officiels du PMU pour 1 €, multipliés par la mise d'une combinaison. Exemple : Quarté+ désordre à 80 pour 1 € = 80 × 1,50 = 120 fers.</li>
 <li><b>Ordre ou désordre</b> : c'est l'ordre si les chevaux arrivés sont dans le même ordre que dans ton classement, même avec des chevaux sautés entre eux (tu classes 4-11-7-2-9, arrivée 4-7-9 : Tiercé ordre). Sinon c'est le désordre. Jamais les deux.</li>
 <li><b>Mises</b> : à partir de ton premier pronostic, 171,50 fers sont retirés pour chaque jour de Quinté+, que tu joues ou non. Celui qui joue tous les jours n'est donc jamais pénalisé.</li>
+<li><b>Les pronostics du site jouent aussi</b> : TCR, ALGO, Études Quinté et Formule du membre (les jours de Quinté au trot) jouent chaque jour avec les mêmes règles et la même mise. Ils sont affichés en tête des classements pour que chacun sache s'il fait mieux qu'eux, mais ils ne montent jamais sur le podium : seuls les membres sont récompensés.</li>
 <li><b>Trois podiums</b> : celui du jour, celui de la semaine (du lundi au dimanche) et le Globe de Cristal du mois. Tous se classent en gains moins mises.</li>
 <li>Tout est calculé automatiquement dès que le PMU publie les rapports définitifs.</li>
 </ul>
@@ -127,7 +128,7 @@
     z.innerHTML = h; z.hidden = false;
     if (D.tous && D.tous.length) {
       t.innerHTML = '<h2>Les pronostics de tous (' + D.tous.length + ')</h2>' + D.tous.map(function(p, i){
-        return '<details class="ptous"><summary><span class="rg">' + (i + 1) + '</span><b>' + E(p.pseudo) + '</b><span class="lst">' + (p.retenu || p.chevaux).slice(0, 7).map(function(n){ return '<i' + (c.arrivee.slice(0,5).indexOf(n) >= 0 ? ' class="hit"' : '') + '>' + n + '</i>'; }).join('') + '</span><span class="' + (p.net >= 0 ? 'pos' : 'neg') + '">' + F(p.gains) + '</span></summary>' + lignes(p.detail) + '</details>';
+        return '<details class="ptous"><summary><span class="rg">' + (i + 1) + '</span><b>' + (p.robot ? '🤖 ' : '') + E(p.pseudo) + '</b><span class="lst">' + (p.retenu || p.chevaux).slice(0, 7).map(function(n){ return '<i' + (c.arrivee.slice(0,5).indexOf(n) >= 0 ? ' class="hit"' : '') + '>' + n + '</i>'; }).join('') + '</span><span class="' + (p.net >= 0 ? 'pos' : 'neg') + '">' + F(p.gains) + '</span></summary>' + lignes(p.detail) + '</details>';
       }).join('') + '<p class="note2">Montants en fers gagnés (mise de 171,50 fers chacun). Touche un joueur pour voir le détail.</p>';
       t.hidden = false;
     } else t.hidden = true;
@@ -193,10 +194,13 @@
   function dessinerCl(){
     var b = CL[ong], z = document.getElementById('cl');
     var titre = ong === 'jour' ? (b.dateFr ? 'Quinté+ du ' + b.dateFr : 'Pas encore de course calculée') : ong === 'semaine' ? 'Semaine du ' + b.du + ' au ' + b.au : 'Mois en cours, du ' + b.du + ' au ' + b.au + ' (' + b.restants + ' jours restants)';
-    var L = b.liste || [];
+    var TOUT = b.liste || [];
+    // Les joueurs du site (TCR, ALGO, Études, Formule) : affichés en tête, mais jamais sur le podium
+    var ROB = TOUT.filter(function(x){ return x.robot; }), L = TOUT.filter(function(x){ return !x.robot; });
     var pod = function(x, r){ if (!x) return '<div class="pod r' + r + '"><div class="pav">–</div><div class="pblk">' + r + '</div></div>';
       return '<div class="pod r' + r + '">' + (r === 1 ? '<div class="pstar">⭐</div>' : '') + '<div class="pav">' + E(x.pseudo.charAt(0).toUpperCase()) + '</div><div class="pnm">' + E(x.pseudo) + '</div><div class="pam ' + (x.net >= 0 ? 'pos' : 'neg') + '">' + (x.net >= 0 ? '+' : '') + F(x.net) + '</div><div class="pblk">' + r + '</div></div>'; };
     var h = '<div class="clh2"><b>' + (ong === 'globe' ? '🔮 Globe de Cristal' : '🏆 ' + (ong === 'jour' ? 'Podium du jour' : 'Podium de la semaine')) + '</b><span>' + E(titre) + '</span></div>';
+    if (ROB.length) h += '<div class="note" style="margin:8px 0"><b>🤖 À battre : les pronostics du site</b><br>' + ROB.map(function(x){ return E(x.pseudo) + ' <b class="' + (x.net >= 0 ? 'pos' : 'neg') + '">' + (x.net >= 0 ? '+' : '') + F(x.net) + '</b>'; }).join(' · ') + '<br><small>Ils jouent tous les jours comme vous, mais ne montent pas sur le podium. Faites mieux qu\'eux !</small></div>';
     h += '<div class="podium">' + pod(L[1], 2) + pod(L[0], 1) + pod(L[2], 3) + '</div>';
     if (L.length) h += '<table class="st bil cl"><tr><th>#</th><th>Joueur</th><th>Mises</th><th>Gains</th><th>Net</th></tr>' + L.map(function(x, i){
       return '<tr><td>' + (i + 1) + '</td><td><b>' + E(x.pseudo) + '</b><small>' + x.joues + ' joué' + (x.joues > 1 ? 's' : '') + ' sur ' + x.jours + ' j.</small></td><td>' + F(x.mises) + '</td><td>' + F(x.gains) + '</td><td class="' + (x.net >= 0 ? 'pos' : 'neg') + '">' + (x.net >= 0 ? '+' : '') + F(x.net) + '</td></tr>';
