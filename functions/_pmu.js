@@ -95,7 +95,9 @@ export async function detailCourse(db, d, R, c) {
       const rap = await cache(db, cle, 60, () => get(`${BASE}/${d}/R${R}/C${C}/rapports-definitifs`));
       rapports = lireRapports(rap);
     } catch (e) { rapports = []; } // rapports pas encore publiés : on garde l'arrivée
-    if (rapports.length) await db.prepare('UPDATE pmu_cache SET expire = ? WHERE cle = ?').bind(Date.now() + 86400000, cle).run();
+    // On ne garde les rapports 24 h que s'ils sont complets : pour une course Quinté+, le PMU publie le Quinté+ après les simples
+    const quinte = (c.paris || []).some((p) => p.codePari === 'QUINTE_PLUS');
+    if (rapports.length && (!quinte || rapports.some((x) => /quint/i.test(String(x.nom || ''))))) await db.prepare('UPDATE pmu_cache SET expire = ? WHERE cle = ?').bind(Date.now() + 86400000, cle).run();
   }
   return { num: C, libelle: c.libelle || '', heure: c.heureDepart || null, discipline: c.discipline || '', distance: dist || null, specialite: c.specialite || '', allocation: c.montantPrix || null, conditions: c.conditions || '', corde: c.corde || '', categorie: c.categorieParticularite || '', partants, arrivee, definitive: rapports.length > 0, rapports };
 }

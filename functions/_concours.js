@@ -223,7 +223,8 @@ export async function calculerSiPret(db, iso) {
   const arr = JSON.parse(j.arrivee || '[]');
   if (arr.length < 5) return j;
   const d = isoVersPmu(iso);
-  const blocs = await cache(db, `rap-${d}-R${j.reunion}C${j.course}`, 60, () => get(`${BASE}/${d}/R${j.reunion}/C${j.course}/rapports-definitifs`));
+  // clé à part (rapq-) : jamais prolongée, on relit le PMU chaque minute jusqu'aux rapports Quinté+
+  const blocs = await cache(db, `rapq-${d}-R${j.reunion}C${j.course}`, 60, () => get(`${BASE}/${d}/R${j.reunion}/C${j.course}/rapports-definitifs`));
   const R = lireRapportsConcours(blocs);
   if (!R.qi.d && !R.qi.o) return j; // rapports pas encore définitifs
   const np = JSON.parse(j.partants || '[]').filter((p) => p.np).map((p) => p.n);
