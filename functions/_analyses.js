@@ -15,11 +15,25 @@ export async function prepAnalyses(db) {
   try { await db.prepare('ALTER TABLE analyses ADD COLUMN html INTEGER NOT NULL DEFAULT 0').run(); } catch (e) { /* déjà là */ }
 }
 
+// Toutes les rubriques : les auteurs fixes + celles des membres à qui Bruno a donné le droit (à leur pseudo)
+export async function listeAuteurs(db) {
+  const r = await db.prepare('SELECT DISTINCT auteur FROM analystes').all();
+  const out = AUTEURS.slice();
+  (r.results || []).forEach((x) => { if (x.auteur && !out.includes(x.auteur)) out.push(x.auteur); });
+  return out;
+}
+
+// Rubrique choisie dans l'administration : '__pseudo__' = rubrique au pseudo du membre, sinon un auteur fixe
+export function rubriqueChoisie(valeur, pseudo) {
+  if (valeur === '__pseudo__') return String(pseudo || '').trim() || null;
+  return AUTEURS.includes(valeur) ? valeur : null;
+}
+
 // Qui peut écrire, et au nom de qui : l'administration pour tous, un analyste seulement pour lui-même
 export async function droitsAnalyse(db, request) {
   const u = await currentUser(db, request);
   if (!u) return null;
-  if (peutPublier(u)) return { u, auteurs: AUTEURS, admin: true };
+  if (peutPublier(u)) return { u, auteurs: await listeAuteurs(db), admin: true };
   const r = await db.prepare('SELECT auteur FROM analystes WHERE user_id = ?').bind(u.id).first();
   return r ? { u, auteurs: [r.auteur], admin: false } : null;
 }

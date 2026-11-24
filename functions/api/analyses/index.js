@@ -1,5 +1,5 @@
 import { json, initDb, currentUser, peutPublier, noDb } from '../../_auth.js';
-import { prepAnalyses, droitsAnalyse, AUTEURS, nettoyerHtml } from '../../_analyses.js';
+import { prepAnalyses, droitsAnalyse, rubriqueChoisie, nettoyerHtml } from '../../_analyses.js';
 
 // Écriture des analyses : administration (tous les auteurs) ou analyste autorisé (lui seul)
 async function base(env, request) {
@@ -37,11 +37,12 @@ export async function onRequestPost({ request, env }) {
   }
   if (b.action === 'analyste' || b.action === 'retirer') {
     if (!d.admin || !peutPublier(d.u)) return json({ erreur: 'Réservé à l\'administration.' }, 403);
-    const u = await db.prepare('SELECT id FROM users WHERE pseudo_lc = ?').bind(String(b.pseudo || '').trim().toLowerCase()).first();
+    const u = await db.prepare('SELECT id, pseudo FROM users WHERE pseudo_lc = ?').bind(String(b.pseudo || '').trim().toLowerCase()).first();
     if (!u) return json({ erreur: 'Pseudo introuvable sur le site.' }, 404);
     if (b.action === 'retirer') { await db.prepare('DELETE FROM analystes WHERE user_id = ?').bind(u.id).run(); return json({ ok: true }); }
-    if (!AUTEURS.includes(b.auteur)) return json({ erreur: 'Auteur inconnu.' }, 400);
-    await db.prepare('INSERT INTO analystes (user_id, auteur) VALUES (?, ?) ON CONFLICT(user_id) DO UPDATE SET auteur = excluded.auteur').bind(u.id, b.auteur).run();
+    const rub = rubriqueChoisie(b.auteur, u.pseudo);
+    if (!rub) return json({ erreur: 'Rubrique inconnue.' }, 400);
+    await db.prepare('INSERT INTO analystes (user_id, auteur) VALUES (?, ?) ON CONFLICT(user_id) DO UPDATE SET auteur = excluded.auteur').bind(u.id, rub).run();
     return json({ ok: true });
   }
   const jour = String(b.jour || ''), hippo = String(b.hippo || '').trim().slice(0, 60), course = String(b.course || '').trim().slice(0, 10);

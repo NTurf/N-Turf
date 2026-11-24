@@ -85,7 +85,7 @@ function charger(){
     $('zone').hidden = false;
     if (!$('auteur').options.length) {
       $('auteur').innerHTML = d.auteurs.map(function(a){ return '<option>' + E(a) + '</option>'; }).join('');
-      $('auteur2').innerHTML = d.auteurs.map(function(a){ return '<option>' + E(a) + '</option>'; }).join('');
+      $('auteur2').innerHTML = '<option value="__pseudo__">Sous son propre pseudo</option>' + d.auteurs.map(function(a){ return '<option>' + E(a) + '</option>'; }).join('');
     }
     LISTE = d.analyses || [];
     $('liste').innerHTML = LISTE.length ? LISTE.map(function(a){ return '<section class="card mine"><b>' + E(a.hippo) + ' – C' + E(a.course) + '</b> · ' + E(a.auteur) + '<div class="ap">' + versHtml(a) + '</div><button type="button" class="btn ghost" data-m="' + a.id + '">Modifier</button> <button type="button" class="btn ghost" data-s="' + a.id + '">Supprimer</button></section>'; }).join('') : '<p class="empty">Aucune analyse pour ce jour.</p>';

@@ -34,7 +34,7 @@ function dessiner(){
   $('liste').innerHTML = L.map(function(m){
     if (m.role === 'admin') return '<div class="mbr"><div><b>'+esc(m.pseudo)+'</b> <span class="tag adm">Administrateur</span><br><small>'+esc(m.email)+'</small></div></div>';
     function sw(k, lib){ return '<label class="sw"><input type="checkbox" data-id="'+m.id+'" data-k="'+k+'"'+(m[k]?' checked':'')+'> '+lib+'</label>'; }
-    return '<div class="mbr'+(m.banni?' ban':'')+'"><div><b>'+esc(m.pseudo)+'</b><br><small>'+esc(m.email)+' · inscrit le '+dt(m.created_at).split(' ')[0]+' · dernière connexion : '+dt(m.last_login)+'</small></div><div class="sws">'+sw('moderateur','Modérateur')+sw('publier','Administration')+sw('hippo','Hippodrome')+sw('banni','Suspendu')+'<label class="sw">Analyste : <select data-an="'+m.id+'"><option value="">non</option>'+AUT.map(function(a){ return '<option'+(m.analyste===a?' selected':'')+'>'+esc(a)+'</option>'; }).join('')+'</select></label></div></div>';
+    return '<div class="mbr'+(m.banni?' ban':'')+'"><div><b>'+esc(m.pseudo)+'</b><br><small>'+esc(m.email)+' · inscrit le '+dt(m.created_at).split(' ')[0]+' · dernière connexion : '+dt(m.last_login)+'</small></div><div class="sws">'+sw('moderateur','Modérateur')+sw('publier','Administration')+sw('hippo','Hippodrome')+sw('banni','Suspendu')+'<label class="sw">Analyste : <select data-an="'+m.id+'"><option value="">non</option><option value="__pseudo__"'+(m.analyste && m.analyste===m.pseudo?' selected':'')+'>oui (rubrique « '+esc(m.pseudo)+' »)</option>'+AUT.map(function(a){ return '<option'+(m.analyste===a && a!==m.pseudo?' selected':'')+'>'+esc(a)+'</option>'; }).join('')+'</select></label></div></div>';
   }).join('') || '<p class="empty">Aucun membre trouvé.</p>';
   $('liste').querySelectorAll('select[data-an]').forEach(function(sel){
     sel.onchange = function(){
@@ -42,7 +42,7 @@ function dessiner(){
       fetch('/api/admin/membres', { method: 'POST', headers: {'content-type':'application/json'}, body: JSON.stringify({ id: id, analyste: v }) })
         .then(function(r){ return r.json().then(function(d){ return {ok:r.ok, d:d}; }); })
         .then(function(x){
-          if (x.ok) { M.forEach(function(m){ if (m.id === id) m.analyste = v || null; }); $('msg').className = 'msg ok'; $('msg').textContent = v ? 'Analyste « ' + v + ' » : il peut écrire ses analyses (et seulement les siennes).' : 'Droit analyste retiré.'; }
+          if (x.ok) { var rub = x.d.rubrique || null; M.forEach(function(m){ if (m.id === id) m.analyste = rub; }); $('msg').className = 'msg ok'; $('msg').textContent = rub ? 'Analyste, rubrique « ' + rub + ' » : il peut écrire ses analyses (et seulement les siennes).' : 'Droit analyste retiré.'; }
           else { $('msg').className = 'msg err'; $('msg').textContent = x.d.erreur || 'Erreur.'; dessiner(); }
         });
     };
