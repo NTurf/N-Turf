@@ -46,6 +46,20 @@
 <div class="pills"><button type="button" class="pill on" id="tP">Les pronos</button><button type="button" class="pill" id="tC">Classement</button></div>
 <div id="vP">
 <p class="lead">Chacun donne son prono (4 chevaux maximum) sur la course de son choix. Tout le monde le voit, et le site le vérifie après l'arrivée.</p>
+<details class="card tuto" id="tuto" style="padding:12px 14px;margin:8px 0;border-color:var(--gold)">
+<summary style="font-weight:800;cursor:pointer;color:#0e2a5c">📘 Comment donner mon prono ? (2 minutes)</summary>
+<ol style="margin:10px 0 4px;padding-left:20px;line-height:1.6">
+<li><b>Choisis le jour</b> (Aujourd'hui ou Demain), puis <b>l'hippodrome</b>, puis <b>la course</b> (C1, C2…). La pastille rouge indique combien de pronos il y a déjà.</li>
+<li>Touche <b>« + Mon prono »</b>. La liste des partants s'affiche, avec leur musique.</li>
+<li><b>Choisis tes chevaux</b> (4 au maximum) en les touchant :
+<ul style="margin:4px 0"><li>1 fois = <b style="color:#1a5fb4">associé</b> (bleu)</li><li>2 fois = <b style="color:#b8860b">base ★</b> (doré)</li><li>3 fois = retiré</li></ul>
+Exemples : 1 base + 3 associés, ou 2 bases + 2 associés.</li>
+<li><b>Choisis ton jeu</b> : Simple, Couplé placé, Trio ou Multi en 4. Le site t'affiche ta mise (1 € par pari).</li>
+<li>Ajoute <b>un petit mot</b> si tu veux expliquer ton choix, puis touche <b>« Publier mon prono »</b>. Tu peux le modifier jusqu'au départ.</li>
+</ol>
+<p class="note2" style="margin:6px 0 0">Après l'arrivée, tes chevaux arrivés passent en <b style="color:#e5243b">rouge</b> et le site indique ce que tu as gagné, avec les vrais rapports PMU. Ton bilan apparaît dans l'onglet <b>Classement</b>. Sous chaque prono, « 💬 Réagir » permet d'en discuter.</p>
+</details>
+
 <div class="pills" id="jours"></div>
 <div class="pills" id="reus" style="margin-top:6px"></div>
 <div class="cbt" id="crs"></div>
@@ -185,6 +199,7 @@ function classement(k){
 document.querySelectorAll('[data-cl]').forEach(function(b){ b.onclick = function(){ classement(b.getAttribute('data-cl')); }; });
 $('tP').onclick = function(){ $('tP').classList.add('on'); $('tC').classList.remove('on'); $('vP').hidden = false; $('vC').hidden = true; };
 $('tC').onclick = function(){ $('tC').classList.add('on'); $('tP').classList.remove('on'); $('vC').hidden = false; $('vP').hidden = true; classement('mois'); };
+try { if (!localStorage.getItem('pmTuto')) { $('tuto').open = true; localStorage.setItem('pmTuto', '1'); } } catch (e) {}
 charger();
 </script>
 </body>
