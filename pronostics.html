@@ -16,6 +16,7 @@
 <div id="refus" class="note" hidden>🔒 Réservé aux membres. <a href="/inscription.html">S'inscrire gratuitement</a> ou <a href="/inscription.html#connexion">se connecter</a>.</div>
 <div id="zone" hidden>
 <nav class="tabs" id="liensQ" style="padding:0 0 10px;flex-wrap:wrap"><a href="#" class="on">Quinté+</a><a href="/tickets.html">Tickets</a><a href="/etudes.html#etquinte">Étude Quinté+</a><a href="/hippodrome.html#quinte">Pronos Hippodrome du Quinté+</a></nav>
+<nav class="tabs" id="liensC" style="padding:0 0 10px;flex-wrap:wrap;display:none"><a href="#" class="on">Course par course</a><a href="/pronos-membres.html">👥 Pronos des membres</a><a href="/etudes.html#etr1">Étude des réunions</a></nav>
 <span id="oQ" hidden></span><span id="oC" hidden></span><span id="oF" hidden></span>
 <section class="card" id="sQ"><div id="rendu"><p class="empty">Chargement…</p></div></section>
 <section class="card" id="sC" hidden><div id="renduC"><p class="empty">Chargement…</p></div></section>
@@ -50,11 +51,13 @@ fetch('/api/membres/quinte', {credentials:'same-origin'})
 // Chaque rubrique s'ouvre seule depuis le menu de gauche ; la page Quinté+ propose ses liens (tickets, étude, Hippodrome)
 function onglet(k){
   ['Q','C','F'].forEach(function(x){ document.getElementById('s' + x).hidden = x !== k; });
-  document.getElementById('liensQ').hidden = k !== 'Q';
+  // (display et non hidden : la classe .tabs force l'affichage)
+  document.getElementById('liensQ').style.display = k === 'Q' ? '' : 'none';
+  document.getElementById('liensC').style.display = k === 'C' ? '' : 'none';
   document.querySelector('main h1').textContent = k === 'C' ? 'Pronos course par course' : k === 'F' ? 'Repérés de Fanny' : 'Pronos Quinté+';
   if (k === 'F') chargerFanny();
 }
-document.querySelector('#liensQ a.on').onclick = function(e){ e.preventDefault(); };
+document.querySelectorAll('#liensQ a.on, #liensC a.on').forEach(function(a){ a.onclick = function(e){ e.preventDefault(); }; });
 function depuisHash(){ onglet(location.hash === '#cpc' ? 'C' : location.hash === '#fanny' ? 'F' : 'Q'); }
 document.getElementById('oQ').onclick = function(e){ e.preventDefault(); location.hash = 'quinte'; };
 document.getElementById('oC').onclick = function(e){ e.preventDefault(); location.hash = 'cpc'; };
