@@ -10,7 +10,7 @@
 <link rel="stylesheet" href="/style.css">
 <style>
 .an{padding:12px 14px;margin:8px 0}.an h3{margin:0 0 2px}.an .aut{font-weight:700;color:var(--gold,#b8860b);margin:0 0 6px}
-.an .tx{white-space:pre-wrap;line-height:1.5;margin:0}
+.an .tx{white-space:pre-wrap;line-height:1.5;margin:0;overflow-wrap:anywhere}.an .tx ul{white-space:normal}
 </style>
 </head>
 <body data-page="membres">
@@ -44,7 +44,7 @@ function dessiner(){
   var h = '', hh = null;
   L.forEach(function(a){
     if (a.hippo !== hh) { hh = a.hippo; h += '<h2 style="margin:18px 0 6px">' + E(a.hippo) + '</h2>'; }
-    h += '<section class="card an"><h3>Course ' + E(a.course) + '</h3><p class="aut">' + E(a.auteur) + '</p><p class="tx">' + E(a.texte) + '</p></section>';
+    h += '<section class="card an"><h3>Course ' + E(a.course) + '</h3><p class="aut">' + E(a.auteur) + '</p><div class="tx">' + (a.html ? a.texte : E(a.texte)) + '</div></section>';
   });
   document.getElementById('liste').innerHTML = h;
 }

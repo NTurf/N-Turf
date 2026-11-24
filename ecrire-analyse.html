@@ -11,7 +11,13 @@
 <style>
 .f label{display:block;margin:8px 0 4px;font-weight:700}.f input,.f select,.f textarea{width:100%;box-sizing:border-box}
 .f textarea{min-height:320px;font:inherit;line-height:1.45}
-.mine{padding:10px 12px;margin:8px 0}.mine p{white-space:pre-wrap;margin:6px 0;max-height:7.5em;overflow:hidden}
+.tb{display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin:4px 0;padding:6px;background:#f2f6fc;border:1px solid #c9d6ea;border-radius:8px 8px 0 0}
+.tb button{min-width:34px;height:32px;border:1px solid #c9d6ea;border-radius:6px;background:#fff;cursor:pointer;font:inherit;padding:0 8px}
+.tb .pt{min-width:28px;width:28px;border:2px solid #fff;box-shadow:0 0 0 1px #c9d6ea}
+.tb .sep{width:1px;height:24px;background:#c9d6ea;margin:0 4px}
+.ed{min-height:320px;border:1px solid #c9d6ea;border-top:0;border-radius:0 0 8px 8px;padding:10px;background:#fff;line-height:1.5;outline:none;overflow-wrap:anywhere}
+.ed:empty:before{content:attr(data-ph);color:#8a98b0}
+.mine{padding:10px 12px;margin:8px 0}.mine .ap{white-space:pre-wrap;margin:6px 0;max-height:7.5em;overflow:hidden}
 </style>
 </head>
 <body data-page="admin">
@@ -24,7 +30,17 @@
 <label for="auteur">Auteur</label><select id="auteur"></select>
 <label for="hippo">Hippodrome</label><input id="hippo" list="hippos" placeholder="ex. Paris-Vincennes"><datalist id="hippos"></datalist>
 <label for="course">Course (numéro)</label><input id="course" inputmode="numeric" placeholder="ex. 1">
-<label for="texte">Analyse</label><textarea id="texte" placeholder="Colle ou écris ici l'analyse, telle quelle (heure, distance, catégorie, avis cheval par cheval, résumé…)."></textarea>
+<label>Analyse</label>
+<div class="tb" id="tb">
+<button type="button" data-c="bold" title="Gras"><b>G</b></button><button type="button" data-c="italic" title="Italique"><i>I</i></button><button type="button" data-c="underline" title="Souligné"><u>S</u></button>
+<span class="sep"></span>
+<button type="button" data-col="#d8232f" title="Rouge" class="pt" style="background:#d8232f"></button><button type="button" data-col="#1a5fb4" title="Bleu" class="pt" style="background:#1a5fb4"></button><button type="button" data-col="#1a8a3a" title="Vert" class="pt" style="background:#1a8a3a"></button><button type="button" data-col="#b8860b" title="Or" class="pt" style="background:#b8860b"></button><button type="button" data-col="#22324f" title="Noir" class="pt" style="background:#22324f"></button>
+<span class="sep"></span>
+<button type="button" data-hl="#fff176" title="Surligner en jaune" class="hl" style="background:#fff176">ab</button><button type="button" data-hl="#c8f7c5" title="Surligner en vert" class="hl" style="background:#c8f7c5">ab</button><button type="button" data-hl="#ffd1d1" title="Surligner en rose" class="hl" style="background:#ffd1d1">ab</button>
+<span class="sep"></span>
+<button type="button" data-c="insertUnorderedList" title="Liste à puces">• Liste</button><button type="button" data-c="removeFormat" title="Enlever la mise en forme">✕ Effacer</button>
+</div>
+<div id="texte" class="ed" contenteditable="true" data-ph="Colle ou écris ici l'analyse (heure, distance, catégorie, avis cheval par cheval, résumé…). Sélectionne un mot puis touche un bouton pour le mettre en gras, en couleur ou en surligné."></div>
 <p><button type="button" class="btn" id="pub">Publier aux membres</button> <button type="button" class="btn ghost" id="annuler" hidden>Annuler la modification</button></p>
 <p class="msg" id="msg"></p>
 </section>
@@ -48,6 +64,13 @@ function E(s){ return String(s||'').replace(/[&<>"]/g, function(c){ return {'&':
 function iso(k){ return new Date(Date.now() + k*86400000).toLocaleDateString('fr-CA', {timeZone:'Europe/Paris'}); }
 function frc(k){ return new Date(Date.now() + k*86400000).toLocaleDateString('fr-FR', {timeZone:'Europe/Paris', day:'2-digit', month:'2-digit', year:'numeric'}); }
 var J = 0, EDIT = null, LISTE = [];
+function versHtml(a){ return a.html ? a.texte : E(a.texte).replace(/\n/g, '<br>'); }
+try { document.execCommand('styleWithCSS', false, true); } catch (e) {}
+document.querySelectorAll('#tb [data-c]').forEach(function(b){ b.onmousedown = function(e){ e.preventDefault(); }; b.onclick = function(){ document.execCommand(b.getAttribute('data-c'), false, null); $('texte').focus(); }; });
+document.querySelectorAll('#tb [data-col]').forEach(function(b){ b.onmousedown = function(e){ e.preventDefault(); }; b.onclick = function(){ document.execCommand('foreColor', false, b.getAttribute('data-col')); }; });
+document.querySelectorAll('#tb [data-hl]').forEach(function(b){ b.onmousedown = function(e){ e.preventDefault(); }; b.onclick = function(){ if (!document.execCommand('hiliteColor', false, b.getAttribute('data-hl'))) document.execCommand('backColor', false, b.getAttribute('data-hl')); }; });
+// coller : seulement le texte (la mise en forme se fait avec les boutons)
+$('texte').addEventListener('paste', function(e){ e.preventDefault(); var t = (e.clipboardData || window.clipboardData).getData('text/plain'); document.execCommand('insertText', false, t); });
 function post(b){ return fetch('/api/analyses', {method:'POST', credentials:'same-origin', headers:{'content-type':'application/json'}, body: JSON.stringify(b)}).then(function(r){ return r.json().then(function(x){ if (!r.ok) throw new Error(x.erreur || 'Erreur'); return x; }); }); }
 function jours(){
   $('jours').innerHTML = [[0,'Aujourd\'hui ('+frc(0)+')'],[1,'Demain ('+frc(1)+')']].map(function(x){ return '<button type="button" class="pill'+(x[0]===J?' on':'')+'" data-j="'+x[0]+'">'+x[1]+'</button>'; }).join('');
@@ -65,10 +88,10 @@ function charger(){
       $('auteur2').innerHTML = d.auteurs.map(function(a){ return '<option>' + E(a) + '</option>'; }).join('');
     }
     LISTE = d.analyses || [];
-    $('liste').innerHTML = LISTE.length ? LISTE.map(function(a){ return '<section class="card mine"><b>' + E(a.hippo) + ' – C' + E(a.course) + '</b> · ' + E(a.auteur) + '<p>' + E(a.texte) + '</p><button type="button" class="btn ghost" data-m="' + a.id + '">Modifier</button> <button type="button" class="btn ghost" data-s="' + a.id + '">Supprimer</button></section>'; }).join('') : '<p class="empty">Aucune analyse pour ce jour.</p>';
+    $('liste').innerHTML = LISTE.length ? LISTE.map(function(a){ return '<section class="card mine"><b>' + E(a.hippo) + ' – C' + E(a.course) + '</b> · ' + E(a.auteur) + '<div class="ap">' + versHtml(a) + '</div><button type="button" class="btn ghost" data-m="' + a.id + '">Modifier</button> <button type="button" class="btn ghost" data-s="' + a.id + '">Supprimer</button></section>'; }).join('') : '<p class="empty">Aucune analyse pour ce jour.</p>';
     document.querySelectorAll('[data-m]').forEach(function(b){ b.onclick = function(){
       var a = LISTE.filter(function(x){ return x.id == b.getAttribute('data-m'); })[0]; if (!a) return;
-      EDIT = a.id; $('auteur').value = a.auteur; $('hippo').value = a.hippo; $('course').value = a.course; $('texte').value = a.texte;
+      EDIT = a.id; $('auteur').value = a.auteur; $('hippo').value = a.hippo; $('course').value = a.course; $('texte').innerHTML = versHtml(a);
       $('pub').textContent = 'Enregistrer la modification'; $('annuler').hidden = false; window.scrollTo(0, 0);
     }; });
     document.querySelectorAll('[data-s]').forEach(function(b){ b.onclick = function(){
@@ -82,11 +105,11 @@ function charger(){
     }
   }).catch(function(){ $('refus').hidden = false; });
 }
-function vider(){ EDIT = null; $('texte').value = ''; $('course').value = ''; $('pub').textContent = 'Publier aux membres'; $('annuler').hidden = true; }
+function vider(){ EDIT = null; $('texte').innerHTML = ''; $('course').value = ''; $('pub').textContent = 'Publier aux membres'; $('annuler').hidden = true; }
 $('annuler').onclick = vider;
 $('pub').onclick = function(){
   var m = $('msg'); m.className = 'msg'; m.textContent = 'Envoi…';
-  post({ id: EDIT, jour: iso(J), auteur: $('auteur').value, hippo: $('hippo').value, course: $('course').value.replace(/^c/i, ''), texte: $('texte').value })
+  post({ id: EDIT, jour: iso(J), auteur: $('auteur').value, hippo: $('hippo').value, course: $('course').value.replace(/^c/i, ''), texte: $('texte').innerHTML, html: 1 })
     .then(function(){ m.className = 'msg ok'; m.textContent = 'Publié !'; vider(); charger(); })
     .catch(function(e){ m.className = 'msg err'; m.textContent = e.message; });
 };
