@@ -552,3 +552,6 @@ main > h1:not(.nlogo), main h1#titre{display:inline-block;font-family:'Barlow Co
   background:linear-gradient(180deg,#f4f7fb 0%,#c3ccd9 38%,#6f7d93 52%,#aeb9c9 70%,#e6ebf2 100%);-webkit-background-clip:text;background-clip:text;color:transparent;
   -webkit-text-stroke:1.4px #1d3a7a;filter:drop-shadow(1px 2px 0 rgba(14,42,92,.35))}
 @media (max-width:600px){ main > h1:not(.nlogo), main h1#titre{font-size:30px} }
+
+/* Accueil : chevaux de notre synthèse dans l'arrivée */
+.arr .n .cite, .note2 .cite{display:inline-block;min-width:24px;padding:0 5px;border-radius:6px;background:#d8343f;color:#fff;font-weight:800;text-align:center}

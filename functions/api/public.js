@@ -73,6 +73,25 @@ export async function onRequestGet({ env }) {
   }
   const reunionsJour = cpc && Array.isArray(cpc.reunions) ? cpc.reunions.map((r) => ({ hippodrome: r.hippodrome, brut: r.brut || r.hippodrome })) : [];
   const dateCpc = cpc ? cpc.date : '';
+  // Chevaux de notre synthèse arrivés dans les 4 premiers, pour les courses déjà courues seulement (jamais avant la course)
+  const cites = {};
+  try {
+    if (cpc && Array.isArray(cpc.reunions) && /^\d{2}\/\d{2}\/\d{4}$/.test(cpc.date || '')) {
+      const d = cpc.date.replace(/\//g, '');
+      const prog = await cache(db, 'prog-' + d, 60, () => get(`${BASE}/${d}`));
+      const reus = (prog && prog.programme && prog.programme.reunions) || [];
+      for (const re of cpc.reunions) {
+        const h = norm(re.brut || re.hippodrome);
+        const pr = reus.find((r) => { const a = norm(r.hippodrome && r.hippodrome.libelleCourt), b = norm(r.hippodrome && r.hippodrome.libelleLong); return (a && (a.includes(h) || h.includes(a))) || (b && (b.includes(h) || h.includes(b))); });
+        for (const c of re.courses || []) {
+          const num = parseInt(String(c.course).replace(/\D/g, ''), 10);
+          const pc = pr && (pr.courses || []).find((x) => x.numOrdre === num);
+          const arr = (pc && Array.isArray(pc.ordreArrivee) ? pc.ordreArrivee.map((x) => (Array.isArray(x) ? x[0] : x)) : (c.arrivee || [])).slice(0, 4).map(Number);
+          if (arr.length) cites[re.hippodrome + '|C' + num] = arr.filter((n) => (c.synthese || []).map(Number).includes(n));
+        }
+      }
+    }
+  } catch (e) {}
 
   // Bandeau : calculé au plus une fois par minute
   let bandeau = [];
@@ -129,9 +148,9 @@ export async function onRequestGet({ env }) {
     });
   } catch (e) { bandeau = ['N-TURF : pronostics Quinté+ et course par course, mises et résultats en toute transparence']; }
 
-  if (!q) return json({ quinte: null, bandeau, arrivees, reunionsJour, dateCpc });
+  if (!q) return json({ quinte: null, bandeau, arrivees, reunionsJour, dateCpc, cites });
   return json({
     quinte: { date: q.date, discipline: q.discipline, partants: q.partants, top3: (q.synthese || []).slice(0, 3), arrivee: q.arrivee || [] },
-    bandeau, arrivees, reunionsJour, dateCpc, maj: q.maj,
+    bandeau, arrivees, reunionsJour, dateCpc, cites, maj: q.maj,
   });
 }

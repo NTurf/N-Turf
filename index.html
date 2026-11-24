@@ -97,8 +97,8 @@ fetch('/api/public',{cache:'no-store'}).then(function(r){return r.json()}).then(
   (d.arrivees||[]).forEach(function(a){ vues[a.hippodrome+'|'+a.course]=a; });
   function montrer(){
     var t=h;
-    Object.keys(vues).forEach(function(k){ var a=vues[k]; t+='<div class="arr"><div class="t">'+esc(a.hippodrome)+' · '+esc(a.course)+(a.prov?' <span class="prov">(provisoire)</span>':'')+'</div><div class="n">'+a.arrivee.map(esc).join(' - ')+'</div></div>'; });
-    if(t) document.getElementById('arrivees').innerHTML=t;
+    Object.keys(vues).forEach(function(k){ var a=vues[k]; t+='<div class="arr"><div class="t">'+esc(a.hippodrome)+' · '+esc(a.course)+(a.prov?' <span class="prov">(provisoire)</span>':'')+'</div><div class="n">'+a.arrivee.map(function(n){ var ci=(d.cites||{})[k]||[]; return ci.indexOf(+n)>=0 ? '<span class="cite">'+esc(n)+'</span>' : esc(n); }).join(' - ')+'</div></div>'; });
+    if(t) document.getElementById('arrivees').innerHTML=t+(Object.keys(d.cites||{}).some(function(k){ return (d.cites[k]||[]).length; }) ? '<p class="note2" style="margin-top:8px"><span class="cite">5</span> = cheval donné dans notre synthèse du course par course</p>' : '');
   }
   montrer();
   function direct(){
