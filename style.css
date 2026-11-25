@@ -555,3 +555,9 @@ main > h1:not(.nlogo), main h1#titre{display:inline-block;font-family:'Barlow Co
 
 /* Accueil : chevaux de notre synthèse dans l'arrivée */
 .arr .n .cite, .note2 .cite{display:inline-block;min-width:24px;padding:0 5px;border-radius:6px;background:#d8343f;color:#fff;font-weight:800;text-align:center}
+
+/* Médailles du mois à côté des pseudos (jamais de doré : réservé aux chevaux de base) */
+.med{display:inline-flex;align-items:center;gap:2px;margin-left:5px;padding:0 6px;border-radius:10px;font-size:.78em;font-weight:700;line-height:1.55;vertical-align:middle;white-space:nowrap;cursor:help}
+.med small{font-size:.85em;font-weight:700}
+.med.q{background:#e3ecfb;color:#0e2a5a;border:1px solid #8fa9d8}
+.med.p{background:#e6f5ea;color:#145a2c;border:1px solid #93c9a3}

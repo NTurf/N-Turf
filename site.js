@@ -133,3 +133,29 @@
       return m;
     });
 })();
+
+// Médailles du mois à côté des pseudos : 🥇🥈🥉 concours Quinté+ (bleu) et Pronos des membres (vert)
+(function(){
+  if (document.body.getAttribute('data-page') === 'admin') return;
+  var M = null, RANG = ['', '🥇', '🥈', '🥉'], ORD = ['', '1er', '2e', '3e'];
+  function cle(p){ return String(p || '').trim().toLowerCase(); }
+  function table(o){ var t = {}; Object.keys(o || {}).forEach(function(k){ t[cle(k)] = o[k]; }); return t; }
+  function badges(ps){
+    var h = '', q = M.q[cle(ps)], p = M.p[cle(ps)];
+    if (q) h += '<span class="med q" title="' + ORD[q] + ' du concours Quinté+ ce mois-ci (Globe de Cristal)">' + RANG[q] + '<small>Quinté+</small></span>';
+    if (p) h += '<span class="med p" title="' + ORD[p] + ' des Pronos des membres ce mois-ci">' + RANG[p] + '<small>Pronos</small></span>';
+    return h;
+  }
+  function poser(){
+    if (!M) return;
+    document.querySelectorAll('a[href*="fiche.html?p="]:not([data-med]), .psn:not([data-med])').forEach(function(el){
+      el.setAttribute('data-med', '1');
+      var ps = el.textContent;
+      if (el.tagName === 'A') { try { var v = decodeURIComponent((el.getAttribute('href').split('p=')[1] || '').split('&')[0]); if (cle(v) !== cle(ps)) return; ps = v; } catch (e) { return; } }
+      var b = badges(ps); if (b) el.insertAdjacentHTML('afterend', b);
+    });
+  }
+  var attente = false;
+  new MutationObserver(function(){ if (attente) return; attente = true; requestAnimationFrame(function(){ attente = false; poser(); }); }).observe(document.body, { childList: true, subtree: true });
+  fetch('/api/medailles').then(function(r){ return r.json(); }).then(function(d){ M = { q: table(d.quinte), p: table(d.pronos) }; poser(); }).catch(function(){});
+})();

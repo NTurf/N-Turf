@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#0D1E3D">
 <link rel="manifest" href="/manifest.webmanifest?v=2">
 <link rel="icon" href="/icone-nturf-192.png">
-<link rel="stylesheet" href="/style.css?v=20261124b">
+<link rel="stylesheet" href="/style.css?v=20261125a">
 <style>
 .cbt{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
 .cbt a{display:inline-flex;align-items:center;gap:4px;padding:6px 10px;border-radius:8px;border:1px solid #c9d6ea;background:#fff;text-decoration:none;color:inherit;font-weight:700}
@@ -87,7 +87,7 @@ Le site t'affiche ta mise totale avant de publier.</li>
 </div>
 </div>
 </main>
-<script src="/site.js?v=20261124b"></script>
+<script src="/site.js?v=20261125a"></script>
 <script>
 function $(i){ return document.getElementById(i); }
 function E(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
@@ -288,7 +288,7 @@ function classement(k){
     var tm = MB.reduce(function(s, x){ return {m: s.m + x.mise, g: s.g + x.gains}; }, {m:0, g:0}), tn = Math.round((tm.g - tm.m) * 100) / 100;
     $('mb').innerHTML = '<section class="card" style="padding:10px 14px"><h3 style="margin:0 0 6px">Mon bilan, pari par pari</h3>' + (MB.length ? '<table class="st"><tr><th>Jeu</th><th>Paris</th><th>Gagnés</th><th>Mise</th><th>Net</th></tr>' + MB.map(function(x){ return '<tr><td>'+TYPES[x.t]+'</td><td>'+x.paris+'</td><td>'+x.gagnes+'</td><td>'+Fe(x.mise)+'</td><td class="'+cl(x.net)+'"><b>'+Fn(x.net)+'</b></td></tr>'; }).join('') + '<tr><td><b>Total</b></td><td></td><td></td><td><b>'+Fe(tm.m)+'</b></td><td class="'+cl(tn)+'"><b>'+Fn(tn)+'</b></td></tr></table>' : '<p class="empty">Pas encore de prono vérifié sur cette période.</p>') + '</section>';
     if (d.verrou) { $('cl').innerHTML = '<div class="note">🔒 <b>Le classement et les stats des autres membres sont réservés à ceux qui participent : au moins ' + d.verrou.min + ' pronos par jour.</b><br>Aujourd\'hui, tu en as donné ' + d.verrou.n + ' sur ' + d.verrou.min + '. Encore ' + (d.verrou.min - d.verrou.n) + ' et tu y as accès.</div>'; return; }
-    $('cl').innerHTML = L.length ? '<p class="note2">Touche un membre pour voir son détail jeu par jeu.</p><table class="st"><tr><th>#</th><th>Membre</th><th>Pronos</th><th>Gagnés</th><th>Mise</th><th>Net</th></tr>'+L.map(function(x, i){ return '<tr data-dt="'+i+'" style="cursor:pointer"><td>'+(i+1)+'</td><td><b>'+E(x.pseudo)+'</b> ▾</td><td>'+x.n+'</td><td>'+x.gagnes+'</td><td>'+Fe(x.mise)+'</td><td class="'+(x.net >= 0 ? 'pos' : 'neg')+'"><b>'+(x.net >= 0 ? '+' : '')+Fe(x.net)+'</b></td></tr><tr id="dt'+i+'" hidden><td colspan="6">'+detailTypes(x.types)+'<p style="margin:4px 0"><a href="/fiche.html?p='+encodeURIComponent(x.pseudo)+'">Voir la fiche de '+E(x.pseudo)+'</a></p></td></tr>'; }).join('')+'</table>' : '<p class="empty">Pas encore de prono vérifié sur cette période.</p>';
+    $('cl').innerHTML = L.length ? '<p class="note2">Touche un membre pour voir son détail jeu par jeu.</p><table class="st"><tr><th>#</th><th>Membre</th><th>Pronos</th><th>Gagnés</th><th>Mise</th><th>Net</th></tr>'+L.map(function(x, i){ return '<tr data-dt="'+i+'" style="cursor:pointer"><td>'+(i+1)+'</td><td><b class="psn">'+E(x.pseudo)+'</b> ▾</td><td>'+x.n+'</td><td>'+x.gagnes+'</td><td>'+Fe(x.mise)+'</td><td class="'+(x.net >= 0 ? 'pos' : 'neg')+'"><b>'+(x.net >= 0 ? '+' : '')+Fe(x.net)+'</b></td></tr><tr id="dt'+i+'" hidden><td colspan="6">'+detailTypes(x.types)+'<p style="margin:4px 0"><a href="/fiche.html?p='+encodeURIComponent(x.pseudo)+'">Voir la fiche de '+E(x.pseudo)+'</a></p></td></tr>'; }).join('')+'</table>' : '<p class="empty">Pas encore de prono vérifié sur cette période.</p>';
     document.querySelectorAll('[data-dt]').forEach(function(t){ t.onclick = function(){ var z = $('dt' + t.getAttribute('data-dt')); z.hidden = !z.hidden; }; });
   });
 }

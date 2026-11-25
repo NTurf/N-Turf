@@ -8,7 +8,7 @@
 <meta name="robots" content="noindex">
 <link rel="manifest" href="/manifest.webmanifest?v=2">
 <link rel="icon" href="/icone-nturf-192.png">
-<link rel="stylesheet" href="/style.css?v=20261124b">
+<link rel="stylesheet" href="/style.css?v=20261125a">
 <style>.fl{display:inline-block;width:10px;height:10px;border-radius:50%;background:#b9c3d3;margin-right:6px}.fl.on{background:#1fa54a}.bio{white-space:pre-wrap}.pos{color:#13702f}.neg{color:#b3121f}</style>
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4848326247118929" crossorigin="anonymous"></script>
 </head>
@@ -24,7 +24,7 @@
 </section>
 <section class="card" id="pmz" hidden><h2 style="margin:0 0 6px">Ses pronos, jeu par jeu</h2><div class="pills"><button type="button" class="pill on" data-pp="mois">Ce mois-ci</button><button type="button" class="pill" data-pp="tout">Depuis le début</button></div><div id="pmb"></div><p class="note2">Mise de 1 € par pari, aux vrais rapports PMU. Le net est le gain mise déduite.</p><p><a href="/pronos-membres.html">Voir les pronos des membres</a></p></section>
 </main>
-<script src="/site.js?v=20261124b"></script>
+<script src="/site.js?v=20261125a"></script>
 <script>
 function $(i){ return document.getElementById(i); }
 function E(s){ return String(s||'').replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
@@ -33,7 +33,7 @@ fetch('/api/social/fiche?pseudo=' + encodeURIComponent(P), {credentials:'same-or
   var d = x.d;
   if (!x.ok) { $('refus').hidden = false; $('refus').innerHTML = E(d.erreur) + (x.d.erreur && /Connectez/.test(d.erreur) ? ' <a href="/inscription.html#connexion">Se connecter</a>' : ''); return; }
   $('zone').hidden = false; document.title = d.pseudo + ' – N-TURF';
-  $('ps').innerHTML = '<span class="fl' + (d.enLigne ? ' on' : '') + '"></span>' + E(d.pseudo) + (d.modo ? ' <small style="color:#d8232f">modérateur</small>' : '');
+  $('ps').innerHTML = '<span class="fl' + (d.enLigne ? ' on' : '') + '"></span><span class="psn">' + E(d.pseudo) + '</span>' + (d.modo ? ' <small style="color:#d8232f">modérateur</small>' : '');
   $('etat').textContent = (d.enLigne ? 'En ligne' : 'Hors ligne') + ' · membre depuis le ' + new Date((d.inscrit || '').replace(' ', 'T') + 'Z').toLocaleDateString('fr-FR');
   var rows = [['Région', d.region], ['Joue depuis', d.depuis], ['Jeux préférés', d.jeux]].filter(function(r){ return r[1]; });
   $('tb').innerHTML = rows.map(function(r){ return '<tr><td>' + r[0] + '</td><td><b>' + E(r[1]) + '</b></td></tr>'; }).join('');
