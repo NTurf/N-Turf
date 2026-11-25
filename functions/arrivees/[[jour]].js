@@ -28,7 +28,7 @@ function page(titre, desc, canon, corps) {
 <link rel="manifest" href="/manifest.webmanifest?v=2">
 <link rel="icon" href="/icone-nturf-192.png">
 <link rel="stylesheet" href="/style.css?v=20261124b">
-</head>
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4848326247118929" crossorigin="anonymous"></script></head>
 <body data-page="arrivees">
 <main>
 ${corps}
