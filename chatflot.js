@@ -102,6 +102,6 @@
 
   ouvrir(S.ouvert);
   charger(true);
-  setInterval(function () { if (!document.hidden && S.ouvert) charger(); }, 4000);
-  setInterval(function () { if (!document.hidden && !S.ouvert) charger(); }, 20000);
+  setInterval(function () { if (!document.hidden && S.ouvert) charger(); }, 6000);
+  setInterval(function () { if (!document.hidden && !S.ouvert) charger(); }, 60000);
 })();

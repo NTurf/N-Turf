@@ -32,7 +32,7 @@
 </section>
 <p style="text-align:center"><a href="/inscription.html#connexion">← Retour à la connexion</a></p>
 </main>
-<script src="/site.js?v=20261127c"></script>
+<script src="/site.js?v=20261127r"></script>
 <script>
 document.getElementById('fN').onsubmit = function(e){ e.preventDefault(); var m = document.getElementById('nM'), bt = this.querySelector('button'); bt.disabled = true; m.className = 'msg'; m.textContent = 'Un instant…';
   fetch('/api/compte/nouveau-mdp', {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({ login: document.getElementById('nL').value, email: document.getElementById('nE').value, password: document.getElementById('nP').value })})

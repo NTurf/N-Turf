@@ -1,0 +1,5 @@
+{
+  "version": 1,
+  "include": ["/api/*", "/arrivees", "/arrivees/*", "/journal", "/journal/*", "/balancoire", "/balancoire/*", "/sitemap-arrivees.xml", "/etudes-img/*"],
+  "exclude": []
+}

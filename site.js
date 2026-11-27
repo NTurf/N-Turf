@@ -1,3 +1,5 @@
+// L'ancienne adresse n-turf.pages.dev renvoie vers n-turf.net (les pages du site ne passent plus par le serveur, pour ne pas épuiser le quota gratuit de Cloudflare)
+if (location.hostname === 'n-turf.pages.dev') location.replace('https://n-turf.net' + location.pathname + location.search + location.hash);
 // En-tête et pied de page communs à toutes les pages
 (function(){
   var page = document.body.getAttribute('data-page') || '';
