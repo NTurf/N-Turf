@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Statistiques du concours Quinté+ – N-TURF</title>
+<meta name="theme-color" content="#0D1E3D">
+<link rel="manifest" href="/manifest.webmanifest?v=2">
+<link rel="icon" href="/icone-nturf-192.png">
+<link rel="stylesheet" href="/style.css?v=20261127a">
+<style>
+.pos{color:#157a3a;font-weight:800}.neg{color:#c62832;font-weight:800}
+.kpi{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:10px 0}
+.kpi div{background:var(--navy2);border-radius:10px;padding:8px 10px}
+.kpi small{display:block;color:var(--mute);font-size:12px}
+.kpi b{font-size:18px}
+.wrap{overflow-x:auto}
+table.st td small{display:block;color:var(--mute)}
+.courbe{width:100%;height:120px;display:block;background:#fff;border:1px solid var(--line);border-radius:10px}
+.fictif{background:#FFF6DC;border:1px solid #f0be3c;border-radius:10px;padding:7px 10px;font-size:13px;margin:8px 0}
+select.big{font-size:16px;padding:9px;border-radius:10px;border:1.5px solid var(--line);width:100%}
+</style>
+</head>
+<body data-page="membres">
+<main>
+<h1>Statistiques du concours Quinté+</h1>
+<p><a href="/concours.html">← Retour au concours</a></p>
+<div id="refus" class="note" hidden>🔒 Réservé aux membres. <a href="/inscription.html">S'inscrire gratuitement</a> ou <a href="/inscription.html#connexion">se connecter</a>.</div>
+<div id="zone" hidden>
+<p class="fictif">🧲 <b>Fers à cheval : jeu fictif, aucun euro n'est joué.</b> Les gains sont des simulations calculées avec les vrais rapports officiels du PMU. Ce ne sont pas des gains réellement encaissés.</p>
+<p class="note2">Les statistiques reposent uniquement sur les pronostics enregistrés avant la course (fermeture 5 minutes avant le départ) et sur les arrivées et rapports officiels. Le nombre de courses est toujours indiqué : de bons résultats sur 5 courses ne valent pas des résultats réguliers sur 100.</p>
+<nav class="tabs inner" id="ong"><a href="#" data-k="fiche" class="on">Fiche d'un joueur</a><a href="#" data-k="comp">Tableau comparatif</a><a href="#" data-k="spec">Par spécialité</a></nav>
+<section id="s-fiche"><select class="big" id="qui"></select><div id="rFiche"></div></section>
+<section id="s-comp" hidden><div class="card" id="rComp"></div></section>
+<section id="s-spec" hidden><div id="rSpec"></div></section>
+</div>
+</main>
+<script src="/site.js?v=20261127a"></script>
+<script>
+(function(){
+  var $ = function(i){ return document.getElementById(i); };
+  var E = function(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); };
+  var F = function(x){ var v = Math.round((x || 0) * 100) / 100; return (v % 1 ? v.toFixed(2).replace('.', ',') : String(v)).replace(/\B(?=(\d{3})+(?!\d))/g, ' '); };
+  var NET = function(x){ return '<span class="' + (x >= 0 ? 'pos' : 'neg') + '">' + (x >= 0 ? '+' : '') + F(x) + '</span>'; };
+  // le rendement en fers, sans pourcentage : ce que rapportent 100 fers misés
+  var REND = function(g, m){ return m ? F(Math.round(g / m * 100)) + ' rendus pour 100 misés' : '–'; };
+  var fr = function(iso){ return iso.split('-').reverse().join('/'); };
+  var MOIS = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+  var S = null;
+
+  function courbe(c){
+    if (c.length < 2) return '<p class="empty">La courbe apparaîtra après 2 courses.</p>';
+    var W = 600, Hh = 120, P = 8, v = c.map(function(x){ return x.net; }), mn = Math.min(0, Math.min.apply(null, v)), mx = Math.max(0, Math.max.apply(null, v)), sp = (mx - mn) || 1;
+    var X = function(i){ return P + i * (W - 2 * P) / (c.length - 1); }, Y = function(y){ return Hh - P - (y - mn) * (Hh - 2 * P) / sp; };
+    var pts = c.map(function(x, i){ return X(i).toFixed(1) + ',' + Y(x.net).toFixed(1); }).join(' ');
+    return '<svg class="courbe" viewBox="0 0 ' + W + ' ' + Hh + '" preserveAspectRatio="none"><line x1="0" x2="' + W + '" y1="' + Y(0) + '" y2="' + Y(0) + '" stroke="#9aa8c0" stroke-dasharray="4 4"/><polyline fill="none" stroke="' + (v[v.length - 1] >= 0 ? '#157a3a' : '#c62832') + '" stroke-width="2.5" points="' + pts + '"/></svg>' +
+      '<p class="note2">Bilan net cumulé, course après course (pointillé = zéro), du ' + fr(c[0].date) + ' au ' + fr(c[c.length - 1].date) + '.</p>';
+  }
+  function fiche(p){
+    var x = S.joueurs.find(function(j){ return j.pseudo === p; });
+    if (!x) { $('rFiche').innerHTML = '<p class="empty">Pas encore de course calculée pour ce joueur.</p>'; return; }
+    var C = x.cat, h = '<div class="card"><h2>' + (x.robot ? '🤖 ' : '') + E(x.pseudo) + '</h2><p class="sub">' + x.courses + ' course' + (x.courses > 1 ? 's' : '') + ' jouée' + (x.courses > 1 ? 's' : '') + ', du ' + fr(x.premier) + ' au ' + fr(x.dernier) + (x.courses < S.min ? ' · moins de ' + S.min + ' courses : résultats encore peu significatifs' : '') + '</p>';
+    // 5B — statistiques financières
+    h += '<h3>Bilan (en fers, jeu fictif)</h3><div class="kpi"><div><small>Total des mises</small><b>' + F(x.mises) + '</b></div><div><small>Total des rapports</small><b>' + F(x.gains) + '</b></div><div><small>Bilan net (rapports − mises)</small><b>' + NET(x.net) + '</b></div><div><small>Retour sur mises</small><b>' + REND(x.gains, x.mises) + '</b></div></div>' + courbe(x.courbe) + '</div>';
+    // 5A — jeux simples
+    h += '<div class="card"><h3>Jeux simples (tes chevaux 1 et 2)</h3><div class="wrap"><table class="st"><tr><th>Jeu</th><th>Réussites</th><th>Mises</th><th>Rapports</th><th>Net</th></tr>' +
+      ['sg', 'sp'].map(function(k){ var c = C[k]; return '<tr><td><b>' + S.noms[k] + '</b></td><td>' + c.reussites + ' ' + (k === 'sg' ? 'gagnant' : 'placé') + (c.reussites > 1 ? 's' : '') + ' sur ' + c.sel + '</td><td>' + F(c.mises) + '</td><td>' + F(c.gains) + '</td><td>' + NET(c.net) + '</td></tr>'; }).join('') + '</table></div>';
+    ['sg', 'sp'].forEach(function(k){
+      var L = x.chevaux[k];
+      h += '<p><b>Ses 3 chevaux les plus performants au ' + S.noms[k].toLowerCase() + ' :</b></p>' + (L.length ? '<table class="st">' + L.map(function(c){ return '<tr><td><b>' + c.n + ' ' + E(c.nom) + '</b><small>Quinté+ du ' + fr(c.date) + '</small></td><td>' + F(c.fers) + ' fers rapportés</td></tr>'; }).join('') + '</table>' : '<p class="empty">Aucun pour l\'instant.</p>');
+    });
+    h += '</div>';
+    // 5A — jeux combinés
+    h += '<div class="card"><h3>Jeux combinés</h3><div class="wrap"><table class="st"><tr><th>Jeu</th><th>Réussites</th><th>Mises</th><th>Rapports</th><th>Net</th></tr>' +
+      ['couple', 'tierce', 'quarte', 'multi', 'quinte'].map(function(k){ var c = C[k]; return '<tr><td><b>' + S.noms[k] + '</b></td><td>' + c.reussites + ' fois sur ' + c.courses + (c.ordre ? '<small>dont ' + c.ordre + ' dans l\'ordre</small>' : '') + '</td><td>' + F(c.mises) + '</td><td>' + F(c.gains) + '</td><td>' + NET(c.net) + '</td></tr>'; }).join('') +
+      '</table></div><p class="note2">Jeux simples : « 5 gagnants sur 28 » = 5 de ses chevaux 1 et 2 ont gagné, sur 28 sélectionnés. Jeux combinés : une réussite = la course a rapporté quelque chose sur ce jeu (ordre, désordre ou bonus du PMU).</p></div>';
+    // Évolution dans le temps
+    h += '<div class="card"><h3>Évolution mois par mois</h3><table class="st"><tr><th>Mois</th><th>Courses</th><th>Mises</th><th>Rapports</th><th>Net</th></tr>' + x.mois.map(function(m){ var a = m.mois.split('-'); return '<tr><td>' + MOIS[+a[1] - 1] + ' ' + a[0] + '</td><td>' + m.courses + '</td><td>' + F(m.mises) + '</td><td>' + F(m.gains) + '</td><td>' + NET(m.net) + '</td></tr>'; }).join('') + '</table></div>';
+    $('rFiche').innerHTML = h;
+  }
+  // 6A — tableau comparatif
+  function comparatif(){
+    var L = S.joueurs, h = '<h2>Tableau comparatif</h2><p class="sub">' + L.length + ' participants · touche un pseudo pour ouvrir sa fiche.</p><table class="st"><tr><th>Joueur</th><th>Courses</th><th>Net</th></tr>' +
+      L.map(function(x){ var C = x.cat, o = function(c){ return c.ordre ? ' (' + c.ordre + ' ordre)' : ''; };
+        return '<tr><td><a href="#" class="vf" data-p="' + E(x.pseudo) + '"><b>' + (x.robot ? '🤖 ' : '') + E(x.pseudo) + '</b></a></td><td>' + x.courses + '</td><td>' + NET(x.net) + '<small>' + F(x.gains) + ' rendus pour ' + F(x.mises) + ' misés</small></td></tr>' +
+          '<tr><td colspan="3" style="font-size:13px;color:var(--mute);border-top:0;padding-top:0">Gagnants ' + C.sg.reussites + ' sur ' + C.sg.sel + ' · Placés ' + C.sp.reussites + ' sur ' + C.sp.sel + ' · Couplé ' + C.couple.reussites + ' · Tiercé ' + C.tierce.reussites + o(C.tierce) + ' · Quarté+ ' + C.quarte.reussites + o(C.quarte) + ' · Multi ' + C.multi.reussites + ' · Quinté+ ' + C.quinte.reussites + o(C.quinte) + '</td></tr>'; }).join('') +
+      '</table><p class="note2">Gagnants / Placés : ses chevaux 1 et 2. Couplé, Tiercé, Quarté+, Multi, Quinté+ : nombre de courses où le jeu a rapporté, sur ses courses jouées. Montants en fers (jeu fictif).</p>';
+    $('rComp').innerHTML = h;
+    document.querySelectorAll('.vf').forEach(function(a){ a.onclick = function(e){ e.preventDefault(); $('qui').value = a.getAttribute('data-p'); fiche(a.getAttribute('data-p')); montrer('fiche'); }; });
+  }
+  // 6A — classement par spécialité
+  function specialites(){
+    var h = '<p class="note">Pour être classé, il faut au moins <b>' + S.min + ' courses</b> jouées. On classe au bilan net du jeu (rapports − mises), avec le nombre de réussites et de courses à côté.</p>';
+    ['sg', 'sp', 'couple', 'tierce', 'quarte', 'quinte', 'bilan'].forEach(function(k){
+      var L = S.specialites[k] || [], titre = k === 'bilan' ? 'Meilleurs bilans financiers' : 'Meilleurs au ' + S.noms[k];
+      h += '<div class="card"><h3>' + titre + '</h3>' + (L.length ? '<table class="st"><tr><th>#</th><th>Joueur</th><th>' + (k === 'bilan' ? 'Mises' : 'Réussites') + '</th><th>Net</th></tr>' + L.slice(0, 10).map(function(x, i){ return '<tr><td>' + (i + 1) + '</td><td><b>' + (x.robot ? '🤖 ' : '') + E(x.pseudo) + '</b><small>' + x.courses + ' courses</small></td><td>' + (k === 'bilan' ? F(x.mises) : x.reussites + (x.sel ? ' sur ' + x.sel : ' fois')) + '</td><td>' + NET(x.net) + '</td></tr>'; }).join('') + '</table>' : '<p class="empty">Personne n\'a encore ' + S.min + ' courses.</p>') + '</div>';
+    });
+    $('rSpec').innerHTML = h;
+  }
+  function montrer(k){
+    document.querySelectorAll('#ong a').forEach(function(a){ a.classList.toggle('on', a.getAttribute('data-k') === k); });
+    ['fiche', 'comp', 'spec'].forEach(function(x){ $('s-' + x).hidden = x !== k; });
+  }
+  document.querySelectorAll('#ong a').forEach(function(a){ a.onclick = function(e){ e.preventDefault(); montrer(a.getAttribute('data-k')); }; });
+  fetch('/api/concours/stats', {credentials:'same-origin', cache:'no-store'}).then(function(r){ if (!r.ok) throw 0; return r.json(); }).then(function(d){
+    S = d; $('zone').hidden = false;
+    $('qui').innerHTML = d.joueurs.map(function(x){ return '<option value="' + E(x.pseudo) + '">' + (x.robot ? '🤖 ' : '') + E(x.pseudo) + ' (' + x.courses + ' course' + (x.courses > 1 ? 's' : '') + ')</option>'; }).join('');
+    var voulu = decodeURIComponent(location.hash.replace('#', '')) || d.moi || (d.joueurs[0] && d.joueurs[0].pseudo);
+    if (voulu) { $('qui').value = voulu; fiche(voulu); } else $('rFiche').innerHTML = '<p class="empty">Aucune course calculée pour l\'instant.</p>';
+    $('qui').onchange = function(){ fiche(this.value); };
+    comparatif(); specialites();
+  }).catch(function(){ $('refus').hidden = false; });
+})();
+</script>
+</body>
+</html>
