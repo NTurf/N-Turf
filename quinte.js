@@ -358,5 +358,39 @@ var NT = (function(){
       el.querySelectorAll('.pmlien').forEach(function(l){ var n = C[l.getAttribute('data-pm')] || 0; l.textContent = n ? '👥 ' + n + ' prono' + (n > 1 ? 's' : '') + ' de membres' : '👥 Pronos des membres : donne le tien'; l.classList.toggle('pmn', n > 0); });
     }).catch(function(){});
   }
-  return { lire: lire, afficher: afficher, chargerQuinte: chargerQuinte, lireCpc: lireCpc, afficherCpc: afficherCpc, brancherOnglets: brancherOnglets, chargerLive: chargerLive, majPm: majPm };
+  // Archive du fichier (feuille « Archive ») : tous les Quinté+ passés, au même format que le jour (tableau de saisie, approches, arrivée, rapports, cotes).
+  // Sert à remplir les Archives du site : seuls les jours absents y sont ajoutés, jamais un jour déjà présent.
+  function lireArchive(wb){
+    var ws = wb.Sheets['Archive']; if (!ws || typeof XLSX === 'undefined') return [];
+    var T = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: null });
+    if (!T.length) return [];
+    var H = {}; (T[0] || []).forEach(function(h, i){ if (h !== null && h !== undefined && H[String(h).trim()] === undefined) H[String(h).trim()] = i; });
+    var nb = function(r, k){ var i = H[k]; if (i === undefined) return null; var v = r[i]; if (typeof v === 'string') { v = v.trim().replace(',', '.'); if (!/^\d+(\.\d+)?$/.test(v)) return null; v = parseFloat(v); } return typeof v === 'number' && isFinite(v) ? v : null; };
+    var serie = function(r, base, n){ var out = []; for (var k = 1; k <= n; k++){ var v = nb(r, base + k); if (v !== null && v > 0 && out.indexOf(v) < 0) out.push(v); } return out; };
+    var out = [];
+    for (var i = 1; i < T.length; i++){
+      var r = T[i] || [], dv = r[H['Date']];
+      if (!dv) continue;
+      var d = dv instanceof Date ? new Date(dv.getTime() + 12 * 3600000) : null;
+      if (!d || isNaN(d)) continue;
+      var date = ('0' + d.getUTCDate()).slice(-2) + '/' + ('0' + (d.getUTCMonth() + 1)).slice(-2) + '/' + d.getUTCFullYear();
+      var q = { date: date, discipline: r[H['Discipline']] || '', partants: nb(r, 'Nb_Partants'), source: 'archive',
+        lignes: { A: serie(r, 'LA', 8), B: [], C: serie(r, 'LC', 8), D: [] }, pondere: serie(r, 'Pondere', 8), synthese: serie(r, 'Synthese', 8), perso: serie(r, 'Perso', 8),
+        arrivee: serie(r, 'Arrivee', 5), rapports: {}, approches: {}, cotes: [] };
+      // les lignes B et D peuvent répéter un même cheval : on les garde telles quelles
+      ['A','B','C','D'].forEach(function(L){ var a = []; for (var k = 1; k <= 8; k++){ var v = nb(r, 'L' + L + k); if (v !== null && v > 0) a.push(v); } q.lignes[L] = a; });
+      [['Simple gagnant','Rap_SG'],['Simple placé 1er','Rap_SP'],['Simple placé 2e','Rap_SP2'],['Simple placé 3e','Rap_SP3'],
+       ['Couplé gagnant','Rap_CG'],['Couplé placé 1-2','Rap_CG2'],['Couplé placé 1-3','Rap_CG3'],['Couplé placé 2-3','Rap_CG4'],
+       ['Tiercé ordre','Rap_CP1'],['Tiercé désordre','Rap_CP2'],['Quarté ordre','Rap_CP3'],['Quarté désordre','Rap_CP4'],['Quarté bonus 3','Bonus3_Quarte'],
+       ['Quinté ordre','Rap_CP5'],['Quinté désordre','Rap_CP6'],['Quinté bonus 4','Bonus4_Quinte'],['Quinté bonus 3','Bonus3_Quinte'],
+       ['2 sur 4','Rap_CP7'],['Multi','Rap_CP8']].forEach(function(x){ var v = nb(r, x[1]); if (v !== null && v > 0) q.rapports[x[0]] = v; });
+      var tcr = serie(r, 'TCR_', 12), algo = serie(r, 'Algo_', 16);
+      if (tcr.length) q.approches.TCR = { selection: tcr };
+      if (algo.length) q.approches.ALGO = { selection: algo };
+      for (var k = 1; k <= 30; k++){ var c = nb(r, 'Cote_Matin_' + k); if (c !== null && c > 0) q.cotes.push({ n: k, cote: c }); }
+      if (q.synthese.length >= 3 || q.lignes.A.length) out.push(q);
+    }
+    return out;
+  }
+  return { lire: lire, lireArchive: lireArchive, afficher: afficher, chargerQuinte: chargerQuinte, lireCpc: lireCpc, afficherCpc: afficherCpc, brancherOnglets: brancherOnglets, chargerLive: chargerLive, majPm: majPm };
 })();

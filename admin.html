@@ -52,7 +52,7 @@
 </main>
 <script src="/site.js?v=20261127b"></script>
 <script src="/vendor/xlsx.full.min.js"></script>
-<script src="/quinte.js?v=20261127a"></script>
+<script src="/quinte.js?v=20261127b"></script>
 <script>
 var donnees = null, typeF = null;
 NTURF_MOI.then(function(m){
@@ -75,6 +75,7 @@ document.getElementById('fichier').onchange = function(){
         msg.className = 'msg ok'; msg.textContent = 'Fichier course par course lu : ' + donnees.reunions.map(function(r){return r.hippodrome;}).join(', ') + '. Vérifie ci-dessous, puis publie.'; majBoutons();
       } else {
         typeF = 'quinte'; donnees = NT.lire(wb);
+        try { ARCH = NT.lireArchive(wb); } catch (e) { ARCH = []; }
         rendu.innerHTML = NT.afficher(donnees);
         msg.className = 'msg ok'; msg.textContent = 'Fichier lu : Quinté du ' + donnees.date + '. Vérifie ci-dessous, puis publie.'; majBoutons(); majBoutons();
       }
@@ -86,6 +87,18 @@ document.getElementById('fichier').onchange = function(){
   };
   r.readAsArrayBuffer(f);
 };
+var ARCH = [];
+// Archives : les Quinté+ passés de la feuille « Archive » du fichier, ajoutés seulement s'ils manquent (par paquets de 60 jours)
+function envoyerArchive(){
+  if (!ARCH.length) return Promise.resolve(null);
+  // deux courses archivées le même jour : la seconde est gardée avec la première, rien n'est perdu
+  var parJour = {}, L = [];
+  ARCH.forEach(function(q){ if (parJour[q.date]) { (parJour[q.date].autres = parJour[q.date].autres || []).push(q); } else { parJour[q.date] = q; L.push(q); } });
+  var total = 0, i = 0;
+  function suite(){ if (i >= L.length) return Promise.resolve(total); var lot = L.slice(i, i + 60); i += 60;
+    return fetch('/api/admin/archive-saisie', {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({ jours: lot })}).then(function(r){ return r.json(); }).then(function(d){ total += d.ajoutes || 0; return suite(); }); }
+  return suite();
+}
 function majBoutons(){
   var auj = new Date().toLocaleDateString('fr-FR', {timeZone:'Europe/Paris', day:'2-digit', month:'2-digit', year:'numeric'});
   var iso = function(x){ return String(x || '').split('/').reverse().join('-'); };
@@ -106,6 +119,7 @@ function publier(attente, b){
     .then(function(x){
       if (x.ok && attente) { m.className = 'msg ok'; m.textContent = 'Mis en attente. Le site garde la journée en cours. Quand tu voudras, appuie sur « Basculer le site sur cette journée » en haut de la page.'; etatAttente(); window.scrollTo({top:0, behavior:'smooth'}); }
       else if (x.ok) { m.className = 'msg ok'; m.innerHTML = 'Publié ! Les membres voient maintenant la mise à jour, et l\'accueil est à jour.<br><a href="/pronostics.html">Voir la page Pronostics</a> · <a href="/">Voir l\'accueil</a>'; }
+      if (x.ok && typeF === 'quinte' && ARCH.length) envoyerArchive().then(function(n){ if (n !== null) m.innerHTML += '<br>Archives du tableau de saisie : ' + (n ? n + ' jour' + (n > 1 ? 's' : '') + ' ajouté' + (n > 1 ? 's' : '') + ' depuis ton fichier.' : 'déjà toutes à jour.'); }).catch(function(){ m.innerHTML += '<br>Les archives du fichier n\'ont pas pu être envoyées, elles le seront au prochain envoi.'; });
       else { m.className = 'msg err'; m.textContent = x.d.erreur || 'Erreur.'; b.disabled = false; }
     }).catch(function(){ m.className='msg err'; m.textContent='Connexion impossible, réessaie.'; b.disabled=false; });
 }

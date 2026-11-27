@@ -23,7 +23,7 @@
 </div>
 </main>
 <script src="/site.js?v=20261127b"></script>
-<script src="/quinte.js?v=20261127a"></script>
+<script src="/quinte.js?v=20261127b"></script>
 <script src="/tickets.js?v=20261125a"></script>
 <script>
 var JOURS = [];
@@ -75,7 +75,12 @@ function charger(j){
       $('dateJ').textContent = fr(j);
       // Quinté+ (arrivée, approches, cotes, rapports) et Tableau de saisie, séparés
       if (q || (live && live.trouve)) {
-        if (q && q.lignes) { R.quinte = NT.afficher(q, live, 'quinte'); R.saisie = NT.afficher(q, live, 'saisie'); }
+        if (q && q.lignes) {
+          var lv = q.source === 'archive' ? null : live;
+          R.quinte = NT.afficher(q, lv, 'quinte'); R.saisie = NT.afficher(q, lv, 'saisie');
+          (q.autres || []).forEach(function(o){ R.quinte += '<h3 style="margin-top:18px">Autre course archivée le même jour</h3>' + NT.afficher(o, null, 'quinte'); R.saisie += '<h3 style="margin-top:18px">Autre course archivée le même jour</h3>' + NT.afficher(o, null, 'saisie'); });
+          if (q.source === 'archive') R.saisie += '<p class="note2">Repris de l\'archive du fichier N-Turf.</p>';
+        }
         else {
           var arr = (q && q.arrivee && q.arrivee.length ? q.arrivee : (live && live.arrivee) || []), t = '';
           t += arr.length ? '<div class="arrivee"><b>Arrivée</b> '+arr.slice(0,5).map(function(n){ var cite = q && [q.synthese, q.pondere, q.perso].some(function(t){ return (t || []).indexOf(n) >= 0; }); return '<span class="ch'+(cite?' hit':'')+'">'+n+'</span>'; }).join('')+'</div>' : '';
