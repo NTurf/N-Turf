@@ -582,3 +582,8 @@ main > h1:not(.nlogo), main h1#titre{display:inline-block;font-family:'Barlow Co
 .al .d{font:800 15px Barlow,Arial,sans-serif;color:var(--navy);margin-top:2px}
 .al .x{position:absolute;top:4px;right:6px;border:0;background:none;font-size:20px;color:var(--mute);cursor:pointer}
 @keyframes alIn{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:none}}
+/* Arrivées : plus d'encadré, pour ne pas les confondre avec les pronostics (chiffres simples séparés par des tirets) */
+.arrivee .ch,.crs .arrivee .ch{background:none!important;border:0!important;box-shadow:none!important;min-width:0;height:auto;padding:0 2px;margin:0;border-radius:0;font-size:19px;font-weight:800;color:var(--navy)}
+.arrivee .ch+.ch::before{content:"-";color:var(--soft);font-weight:400;margin-right:4px}
+.arrivee .ch.hit{color:#c62832!important;background:none!important}
+.arr .n .cite,.note2 .cite{background:none;border:0;min-width:0;padding:0;color:#c62832;font-weight:900}
