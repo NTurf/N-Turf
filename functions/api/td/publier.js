@@ -1,5 +1,6 @@
 import { json, initDb, currentUser, noDb } from '../../_auth.js';
 import { initTd, contributeur, programme, trouver, auj, NTT } from '../../_td.js';
+import { BASE, get } from '../../_pmu.js';
 
 // Publier un pronostic ou un ticket sur une course du jour. Publication libre et immédiate pour les contributeurs autorisés,
 // jusqu'au départ de la course (un pronostic publié après le départ ne compterait pas dans les statistiques).
@@ -27,6 +28,19 @@ export async function onRequestPost({ request, env }) {
     chevaux = (b.chevaux || []).map(num);
     if (!chevaux.length || chevaux.length > 8 || chevaux.some((x) => !x) || new Set(chevaux).size !== chevaux.length) return json({ erreur: `Un pronostic = de 1 à 8 chevaux différents, numéros de 1 à ${max}.` }, 400);
     type = 'prono';
+  } else if (b.type === 'coeur') {
+    // Coup de cœur du jour : un seul cheval, mis à la une du journal
+    if (!c.droits.pronos) return json({ erreur: 'Tu n\'as pas le droit de publier des pronostics.' }, 403);
+    const n = num((b.chevaux || [])[0]);
+    if (!n) return json({ erreur: `Indique le numéro de ton coup de cœur (de 1 à ${max}).` }, 400);
+    chevaux = [n]; type = 'coeur';
+    try { // nom du cheval, pour la une du journal
+      const pmu = iso.split('-').reverse().join('');
+      const parts = await get(`${BASE}/${pmu}/R${r}/C${cn}/participants`);
+      const h = ((parts && parts.participants) || []).find((x) => x.numPmu === n);
+      if (h && h.statut === 'NON_PARTANT') return json({ erreur: `Le ${n} est non partant.` }, 400);
+      if (h) ticket = { nom: h.nom };
+    } catch (e) {}
   } else if (b.type === 'ticket') {
     const t = b.ticket || {};
     if (!NTT.PARIS[t.pari]) return json({ erreur: 'Pari inconnu.' }, 400);

@@ -9,41 +9,52 @@
 <link rel="icon" href="/icone-nturf-192.png">
 <link rel="stylesheet" href="/style.css?v=20261127b">
 <style>
-.une{border-top:4px double var(--dark);border-bottom:4px double var(--dark);text-align:center;padding:8px 0;margin:6px 0 10px}
-.une b{display:block;font:900 26px/1.1 Barlow,Arial,sans-serif;letter-spacing:2px;color:var(--navy)}
-.une span{font-size:14px;color:var(--mute);text-transform:capitalize}
-.crs2{border:1.5px solid var(--line);border-radius:12px;background:#fff;margin:8px 0;padding:8px 10px}
-.crs2.vide{padding:5px 10px;opacity:.75}
-.crs2 h3{margin:0;font-size:15px;display:flex;flex-wrap:wrap;gap:6px;align-items:baseline}
-.crs2 h3 small{color:var(--mute);font-weight:600}
-.badge{font:800 11px Barlow,Arial,sans-serif;border-radius:8px;padding:2px 6px;background:#f0be3c;color:#0D1E3D}
-.badge.p5{background:#1E5BB5;color:#fff}
-.pub{border-top:1px dashed var(--line);padding:7px 0 4px}
-.pub .qui{font-weight:800;color:#1E5BB5}
-.pub .qui.bruno{color:#b8860b}
-.pub .typ{font-size:12px;color:var(--mute);margin-left:6px}
-.pub .com{font-size:14px;font-style:italic;margin:3px 0}
-.pub .res{font-size:13px;margin-top:3px}
-.pub .act{float:right;border:0;background:none;color:#c62832;font-weight:700;cursor:pointer;font-size:13px}
-.pub.sup{opacity:.45}
-.arr2{font-size:13px;margin:3px 0}
+/* Mise en page « quotidien papier » */
+.journal{background:#fffdf6;border:1px solid #d8ccb0;box-shadow:0 2px 10px rgba(0,0,0,.08);padding:14px 16px 18px;margin:8px 0;color:#1b1b1b;font-family:Georgia,'Times New Roman',serif}
+.mast{text-align:center;border-bottom:3px solid #111;padding-bottom:6px}
+.mast img{max-width:220px;width:55%;display:block;margin:0 auto 4px}
+.mast .titre{font:900 34px/1.05 Georgia,'Times New Roman',serif;letter-spacing:3px;text-transform:uppercase;margin:2px 0}
+.mast .devise{font-style:italic;font-size:14px;color:#555}
+.dateline{display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px;border-bottom:1px solid #111;padding:4px 0;font-size:13px;font-variant:small-caps;letter-spacing:.5px;margin-bottom:12px}
+.rub{font:800 15px Georgia,serif;letter-spacing:3px;text-transform:uppercase;border-top:2px solid #111;border-bottom:1px solid #111;padding:3px 0;margin:16px 0 10px;text-align:center}
+.encadre{border:4px double #b8860b;background:#fff7dd;padding:12px 14px;margin:10px 0;text-align:center}
+.encadre .lab{font:800 13px Georgia,serif;letter-spacing:3px;text-transform:uppercase;color:#8a6100}
+.encadre .cnum{display:inline-block;width:60px;height:60px;line-height:60px;border-radius:50%;background:#b8860b;color:#fff;font:900 32px Georgia,serif;margin:8px 0 4px}
+.encadre .cnom{font:900 26px/1.15 Georgia,serif;text-transform:uppercase;letter-spacing:1px}
+.encadre .ccrs{font-size:14px;color:#444;margin:4px 0}
+.encadre .csig{font-style:italic;font-size:14px;margin-top:4px}
+.encadre.quinte{border-color:#1E5BB5;background:#eef4fd;text-align:left}
+.encadre.quinte .lab{color:#1E5BB5;text-align:center}
+.cols{columns:2 300px;column-gap:24px;column-rule:1px solid #cfc4a8}
+.art{break-inside:avoid;margin:0 0 14px}
+.art h3{font:900 20px Georgia,serif;margin:0 0 4px;border-bottom:2px solid #111;padding-bottom:2px}
+.art h3.bruno{color:#8a6100}
+.item{padding:6px 0;border-bottom:1px dotted #bbb}
+.item:last-child{border-bottom:0}
+.item .ou{font-variant:small-caps;font-size:13px;color:#555;letter-spacing:.3px}
+.item .sel{margin:4px 0}
+.item .com{font-style:italic;font-size:15px;margin:3px 0}
+.item .res{font-size:13px;margin-top:3px;font-family:Arial,sans-serif}
+.encadre .act,.item .act{float:right;border:0;background:none;color:#c62832;font-weight:700;cursor:pointer;font-size:12px;font-family:Arial,sans-serif}
+.item.sup{opacity:.45}
+.arrline{font-size:13px;font-family:Arial,sans-serif}
+.arrline b{color:#111}
 .pos{color:#157a3a;font-weight:800}.neg{color:#c62832;font-weight:800}
+.fictif{font-size:12px;color:#8a6d00}
+.vide2{text-align:center;font-style:italic;color:#666;padding:20px 0}
 .frm2 label{display:block;margin:6px 0;font-size:13px;color:var(--mute)}
 .frm2 select,.frm2 input,.frm2 textarea{display:block;width:100%;box-sizing:border-box;font-size:16px;padding:8px;border-radius:8px;border:1.5px solid var(--line);margin-top:3px}
 .charte{background:#FFF6DC;border:1px solid #f0be3c;border-radius:10px;padding:8px 10px}
-.fictif{font-size:12px;color:#8a6d00}
 </style>
 </head>
 <body data-page="membres">
 <main>
-<div class="une"><b>TICKET DU JOUR</b><span id="dateL"></span></div>
 <div id="refus" class="note" hidden>🔒 Réservé aux membres. <a href="/inscription.html">S'inscrire gratuitement</a> ou <a href="/inscription.html#connexion">se connecter</a>.</div>
 <div id="zone" hidden>
 <div class="jourbar"><button type="button" class="btn ghost" id="prec">◀</button><select id="jour"></select><button type="button" class="btn ghost" id="suiv">▶</button></div>
 <nav class="tabs inner" id="ong"><a href="#" data-k="journal" class="on">Le journal du jour</a><a href="#" data-k="stats">Statistiques des contributeurs</a></nav>
 <section id="s-journal">
   <details class="card" id="cPub" hidden><summary><b>✍️ Publier un pronostic ou un ticket</b> <small id="maSig"></small></summary><div id="fPub"></div></details>
-  <nav class="tabs inner" id="reus"></nav>
   <div id="rendu"><p class="empty">Chargement…</p></div>
   <p class="note2">Chaque publication indique son auteur. Les contributeurs autorisés publient librement ; l'administrateur peut retirer après coup une publication qui n'a pas sa place ici (elle ne compte alors plus dans les statistiques). Les pronostics et tickets sont enregistrés avant le départ et comparés aux arrivées et rapports officiels du PMU.</p>
 </section>
@@ -68,43 +79,67 @@
   function charger(date){
     return fetch('/api/td/jour' + (date ? '?date=' + date : ''), {credentials:'same-origin', cache:'no-store'}).then(function(r){ if (r.status === 401) throw 0; return r.json(); }).then(function(d){
       D = d; ecart = d.maintenant - Date.now(); $('zone').hidden = false;
-      $('dateL').textContent = new Date(d.date + 'T12:00:00').toLocaleDateString('fr-FR', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
       $('jour').innerHTML = d.jours.map(function(j){ return '<option value="' + j + '"' + (j === d.date ? ' selected' : '') + '>' + fr(j) + (j === d.aujourdhui ? ' (aujourd\'hui)' : '') + '</option>'; }).join('');
-      if (!REU || !d.reunions.some(function(r){ return r.r === REU; })) { var q = d.reunions.find(function(r){ return r.courses.some(function(c){ return c.quinte; }); }); REU = (q || d.reunions[0] || {}).r; }
       dessiner(); formulaire();
     }).catch(function(){ $('refus').hidden = false; });
   }
+  var DISC = {ATTELE:'trot attelé',MONTE:'trot monté',PLAT:'plat',HAIE:'haies',STEEPLECHASE:'steeple-chase',CROSS:'cross'};
+  function infoCourse(p){
+    var R = D.reunions.find(function(r){ return r.r === p.r; }) || {}, c = (R.courses || []).find(function(x){ return x.c === p.c; }) || {};
+    return { R: R, c: c, txt: 'R' + p.r + 'C' + p.c + (c.heure ? ' · ' + hm(c.heure) : '') + ' · ' + E(R.h || p.hippodrome || '') + (c.libelle || p.course ? ' — ' + E(c.libelle || p.course) : '') };
+  }
+  function arrLigne(c){ return c && c.arrivee && c.arrivee.length ? '<div class="arrline">Arrivée : <b>' + c.arrivee.slice(0, c.quinte || c.pick5 ? 5 : 4).join(' - ') + '</b></div>' : ''; }
   function dessiner(){
-    var d = D;
-    if (!d.reunions.length) { $('reus').innerHTML = ''; $('rendu').innerHTML = '<p class="empty">' + (d.erreurPmu ? 'Le programme du PMU ne répond pas pour le moment.' : 'Pas de programme pour ce jour.') + '</p>'; return; }
-    $('reus').innerHTML = d.reunions.map(function(r){ var n = d.pubs.filter(function(p){ return p.r === r.r && !p.supprime; }).length; return '<a href="#" data-r="' + r.r + '"' + (r.r === REU ? ' class="on"' : '') + '>R' + r.r + ' ' + E(r.h) + (n ? ' (' + n + ')' : '') + '</a>'; }).join('');
-    $('reus').querySelectorAll('a').forEach(function(a){ a.onclick = function(e){ e.preventDefault(); REU = +a.getAttribute('data-r'); dessiner(); }; });
-    var R = d.reunions.find(function(r){ return r.r === REU; }), h = '<h2>R' + R.r + ' – ' + E(R.h) + '</h2>';
-    R.courses.forEach(function(c){
-      var P = d.pubs.filter(function(p){ return p.r === R.r && p.c === c.c; });
-      var tete = '<h3>R' + R.r + 'C' + c.c + ' – ' + E(c.libelle || 'Course ' + c.c) + ' <small>' + hm(c.heure) + (c.discipline ? ' · ' + E(({ATTELE:'trot attelé',MONTE:'trot monté',PLAT:'plat',HAIE:'haies',STEEPLECHASE:'steeple-chase',CROSS:'cross'})[c.discipline] || c.discipline.toLowerCase().replace(/_/g, ' ')) : '') + (c.distance ? ' · ' + c.distance + ' m' : '') + (c.partants ? ' · ' + c.partants + ' partants' : '') + '</small>' + (c.quinte ? ' <span class="badge">QUINTÉ+</span>' : '') + (c.pick5 ? ' <span class="badge p5">SUPER PICK 5</span>' : '') + '</h3>';
-      var arr = c.arrivee.length ? '<div class="arr2"><b>Arrivée</b> ' + c.arrivee.slice(0, c.quinte || c.pick5 ? 5 : 4).join(' - ') + '</div>' : '';
-      var anciens = c.quinte && d.anciens ? '<p class="arr2">🎟️ <a href="/tickets.html">Tickets N-TURF du Quinté+ (' + d.anciens.tickets.length + ')</a></p>' : '';
-      if (!P.length) { h += '<div class="crs2 vide">' + tete + arr + anciens + '</div>'; return; }
-      h += '<div class="crs2">' + tete + arr + anciens + P.map(function(p){ return pub(p, c); }).join('') + '</div>';
-    });
-    $('rendu').innerHTML = h;
+    var d = D, P = d.pubs.filter(function(p){ return !p.supprime || d.moi.admin; });
+    var jour = new Date(d.date + 'T12:00:00').toLocaleDateString('fr-FR', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
+    var h = '<div class="journal"><div class="mast"><img src="/banniere.png" alt="N-TURF"><div class="titre">Le Ticket du Jour</div><div class="devise">Le collectif des passionnés de courses hippiques</div></div>' +
+      '<div class="dateline"><span>Édition du ' + E(jour) + '</span><span>' + P.filter(function(p){ return !p.supprime; }).length + ' publication' + (P.length > 1 ? 's' : '') + '</span></div>';
+    if (!P.length) { $('rendu').innerHTML = h + '<p class="vide2">' + (d.erreurPmu ? 'Le programme du PMU ne répond pas pour le moment.' : 'L\'édition du jour se prépare : les pronostics de nos contributeurs arrivent.') + '</p></div>'; return; }
+    // À la une : les coups de cœur
+    var C = P.filter(function(p){ return p.type === 'coeur'; });
+    if (C.length) {
+      h += '<div class="rub">À la une</div>';
+      C.forEach(function(p){
+        var i = infoCourse(p), n = p.chevaux[0], r = p.resultat;
+        h += '<div class="encadre' + (p.supprime ? ' item sup' : '') + '"><div class="lab">❤ Coup de cœur du jour</div><div class="cnum">' + n + '</div><div class="cnom">' + E((p.ticket && p.ticket.nom) || 'N° ' + n) + '</div><div class="ccrs">' + i.txt + '</div><div class="csig">par ' + E(p.signature) + '</div>' + (p.commentaire ? '<p class="com" style="font-style:italic;margin:6px 0 0">« ' + E(p.commentaire) + ' »</p>' : '') +
+          (r ? '<div class="res" style="margin-top:6px;font-family:Arial,sans-serif">' + (r.rang === 1 ? '<span class="pos">GAGNANT !</span>' : r.place ? '<span class="pos">Placé ' + r.rang + 'e</span>' : (r.rang ? r.rang + 'e' : 'Non placé')) + ' · 1 € gagnant + 1 € placé : rapporte <b>' + EUR(r.gagne + r.place) + '</b> pour 2,00 €</div>' : arrLigne(i.c)) + actions(p, i.c) + '</div>';
+      });
+    }
+    // Spécial Quinté+
+    var Q = P.filter(function(p){ return p.type !== 'coeur' && infoCourse(p).c.quinte; });
+    if (Q.length || (d.anciens && d.anciens.tickets && d.anciens.tickets.length)) {
+      var iq = Q.length ? infoCourse(Q[0]) : null;
+      h += '<div class="rub">Spécial Quinté+</div><div class="encadre quinte"><div class="lab">🏆 Le Quinté+ du jour</div>' + (iq ? '<div class="ccrs" style="text-align:center">' + iq.txt + '</div>' + arrLigne(iq.c) : '') +
+        Q.map(function(p){ return '<div class="item">' + '<b>' + E(p.signature) + '</b> ' + corps(p, infoCourse(p).c) + '</div>'; }).join('') +
+        (d.anciens && d.anciens.tickets && d.anciens.tickets.length ? '<p class="arrline" style="text-align:center;margin-top:6px">🎟️ <a href="/tickets.html">Les tickets N-TURF du Quinté+ (' + d.anciens.tickets.length + ')</a></p>' : '') + '</div>';
+    }
+    // Nos pronostiqueurs : une colonne par contributeur, ses courses dans l'ordre de départ
+    var autres = P.filter(function(p){ return p.type !== 'coeur' && !infoCourse(p).c.quinte; });
+    if (autres.length) {
+      var par = {}, ordre = [];
+      autres.sort(function(a, b){ return (infoCourse(a).c.heure || 0) - (infoCourse(b).c.heure || 0); }).forEach(function(p){ if (!par[p.signature]) { par[p.signature] = []; ordre.push(p.signature); } par[p.signature].push(p); });
+      ordre.sort(function(a, b){ return (/bruno/i.test(b) ? 1 : 0) - (/bruno/i.test(a) ? 1 : 0); });
+      h += '<div class="rub">Nos pronostiqueurs</div><div class="cols">' + ordre.map(function(sig){
+        return '<div class="art"><h3' + (/bruno/i.test(sig) ? ' class="bruno"' : '') + '>' + E(sig) + '</h3>' + par[sig].map(function(p){ var i = infoCourse(p); return '<div class="item' + (p.supprime ? ' sup' : '') + '"><div class="ou">' + i.txt + (i.c.pick5 ? ' · Super Pick 5' : '') + '</div>' + corps(p, i.c) + arrLigne(i.c) + '</div>'; }).join('') + '</div>';
+      }).join('') + '</div>';
+    }
+    $('rendu').innerHTML = h + '</div>';
     $('rendu').querySelectorAll('.act').forEach(function(b){ b.onclick = function(){
       var adm = D.moi.admin, motif = adm ? prompt('Retirer cette publication ? Motif (facultatif, gardé pour toi) :', '') : (confirm('Retirer ta publication ?') ? '' : null);
       if (motif === null) return;
       post('/api/td/supprimer', { id: +b.getAttribute('data-id'), motif: motif }).then(function(x){ if (x.ok) { msg('✓ Publication retirée.', true); charger(D.date); } else msg(x.erreur || 'Erreur.'); });
     }; });
   }
-  function pub(p, c){
-    var arr = (p.resultat && p.resultat.arrivee) || c.arrivee.slice(0, 5), h = '<div class="pub' + (p.supprime ? ' sup' : '') + '">';
-    var peut = !p.supprime && (D.moi.admin || (p.moi && c.heure > now()));
-    if (peut) h += '<button type="button" class="act" data-id="' + p.id + '">' + (D.moi.admin && !p.moi ? 'Supprimer' : 'Retirer') + '</button>';
-    h += '<span class="qui' + (/bruno/i.test(p.signature) ? ' bruno' : '') + '">' + E(p.signature) + '</span><span class="typ">' + (p.type === 'prono' ? 'Pronostic' + (c.quinte ? ' Quinté+' : c.pick5 ? ' Super Pick 5' : '') : 'Ticket ' + E(p.ticket.pari) + ' · ' + E(NTT.FORMULES[p.ticket.formule] || '')) + '</span>';
-    if (p.supprime) h += ' <small>supprimée' + (p.motif ? ' : ' + E(p.motif) : '') + '</small>';
+  function actions(p, c){
+    var peut = !p.supprime && (D.moi.admin || (p.moi && c && c.heure > now()));
+    return (peut ? '<button type="button" class="act" data-id="' + p.id + '">' + (D.moi.admin && !p.moi ? 'Supprimer' : 'Retirer') + '</button>' : '') + (p.supprime ? ' <small>supprimée' + (p.motif ? ' : ' + E(p.motif) : '') + '</small>' : '');
+  }
+  function corps(p, c){
+    var arr = (p.resultat && p.resultat.arrivee) || (c.arrivee || []).slice(0, 5), h = actions(p, c);
     if (p.type === 'prono') h += '<div class="sel">' + p.chevaux.map(function(n, i){ return '<span class="ch' + (i < 3 ? ' piv' : '') + (arr.indexOf(n) >= 0 ? ' hit' : '') + '">' + n + '</span>'; }).join('') + '</div>';
     else {
       var t = p.ticket;
-      h += '<div class="sel">' + NTT.vue(t).map(function(n){ return '<span class="ch' + (n === 'X' ? ' xx' : '') + (arr.indexOf(n) >= 0 ? ' hit' : '') + '">' + E(n) + '</span>'; }).join('') + '</div>';
+      h += '<div class="ou">Ticket ' + E(t.pari) + ' · ' + E(NTT.FORMULES[t.formule] || '') + '</div><div class="sel">' + NTT.vue(t).map(function(n){ return '<span class="ch' + (n === 'X' ? ' xx' : '') + (arr.indexOf(n) >= 0 ? ' hit' : '') + '">' + E(n) + '</span>'; }).join('') + '</div>';
       if (t.associes && t.associes.length && t.formule !== 'champ') h += '<p class="assoc">X = associés : ' + t.associes.join(' - ') + '</p>';
       h += '<div class="res">Mise : <b>' + EUR(p.cout) + '</b> (' + EUR(t.mise) + ' la combinaison)' + (p.joue ? ' · <b>joué réellement</b>' : ' · <span class="fictif">non joué : gains en simulation</span>') + '</div>';
     }
@@ -119,8 +154,8 @@
         var net = r.gagne - r.mise;
         h += '<div class="res">Rapporté : <b class="' + (r.gagne > 0 ? 'pos' : '') + '">' + EUR(r.gagne) + '</b> · net <b class="' + (net >= 0 ? 'pos' : 'neg') + '">' + (net >= 0 ? '+' : '−') + EUR(Math.abs(net)) + '</b> pour ' + EUR(r.mise) + ' misés' + (r.detail && r.detail.length ? '<br><small>' + r.detail.map(E).join(' · ') + '</small>' : '') + '</div>';
       }
-    } else if (c.arrivee.length) h += '<div class="res"><small>Calcul dès les rapports définitifs.</small></div>';
-    return h + '</div>';
+    }
+    return h;
   }
 
   // ---------- Formulaire de publication (contributeurs autorisés) ----------
@@ -136,7 +171,7 @@
     }
     var R = D.reunions.filter(function(r){ return r.courses.some(function(c){ return c.heure > now(); }); });
     if (!R.length) { z.innerHTML = '<p class="empty">Plus aucune course à venir aujourd\'hui.</p>'; return; }
-    var types = []; if (C.droits.pronos) types.push(['prono', 'Pronostic (1 à 8 chevaux)']); if ((C.droits.paris || []).length) types.push(['ticket', 'Ticket']);
+    var types = []; if (C.droits.pronos) { types.push(['coeur', '❤ Coup de cœur du jour (1 cheval, à la une)']); types.push(['prono', 'Pronostic (1 à 8 chevaux)']); } if ((C.droits.paris || []).length) types.push(['ticket', 'Ticket']);
     z.innerHTML = '<div class="frm2"><label>Réunion<select id="pR">' + R.map(function(r){ return '<option value="' + r.r + '">R' + r.r + ' ' + E(r.h) + '</option>'; }).join('') + '</select></label><label>Course<select id="pC"></select></label>' +
       '<label>Je publie<select id="pT">' + types.map(function(t){ return '<option value="' + t[0] + '">' + t[1] + '</option>'; }).join('') + '</select></label><div id="pZ"></div>' +
       '<label>Commentaire (facultatif)<textarea id="pCom" rows="2" maxlength="300"></textarea></label><p class="note2" id="pCout"></p><button type="button" class="btn" id="pGo">Publier</button></div>';
@@ -144,7 +179,8 @@
     function remplirC(){ var r = D.reunions.find(function(x){ return x.r === +$('pR').value; }); $('pC').innerHTML = r.courses.filter(function(c){ return c.heure > now(); }).map(function(c){ return '<option value="' + c.c + '">C' + c.c + ' · ' + hm(c.heure) + ' · ' + E(c.libelle) + (c.quinte ? ' (Quinté+)' : '') + '</option>'; }).join(''); zone(); }
     function zone(){
       var c = course(), t = $('pT').value;
-      if (t === 'prono') $('pZ').innerHTML = '<label>Tes chevaux, dans l\'ordre<input id="pCh" inputmode="numeric" placeholder="ex. 9 12 3 7 1 14 5 8"></label>';
+      if (t === 'coeur') $('pZ').innerHTML = '<label>Numéro de ton coup de cœur<input id="pCh" inputmode="numeric" placeholder="ex. 9"></label>';
+      else if (t === 'prono') $('pZ').innerHTML = '<label>Tes chevaux, dans l\'ordre<input id="pCh" inputmode="numeric" placeholder="ex. 9 12 3 7 1 14 5 8"></label>';
       else {
         var P = (D.moi.contributeur.droits.paris || []).filter(function(p){ return c && c.paris.indexOf(p) >= 0; });
         $('pZ').innerHTML = P.length ? '<label>Pari<select id="pPari">' + P.map(function(p){ return '<option>' + E(p) + '</option>'; }).join('') + '</select></label><label>Formule<select id="pF">' + Object.keys(NTT.FORMULES).map(function(f){ return '<option value="' + f + '">' + E(NTT.FORMULES[f]) + '</option>'; }).join('') + '</select></label>' +
@@ -173,10 +209,10 @@
     $('pR').onchange = remplirC; $('pC').onchange = zone; $('pT').onchange = zone; remplirC();
     $('pGo').onclick = function(){
       var t = $('pT').value, b = { r: +$('pR').value, c: +$('pC').value, type: t, commentaire: $('pCom').value };
-      if (t === 'prono') b.chevaux = NTT.nums($('pCh').value);
+      if (t === 'prono' || t === 'coeur') b.chevaux = NTT.nums($('pCh').value);
       else { b.ticket = ticket(); if (!b.ticket) return; b.joue = $('pJ').checked; }
       post('/api/td/publier', b).then(function(x){
-        if (x.ok) { msg('✓ Publié dans le Ticket du jour.', true); REU = b.r; $('cPub').open = false; charger(D.date); }
+        if (x.ok) { msg('✓ Publié dans le Ticket du jour.', true); $('cPub').open = false; charger(D.date); }
         else msg(x.erreur || 'Erreur.');
       });
     };
@@ -190,7 +226,8 @@
       var h = '<h2>Statistiques des contributeurs</h2><p class="note2">Seulement les publications faites avant le départ, non supprimées, comparées aux arrivées et rapports officiels.</p>';
       L.forEach(function(x){
         var n = x.pronos;
-        h += '<div class="crs2"><h3>' + E(x.signature) + '</h3>';
+        h += '<div class="card" style="margin:8px 0"><h3>' + E(x.signature) + '</h3>';
+        var k2 = x.coeurs; if (k2 && k2.n) { var nk = k2.gains - k2.mises; h += '<p><b>❤ Coups de cœur : ' + k2.n + '</b><br>Gagnants : ' + k2.gagnants + ' · placés : ' + k2.places + ' · 1 € gagnant + 1 € placé : mises ' + EUR(k2.mises) + ' · rapports ' + EUR(k2.gains) + ' · net <b class="' + (nk >= 0 ? 'pos' : 'neg') + '">' + (nk >= 0 ? '+' : '−') + EUR(Math.abs(nk)) + '</b></p>'; }
         if (n) h += '<p><b>Pronostics : ' + n + '</b><br>1er cité gagnant : ' + x.gagnant + ' sur ' + n + ' · 1er cité placé : ' + x.place + ' sur ' + n + '<br>Gagnant présent dans la sélection : ' + x.gagnantCite + ' sur ' + n + '<br>Les 3 premiers dans la sélection : ' + x.trio + ' fois · les 4 premiers : ' + x.multi + ' fois · les 5 premiers : ' + x.quinte + ' fois</p>';
         [['reel', 'Tickets joués réellement'], ['theorique', 'Tickets non joués (simulation, pas des gains encaissés)']].forEach(function(k){
           var t = x.tickets[k[0]]; if (!t.n) return; var net = t.gains - t.mises;

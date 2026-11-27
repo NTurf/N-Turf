@@ -93,7 +93,13 @@ export async function resoudre(db, iso, P) {
     const partants = ((parts && parts.participants) || []).filter((x) => x.statut !== 'NON_PARTANT').length || c.partants;
     const raps = lireRapports(blocs), arr = c.arrivee;
     let res;
-    if (p.type === 'prono') res = { arrivee: arr.slice(0, 5), ...resultatProno(JSON.parse(p.chevaux || '[]'), arr) };
+    if (p.type === 'coeur') {
+      // 1 € gagnant + 1 € placé sur le coup de cœur, aux rapports officiels
+      const n = JSON.parse(p.chevaux || '[]')[0], rang = arr.indexOf(n) + 1;
+      let g = 0, pl = 0;
+      for (const x of raps) { if (x.nom === 'Gagnant' && rang === 1) g = x.euros; const m = String(x.nom).match(/^Placé\s+(\d+)$/); if (m && +m[1] === n) pl = x.euros; }
+      res = { arrivee: arr.slice(0, 5), rang: rang || null, gagne: r2(g), place: r2(pl), mise: 2 };
+    } else if (p.type === 'prono') res = { arrivee: arr.slice(0, 5), ...resultatProno(JSON.parse(p.chevaux || '[]'), arr) };
     else {
       const t = JSON.parse(p.ticket || '{}');
       const g = NTT.gains(t, arr, raps, partants);
@@ -117,10 +123,12 @@ export async function statsContributeurs(db) {
   for (const p of rows) {
     const k = p.auteur_id;
     const x = S.get(k) || { signature: p.signature, pronos: 0, gagnant: 0, place: 0, gagnantCite: 0, trio: 0, multi: 0, quinte: 0,
-      tickets: { reel: { n: 0, gagnants: 0, mises: 0, gains: 0 }, theorique: { n: 0, gagnants: 0, mises: 0, gains: 0 } } };
+      coeurs: { n: 0, gagnants: 0, places: 0, mises: 0, gains: 0 }, tickets: { reel: { n: 0, gagnants: 0, mises: 0, gains: 0 }, theorique: { n: 0, gagnants: 0, mises: 0, gains: 0 } } };
     x.signature = p.signature;
     const r = JSON.parse(p.resultat);
-    if (p.type === 'prono') {
+    if (p.type === 'coeur') {
+      const k2 = x.coeurs; k2.n++; if (r.rang === 1) k2.gagnants++; if (r.place > 0) k2.places++; k2.mises = r2(k2.mises + 2); k2.gains = r2(k2.gains + (r.gagne || 0) + (r.place || 0));
+    } else if (p.type === 'prono') {
       x.pronos++; if (r.gagnant) x.gagnant++; if (r.place) x.place++; if (r.gagnantCite) x.gagnantCite++;
       if (r.trio) x.trio++; if (r.multi) x.multi++; if (r.quinte) x.quinte++;
     } else {
@@ -129,7 +137,7 @@ export async function statsContributeurs(db) {
     }
     S.set(k, x);
   }
-  return [...S.values()].sort((a, b) => (b.pronos + b.tickets.reel.n + b.tickets.theorique.n) - (a.pronos + a.tickets.reel.n + a.tickets.theorique.n));
+  return [...S.values()].sort((a, b) => (b.pronos + b.coeurs.n + b.tickets.reel.n + b.tickets.theorique.n) - (a.pronos + a.coeurs.n + a.tickets.reel.n + a.tickets.theorique.n));
 }
 
 export { NTT };
