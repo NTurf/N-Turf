@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mailing – Communication aux membres – N-TURF</title>
+<meta name="theme-color" content="#0D1E3D">
+<meta name="robots" content="noindex">
+<link rel="manifest" href="/manifest.webmanifest?v=2">
+<link rel="icon" href="/icone-nturf-192.png">
+<link rel="stylesheet" href="/style.css?v=20261127a">
+</head>
+<body data-page="admin">
+<main>
+<h1>Mailing – Communication aux membres</h1>
+<p><a href="/admin.html">← Retour à l'Administration</a></p>
+<div id="refus" class="note" hidden>🔒 Réservé à l'administrateur.</div>
+<div id="zone" hidden>
+<div class="note" id="etat"></div>
+<section class="card">
+<h2>Nouveau message</h2>
+<div class="frm">
+<label>Objet<input id="sujet" maxlength="150"></label>
+<label>Message<textarea id="corps" rows="8" style="width:100%;box-sizing:border-box;font-size:16px;padding:8px;border-radius:8px;border:1.5px solid var(--line)"></textarea></label>
+<p class="note2">Chaque membre reçoit son propre e-mail, qui commence par « Bonjour (son pseudo) ». Personne ne voit l'adresse des autres.</p>
+<label>Type de message<select id="cat"><option value="info">Information (nouveautés, vie du site…)</option><option value="essentiel">Indispensable au compte (sécurité, fonctionnement)</option></select></label>
+<p class="note2" id="catAide"></p>
+<label>Destinataires<select id="grp"></select></label>
+<div id="choix" hidden><input id="cherche" placeholder="Chercher un pseudo" style="width:100%;box-sizing:border-box;font-size:16px;padding:8px;border-radius:8px;border:1.5px solid var(--line);margin:6px 0"><div id="liste" style="max-height:260px;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:6px;background:#fff"></div><p><button type="button" class="btn ghost" id="tout">Tout cocher</button> <button type="button" class="btn ghost" id="rien">Tout décocher</button></p></div>
+<label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="ko" style="width:auto"> Écrire aussi aux adresses signalées en échec</label>
+</div>
+<p class="lead" id="compte">…</p>
+<p style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn ghost" id="bTest">M'envoyer un test</button><button type="button" class="btn" id="bGo">Envoyer</button></p>
+<p class="msg" id="msg"></p>
+</section>
+<section class="card"><h2>Historique des envois</h2><div id="histo"></div><div id="detail"></div></section>
+<section class="card"><h2>Adresses en échec</h2><p class="note2">Adresses invalides ou messages revenus en erreur. Le compte n'est jamais supprimé : le membre est seulement signalé ici et n'est plus visé par les envois (sauf si tu coches la case ci-dessus).</p><div id="echecs"></div></section>
+</div>
+</main>
+<script src="/site.js?v=20261127b"></script>
+<script>
+(function(){
+  var $ = function(i){ return document.getElementById(i); };
+  var E = function(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); };
+  var D = null, coches = {};
+  function msg(t, ok){ var m = $('msg'); m.className = 'msg ' + (ok ? 'ok' : 'err'); m.textContent = t || ''; }
+  function post(b){ return fetch('/api/admin/mailing', {method:'POST', credentials:'same-origin', headers:{'content-type':'application/json'}, body: JSON.stringify(b)}).then(function(r){ return r.json(); }); }
+  function cible(){ return { groupe: $('grp').value, ids: Object.keys(coches).filter(function(k){ return coches[k]; }), inclureKo: $('ko').checked }; }
+  var att = null;
+  function compter(){
+    clearTimeout(att); att = setTimeout(function(){
+      post({ action: 'apercu', categorie: $('cat').value, cible: cible() }).then(function(d){
+        var x = d.exclus || {}, pas = [];
+        if (x.info) pas.push(x.info + ' ne veulent pas d\'informations');
+        if (x.ko) pas.push(x.ko + ' adresse' + (x.ko > 1 ? 's' : '') + ' en échec');
+        if (x.invalide) pas.push(x.invalide + ' adresse' + (x.invalide > 1 ? 's' : '') + ' invalide' + (x.invalide > 1 ? 's' : ''));
+        $('compte').innerHTML = '📨 <b>' + d.nb + ' destinataire' + (d.nb > 1 ? 's' : '') + '</b>' + (pas.length ? ' <small>(non comptés : ' + pas.join(', ') + ')</small>' : '') + (d.nb > 290 ? '<br><small style="color:#c62832">Au-delà de 300 par jour, l\'offre gratuite de Brevo bloque : coupe l\'envoi en plusieurs groupes.</small>' : '');
+      });
+    }, 250);
+  }
+  function liste(){
+    var f = $('cherche').value.trim().toLowerCase();
+    $('liste').innerHTML = D.membres.filter(function(m){ return !f || m.pseudo.toLowerCase().indexOf(f) >= 0; }).map(function(m){ return '<label style="display:block;padding:3px 0"><input type="checkbox" data-id="' + m.id + '"' + (coches[m.id] ? ' checked' : '') + ' style="width:auto"> ' + E(m.pseudo) + (m.ko ? ' <small style="color:#c62832">· en échec</small>' : '') + (m.invalide ? ' <small style="color:#c62832">· adresse invalide</small>' : '') + (!m.info ? ' <small>· pas d\'infos</small>' : '') + '</label>'; }).join('');
+    $('liste').querySelectorAll('input').forEach(function(c){ c.onchange = function(){ coches[c.getAttribute('data-id')] = c.checked; compter(); }; });
+  }
+  function charger(){
+    return fetch('/api/admin/mailing', {credentials:'same-origin', cache:'no-store'}).then(function(r){ if (!r.ok) throw 0; return r.json(); }).then(function(d){
+      D = d; $('zone').hidden = false;
+      $('etat').innerHTML = d.pret ? '✅ Service d\'envoi branché. Les e-mails partent de <b>' + E(d.expediteur) + '</b> ; les réponses arrivent sur n.turf.contact@gmail.com.' : '⏳ <b>Le service d\'envoi (Brevo) n\'est pas encore branché.</b> Tu peux préparer ton message ; l\'envoi marchera dès qu\'il sera branché.';
+      if (!$('grp').options.length) $('grp').innerHTML = d.groupes.map(function(g){ return '<option value="' + g.k + '">' + E(g.nom) + '</option>'; }).join('') + '<option value="choix">Choisir les membres un par un</option>';
+      liste(); compter();
+      $('histo').innerHTML = d.envois.length ? '<table class="st"><tr><th>Envoi</th><th>Résultat</th></tr>' + d.envois.map(function(e){ return '<tr><td><a href="#" class="ve" data-id="' + e.id + '"><b>' + E(e.sujet) + '</b></a><small>' + E(e.quand) + ' · ' + (e.categorie === 'info' ? 'information' : 'indispensable') + ' · ' + E(e.cible) + '</small></td><td>' + e.ok + ' envoyé' + (e.ok > 1 ? 's' : '') + ' sur ' + e.nb + (e.echecs ? '<br><small style="color:#c62832">' + e.echecs + ' échec' + (e.echecs > 1 ? 's' : '') + '</small>' : '') + (e.nonDistribues ? '<br><small style="color:#c62832">' + e.nonDistribues + ' non distribué' + (e.nonDistribues > 1 ? 's' : '') + '</small>' : '') + '</td></tr>'; }).join('') + '</table>' : '<p class="empty">Aucun envoi pour l\'instant.</p>';
+      document.querySelectorAll('.ve').forEach(function(a){ a.onclick = function(e){ e.preventDefault(); detail(+a.getAttribute('data-id')); }; });
+      var K = d.membres.filter(function(m){ return m.ko || m.invalide; });
+      $('echecs').innerHTML = K.length ? '<table class="st">' + K.map(function(m){ return '<tr><td><b>' + E(m.pseudo) + '</b><small>' + (m.invalide ? 'adresse mal écrite' : E(m.raison || 'en échec')) + '</small></td><td>' + (m.ko ? '<button type="button" class="btn ghost rk" data-id="' + m.id + '">Remettre</button>' : '') + '</td></tr>'; }).join('') + '</table>' : '<p class="empty">Aucune adresse en échec.</p>';
+      document.querySelectorAll('.rk').forEach(function(b){ b.onclick = function(){ post({ action: 'reinitKo', user: +b.getAttribute('data-id') }).then(charger); }; });
+    }).catch(function(){ $('refus').hidden = false; });
+  }
+  function detail(id){
+    fetch('/api/admin/mailing?envoi=' + id, {credentials:'same-origin', cache:'no-store'}).then(function(r){ return r.json(); }).then(function(d){
+      var L = d.destinataires || [], lib = { envoye: '✓ envoyé', echec: '✗ échec', 'non distribue': '✗ non distribué' };
+      $('detail').innerHTML = '<h3>« ' + E(d.envoi.sujet) + ' »</h3><p style="white-space:pre-wrap;font-size:14px;background:var(--navy2);border-radius:8px;padding:8px">' + E(d.envoi.corps) + '</p><table class="st">' + L.map(function(x){ return '<tr><td><b>' + E(x.pseudo || '?') + '</b></td><td>' + (lib[x.statut] || E(x.statut)) + (x.erreur ? '<small>' + E(x.erreur) + '</small>' : '') + '</td></tr>'; }).join('') + '</table>';
+      $('detail').scrollIntoView({behavior:'smooth'});
+    });
+  }
+  function aideCat(){ $('catAide').textContent = $('cat').value === 'info' ? 'Envoyé seulement aux membres qui acceptent les informations, avec un lien « Ne plus recevoir ces informations ».' : 'Envoyé à tous les membres visés, même ceux qui ne veulent pas d\'informations. À réserver au fonctionnement du compte.'; }
+  $('cat').onchange = function(){ aideCat(); compter(); }; aideCat();
+  $('grp').onchange = function(){ $('choix').hidden = this.value !== 'choix'; compter(); };
+  $('ko').onchange = compter; $('cherche').oninput = liste;
+  $('tout').onclick = function(){ D.membres.forEach(function(m){ coches[m.id] = true; }); liste(); compter(); };
+  $('rien').onclick = function(){ coches = {}; liste(); compter(); };
+  function lire(){ return { sujet: $('sujet').value.trim(), corps: $('corps').value.trim(), categorie: $('cat').value, cible: cible() }; }
+  $('bTest').onclick = function(){ var b = lire(); b.action = 'test'; msg('Envoi du test…', true); post(b).then(function(x){ msg(x.ok ? x.texte : x.erreur, x.ok); }); };
+  $('bGo').onclick = function(){
+    var b = lire(); b.action = 'envoyer';
+    if (!b.sujet || !b.corps) return msg('Il faut un objet et un message.');
+    if (!confirm('Envoyer « ' + b.sujet + ' » ? ' + $('compte').textContent)) return;
+    var bt = this; bt.disabled = true; msg('Envoi en cours…', true);
+    post(b).then(function(x){ bt.disabled = false; if (x.ok) { msg('✓ ' + x.envoyes + ' e-mail' + (x.envoyes > 1 ? 's' : '') + ' envoyé' + (x.envoyes > 1 ? 's' : '') + ' sur ' + x.nb + (x.echecs ? ' · ' + x.echecs + ' échec' + (x.echecs > 1 ? 's' : '') + ' (voir l\'historique)' : '') + '.', true); charger(); } else msg(x.erreur || 'Erreur.'); });
+  };
+  charger();
+})();
+</script>
+</body>
+</html>

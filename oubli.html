@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Identifiants oubliés – N-TURF</title>
+<meta name="theme-color" content="#0D1E3D">
+<link rel="manifest" href="/manifest.webmanifest?v=2">
+<link rel="icon" href="/icone-nturf-192.png">
+<link rel="stylesheet" href="/style.css?v=20261127a">
+</head>
+<body data-page="membres">
+<main>
+<h1>Retrouver mon compte</h1>
+<nav class="tabs inner" id="ong"><a href="#mdp" data-k="mdp" class="on">Mot de passe oublié</a><a href="#pseudo" data-k="pseudo">Pseudo oublié</a><a href="#aide" data-k="aide">Besoin d'aide</a></nav>
+<section class="card" id="s-mdp">
+<h2>Mot de passe oublié ?</h2>
+<p class="sub">Indique l'adresse e-mail de ton inscription. Tu vas recevoir un lien pour choisir un nouveau mot de passe, sans passer par l'administrateur. Le lien ne sert qu'une fois et n'est valable qu'une heure.</p>
+<form class="frm" data-quoi="mdp"><label>Adresse e-mail d'inscription<input type="email" autocomplete="email" required></label><button class="btn" type="submit">Recevoir le lien</button><p class="msg"></p></form>
+</section>
+<section class="card" id="s-pseudo" hidden>
+<h2>Pseudo oublié ?</h2>
+<p class="sub">Indique l'adresse e-mail de ton inscription : ton pseudo t'est envoyé à cette adresse. Tu peux aussi te connecter directement avec ton adresse e-mail à la place du pseudo.</p>
+<form class="frm" data-quoi="pseudo"><label>Adresse e-mail d'inscription<input type="email" autocomplete="email" required></label><button class="btn" type="submit">Recevoir mon pseudo</button><p class="msg"></p></form>
+</section>
+<section class="card" id="s-aide" hidden>
+<h2>Besoin d'aide pour te connecter ?</h2>
+<p>Tu as essayé, rien ne marche, ou tu n'as plus accès à ton adresse e-mail ? Écris-nous, on t'aide à retrouver ton compte.</p>
+<p>Pour aller vite, indique dans ton message : le pseudo que tu crois avoir, l'adresse e-mail que tu as peut-être utilisée, et ce qui bloque.</p>
+<p><a class="btn" href="mailto:n.turf.contact@gmail.com?subject=Probl%C3%A8me%20de%20connexion%20N-TURF&body=Pseudo%20(si%20je%20m'en%20souviens)%20%3A%20%0AAdresse%20e-mail%20utilis%C3%A9e%20%3A%20%0ACe%20qui%20bloque%20%3A%20">Écrire à N-TURF</a></p>
+<p class="note2">n.turf.contact@gmail.com · Pour ta sécurité, on ne te demandera jamais ton mot de passe.</p>
+</section>
+<p style="text-align:center"><a href="/inscription.html#connexion">← Retour à la connexion</a></p>
+</main>
+<script src="/site.js?v=20261127b"></script>
+<script>
+(function(){
+  function montrer(k){ document.querySelectorAll('#ong a').forEach(function(a){ a.classList.toggle('on', a.getAttribute('data-k') === k); }); ['mdp','pseudo','aide'].forEach(function(x){ document.getElementById('s-' + x).hidden = x !== k; }); }
+  document.querySelectorAll('#ong a').forEach(function(a){ a.onclick = function(e){ e.preventDefault(); history.replaceState(null, '', '#' + a.getAttribute('data-k')); montrer(a.getAttribute('data-k')); }; });
+  montrer(['pseudo','aide'].indexOf(location.hash.slice(1)) >= 0 ? location.hash.slice(1) : 'mdp');
+  document.querySelectorAll('form[data-quoi]').forEach(function(f){
+    f.onsubmit = function(e){ e.preventDefault(); var m = f.querySelector('.msg'), bt = f.querySelector('button'); bt.disabled = true; m.className = 'msg'; m.textContent = 'Un instant…';
+      fetch('/api/compte/oubli', {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({ quoi: f.getAttribute('data-quoi'), email: f.querySelector('input').value })})
+        .then(function(r){ return r.json(); }).then(function(d){ m.className = 'msg ' + (d.ok ? 'ok' : 'err'); m.textContent = d.ok ? d.texte : (d.erreur || 'Erreur.'); bt.disabled = false; })
+        .catch(function(){ m.className = 'msg err'; m.textContent = 'Connexion impossible, réessaie.'; bt.disabled = false; });
+    };
+  });
+})();
+</script>
+</body>
+</html>

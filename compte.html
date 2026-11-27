@@ -56,6 +56,14 @@
     <p class="msg" id="msgM"></p>
   </form>
 </section>
+<section class="card" id="cMail">
+  <h2>Mes e-mails</h2>
+  <p id="vEtat" class="sub"></p>
+  <p><button type="button" class="btn ghost" id="bVerif" hidden>M'envoyer le lien de confirmation</button></p>
+  <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="iInfo" style="width:auto"> Recevoir les messages d'information de N-TURF</label>
+  <p class="note2">Les messages indispensables à ton compte (mot de passe, sécurité) partent toujours, même si tu décoches cette case.</p>
+  <p class="msg" id="msgI"></p>
+</section>
 <section class="card">
   <h2>Changer mon e-mail</h2>
   <form id="fMail" class="frm">
@@ -109,6 +117,8 @@
     if (!d) return;
     $('zone').hidden = false;
     $('pPseudo').textContent = d.pseudo; $('pEmail').textContent = d.email;
+    $('vEtat').innerHTML = d.emailVerifie ? '✓ Ton adresse <b>' + E(d.email) + '</b> est confirmée.' : 'Ton adresse <b>' + E(d.email) + '</b> n\'est pas encore confirmée.';
+    $('bVerif').hidden = d.emailVerifie || !d.mailPret; $('iInfo').checked = d.infoOk;
     $('pDate').textContent = new Date(String(d.inscrit).replace(' ', 'T') + 'Z').toLocaleDateString('fr-FR');
     var h = '';
     if (d.mois) {
@@ -125,7 +135,9 @@
   $('fFiche').onsubmit = function(e){ e.preventDefault(); envoyer('/api/social/fiche', {region: $('fR').value, depuis: $('fD').value, jeux: $('fJ').value, bio: $('fB').value}, 'msgF', '✓ Fiche enregistrée.'); };
   $('mVoir').onchange = function(){ $('mA').type = $('mN').type = this.checked ? 'text' : 'password'; };
   $('fMdp').onsubmit = function(e){ e.preventDefault(); envoyer('/api/compte/motdepasse', {actuel: $('mA').value, nouveau: $('mN').value}, 'msgM', '✓ Mot de passe changé.').then(function(d){ if (d) { $('mA').value = ''; $('mN').value = ''; } }); };
-  $('fMail').onsubmit = function(e){ e.preventDefault(); envoyer('/api/compte/email', {actuel: $('eA').value, email: $('eN').value}, 'msgE', '✓ E-mail changé.').then(function(d){ if (d) { $('pEmail').textContent = d.email; $('eA').value = ''; $('eN').value = ''; } }); };
+  $('fMail').onsubmit = function(e){ e.preventDefault(); envoyer('/api/compte/email', {actuel: $('eA').value, email: $('eN').value}, 'msgE', '✓ E-mail changé.').then(function(d){ if (d) { if (d.attente) $('msgE').textContent = '✉ ' + d.texte; else $('pEmail').textContent = d.email; $('eA').value = ''; $('eN').value = ''; } }); };
+  $('bVerif').onclick = function(){ envoyer('/api/compte/verifier', {renvoyer: true}, 'msgI', '✓ Lien envoyé : regarde ta boîte (et les courriers indésirables).'); };
+  $('iInfo').onchange = function(){ envoyer('/api/compte/preferences', {info: this.checked}, 'msgI', this.checked ? '✓ Tu recevras les messages d\'information.' : '✓ Plus de messages d\'information.'); };
   $('fSup').onsubmit = function(e){ e.preventDefault(); envoyer('/api/compte/supprimer', {actuel: $('sA').value}, 'msgS', 'Compte supprimé. Au revoir !').then(function(d){ if (d) setTimeout(function(){ location.href = '/'; }, 1500); }); };
 })();
 </script>

@@ -1,4 +1,5 @@
 import { json, initDb, hashPassword, createSession, noDb } from '../_auth.js';
+import { initMail, envoyerVerification, mailPret } from '../_mail.js';
 
 export async function onRequestPost({ request, env }) {
   if (!env.DB) return noDb();
@@ -34,6 +35,8 @@ export async function onRequestPost({ request, env }) {
   } catch {
     return json({ erreur: 'Ce pseudo ou cet e-mail est déjà utilisé.' }, 409);
   }
+  // vérification de l'adresse : un lien est envoyé (le compte fonctionne tout de suite, la confirmation se fait quand il veut)
+  if (mailPret(env)) { try { await initMail(db); await envoyerVerification(env, db, { id: res.meta.last_row_id, pseudo, email }); } catch (e) {} }
   const cookie = await createSession(db, res.meta.last_row_id);
   return json({ ok: true, pseudo, role }, 200, { 'set-cookie': cookie });
 }

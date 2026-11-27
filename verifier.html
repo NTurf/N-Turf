@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Confirmation d'adresse – N-TURF</title>
+<meta name="theme-color" content="#0D1E3D">
+<link rel="manifest" href="/manifest.webmanifest?v=2">
+<link rel="icon" href="/icone-nturf-192.png">
+<link rel="stylesheet" href="/style.css?v=20261127a">
+</head>
+<body data-page="membres">
+<main>
+<h1>Confirmation de ton adresse e-mail</h1>
+<section class="card"><p class="msg" id="m">Un instant…</p><p><a href="/compte.html">Mon compte</a> · <a href="/">Accueil</a></p></section>
+</main>
+<script src="/site.js?v=20261127b"></script>
+<script>
+(function(){
+  var h = location.hash, t = (h.match(/[te]=([0-9a-f]{64})/) || [])[1], quoi = /e=/.test(h) ? 'email' : 'verif', m = document.getElementById('m');
+  if (!t) { m.className = 'msg err'; m.textContent = 'Lien incomplet.'; return; }
+  fetch('/api/compte/verifier', {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({ t: t, quoi: quoi })})
+    .then(function(r){ return r.json(); }).then(function(d){ history.replaceState(null, '', location.pathname); m.className = 'msg ' + (d.ok ? 'ok' : 'err'); m.textContent = d.ok ? '✓ ' + d.texte : (d.erreur || 'Erreur.'); });
+})();
+</script>
+</body>
+</html>

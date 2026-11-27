@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Nouveau mot de passe – N-TURF</title>
+<meta name="theme-color" content="#0D1E3D">
+<link rel="manifest" href="/manifest.webmanifest?v=2">
+<link rel="icon" href="/icone-nturf-192.png">
+<link rel="stylesheet" href="/style.css?v=20261127a">
+</head>
+<body data-page="membres">
+<main>
+<h1>Nouveau mot de passe</h1>
+<section class="card">
+<form class="frm" id="f"><label>Nouveau mot de passe (8 caractères au moins)<input type="password" id="p1" autocomplete="new-password" required minlength="8"></label>
+<label>Encore une fois<input type="password" id="p2" autocomplete="new-password" required minlength="8"></label>
+<label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="voir" style="width:auto"> Afficher</label>
+<button class="btn" type="submit">Enregistrer</button><p class="msg" id="m"></p></form>
+</section>
+</main>
+<script src="/site.js?v=20261127b"></script>
+<script>
+(function(){
+  var t = (location.hash.match(/t=([0-9a-f]{64})/) || [])[1], m = document.getElementById('m');
+  if (!t) { m.className = 'msg err'; m.innerHTML = 'Lien incomplet. <a href="/oubli.html">Refais une demande</a>.'; }
+  document.getElementById('voir').onchange = function(){ document.getElementById('p1').type = document.getElementById('p2').type = this.checked ? 'text' : 'password'; };
+  document.getElementById('f').onsubmit = function(e){
+    e.preventDefault();
+    if (document.getElementById('p1').value !== document.getElementById('p2').value) { m.className = 'msg err'; m.textContent = 'Les deux mots de passe ne sont pas pareils.'; return; }
+    fetch('/api/compte/reinit', {method:'POST', credentials:'same-origin', headers:{'content-type':'application/json'}, body: JSON.stringify({ t: t, password: document.getElementById('p1').value })})
+      .then(function(r){ return r.json(); }).then(function(d){
+        if (d.ok) { history.replaceState(null, '', location.pathname); m.className = 'msg ok'; m.innerHTML = '✓ Mot de passe changé, tu es connecté' + (d.pseudo ? ' (' + d.pseudo.replace(/[<>&"]/g, '') + ')' : '') + '. <a href="/membres.html">Aller à l\'espace membres</a>'; document.getElementById('f').querySelector('button').disabled = true; }
+        else { m.className = 'msg err'; m.innerHTML = (d.erreur || 'Erreur.') + ' <a href="/oubli.html">Nouvelle demande</a>'; }
+      });
+  };
+})();
+</script>
+</body>
+</html>
