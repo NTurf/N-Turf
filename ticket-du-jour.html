@@ -76,7 +76,7 @@
 </div>
 </main>
 <script src="/site.js?v=20261127c"></script>
-<script src="/tickets.js?v=20261127n"></script>
+<script src="/tickets.js?v=20261127p"></script>
 <script>
 (function(){
   var $ = function(i){ return document.getElementById(i); };
@@ -284,7 +284,7 @@
         h += '<div class="card" style="margin:8px 0"><h3>' + E(x.signature) + '</h3>';
         var k2 = x.coeurs; if (k2 && k2.n) { var nk = k2.gains - k2.mises; h += '<p><b>❤ Coups de cœur : ' + k2.n + '</b><br>Gagnants : ' + k2.gagnants + ' · placés : ' + k2.places + ' · 1 € gagnant + 1 € placé : mises ' + EUR(k2.mises) + ' · rapports ' + EUR(k2.gains) + ' · net <b class="' + (nk >= 0 ? 'pos' : 'neg') + '">' + (nk >= 0 ? '+' : '−') + EUR(Math.abs(nk)) + '</b></p>'; }
         if (n) h += '<p><b>Pronostics : ' + n + '</b><br>1er cité gagnant : ' + x.gagnant + ' sur ' + n + ' · 1er cité placé : ' + x.place + ' sur ' + n + '<br>Gagnant présent dans la sélection : ' + x.gagnantCite + ' sur ' + n + '<br>Les 3 premiers dans la sélection : ' + x.trio + ' fois · les 4 premiers : ' + x.multi + ' fois · les 5 premiers : ' + x.quinte + ' fois</p>';
-        var tq = x.ticketsQuinte; if (tq && tq.n) { var nq = tq.gains - tq.mises; h += '<p><b>🎟️ Tickets du Quinté+ (fichier N-TURF) : ' + tq.n + ' sur ' + tq.jours + ' Quinté+</b><br>Gagnants : ' + tq.gagnants + ' sur ' + tq.n + ' · Mises : ' + EUR(tq.mises) + ' · Rapports : ' + EUR(tq.gains) + ' · Net : <b class="' + (nq >= 0 ? 'pos' : 'neg') + '">' + (nq >= 0 ? '+' : '−') + EUR(Math.abs(nq)) + '</b></p>'; }
+        var tq = x.ticketsQuinte; if (tq && tq.n) { var nq = tq.gains - tq.mises; h += '<p><b>🎟️ Tickets du Quinté+ (fichier N-TURF) : ' + tq.n + ' sur ' + tq.jours + ' Quinté+</b>' + (tq.incomplet ? ' <small style="color:#b06000">⚠ un Quinté+ attend encore un rapport, bilan provisoire</small>' : '') + '<br>Gagnants : ' + tq.gagnants + ' sur ' + tq.n + ' · Mises : ' + EUR(tq.mises) + ' · Rapports : ' + EUR(tq.gains) + ' · Net : <b class="' + (nq >= 0 ? 'pos' : 'neg') + '">' + (nq >= 0 ? '+' : '−') + EUR(Math.abs(nq)) + '</b></p>'; }
         [['reel', 'Tickets joués réellement'], ['theorique', 'Tickets non joués (simulation, pas des gains encaissés)']].forEach(function(k){
           var t = x.tickets[k[0]]; if (!t.n) return; var net = t.gains - t.mises;
           h += '<p><b>' + k[1] + ' : ' + t.n + '</b><br>Gagnants : ' + t.gagnants + ' sur ' + t.n + ' · Mises : ' + EUR(t.mises) + ' · Rapports : ' + EUR(t.gains) + ' · Net : <b class="' + (net >= 0 ? 'pos' : 'neg') + '">' + (net >= 0 ? '+' : '−') + EUR(Math.abs(net)) + '</b></p>';

@@ -15,6 +15,7 @@
 <h1>Administration</h1>
 <div id="refus" class="note" hidden>Cette page est réservée à l'administrateur. <a href="/inscription.html#connexion">Se connecter</a></div>
 <div id="zone" hidden>
+<section class="card" id="cCtrl"><h2>🔎 Contre-contrôle des tickets</h2><p style="color:var(--soft)">Pour chaque Quinté+ : rapports reçus du PMU, rapports lus par le site, et alerte si une combinaison gagnante n'a pas trouvé son rapport.</p><div id="ctrl"><p class="empty">Chargement…</p></div></section>
 <section class="card"><h2>📰 Ticket du jour</h2><p style="color:var(--soft)">Qui peut publier (Hippodrome, modérateurs…), sous quel nom, et quels tickets. Publications supprimées.</p><p><a class="btn" href="/admin-td.html">Gérer les contributeurs</a></p></section>
 <section class="card" id="cBal" hidden><h2>🔒 La Balançoire</h2><p style="color:var(--soft)">Espace privé de l'équipe : jeux du jour, cagnottes, joueurs (onglet Gestion).</p><p><a class="btn" href="/balancoire">Ouvrir La Balançoire</a></p></section>
 <section class="card" id="cConcours" hidden><h2>Joueurs du concours</h2><p style="color:var(--soft)">Qui a joué le Quinté+ du jour et avec quels chevaux, même avant la course. Visible de toi seul.</p><p><a class="btn" href="/admin-concours.html">Voir les joueurs</a></p></section>
@@ -52,6 +53,25 @@
 <script src="/site.js?v=20261127c"></script>
 <script src="/vendor/xlsx.full.min.js"></script>
 <script src="/quinte.js?v=20261127d"></script>
+<script>
+(function(){
+  var E = function(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); };
+  var EUR = function(v){ return (Math.round((v || 0) * 100) / 100).toFixed(2).replace('.', ',') + ' €'; };
+  fetch('/api/admin/controle', {credentials:'same-origin', cache:'no-store'}).then(function(r){ if (!r.ok) throw 0; return r.json(); }).then(function(d){
+    var J = d.jours || [], mal = J.filter(function(j){ return j.manque.length; });
+    var h = mal.length ? '<p class="msg err" style="font-weight:800">⚠ ' + mal.length + ' Quinté+ avec une combinaison gagnante sans rapport : ' + mal.map(function(j){ return j.date.split('-').reverse().join('/'); }).join(', ') + '</p>' : (J.length ? '<p class="msg ok">✓ Tous les tickets calculés ont trouvé leurs rapports.</p>' : '<p class="empty">Aucun ticket du Quinté+ calculé pour l\'instant.</p>');
+    h += J.map(function(j){
+      var M = j.tickets.reduce(function(s, t){ return s + t.mise; }, 0), G = j.tickets.reduce(function(s, t){ return s + t.gagne; }, 0);
+      return '<details style="margin:6px 0"><summary><b>' + j.date.split('-').reverse().join('/') + '</b> · arrivée ' + j.arrivee.join('-') + ' · misé ' + EUR(M) + ' · rapporté ' + EUR(G) + (j.manque.length ? ' <b style="color:#c62832">⚠ incomplet</b>' : j.final ? ' ✓' : ' (en cours)') + '</summary>' +
+        (j.manque.length ? '<p style="color:#c62832"><b>Sans rapport :</b><br>' + j.manque.map(E).join('<br>') + '</p>' : '') +
+        '<p><b>Tickets :</b><br>' + j.tickets.map(function(t){ return E(t.auteur) + ' · ' + E(t.pari) + ' : misé ' + EUR(t.mise) + ', rapporté ' + EUR(t.gagne) + (t.detail.length ? ' <small>(' + t.detail.map(E).join(' · ') + ')</small>' : ''); }).join('<br>') + '</p>' +
+        '<p><b>Rapports lus par le site :</b><br><small>' + (j.lus.map(E).join(' · ') || '—') + '</small></p>' +
+        '<p><b>Rapports reçus du PMU :</b><br><small>' + (j.bruts.map(E).join('<br>') || '—') + '</small></p></details>';
+    }).join('');
+    document.getElementById('ctrl').innerHTML = h;
+  }).catch(function(){ document.getElementById('cCtrl').hidden = true; });
+})();
+</script>
 <script>
 var donnees = null, typeF = null;
 NTURF_MOI.then(function(m){

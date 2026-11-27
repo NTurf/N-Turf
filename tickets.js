@@ -173,14 +173,16 @@ var NTT = (function(){
       if (gagne !== null) {
         h += '<div class="tkb"><span>Gagné'+(t.gainManuel!==undefined && t.gainManuel!==null && t.gainManuel!=='' ? ' (saisi)' : '')+'</span><b class="'+(gagne>0?'pos':'')+'">'+eur(gagne)+'</b></div>';
         if (g && g.detail.length && (t.gainManuel === undefined || t.gainManuel === null || t.gainManuel === '')) h += '<p class="assoc">'+g.detail.map(esc).join(' · ')+'</p>';
-        h += '<div class="tkb"><span>Net</span><b class="'+(gagne-c>=0?'pos':'neg')+'">'+(gagne-c>=0?'+':'−')+eur(Math.abs(gagne-c))+'</b></div>';
+        // contre-contrôle : une combinaison gagnante dont le rapport manque n'est jamais comptée comme perdue
+        if (g && g.attente) h += '<p class="assoc" style="color:#b06000;font-weight:700">⚠ Combinaison gagnante dont le rapport n\'est pas encore lu : le net sera juste dès qu\'il le sera.</p><div class="tkb"><span>Net</span><b style="color:#b06000">en attente</b></div>';
+        else h += '<div class="tkb"><span>Net</span><b class="'+(gagne-c>=0?'pos':'neg')+'">'+(gagne-c>=0?'+':'−')+eur(Math.abs(gagne-c))+'</b></div>';
       }
       h += '</div>';
     });
     h += '<div class="bilan"><div class="tot"><b>Mise totale</b><b>'+eur(totM)+'</b></div>';
     if (fini) {
-      h += '<div><span>Gagné</span><span class="'+(totG>0?'pos':'')+'">'+eur(totG)+'</span></div><div><span>Net</span><span class="'+(totG-totM>=0?'pos':'neg')+'">'+(totG-totM>=0?'+':'−')+eur(Math.abs(totG-totM))+'</span></div>';
-      if (attente) h += '<p class="note2">Certains rapports ne sont pas encore publiés : le gagné sera complété dès leur sortie.</p>';
+      h += '<div><span>Gagné'+(attente?' (au moins)':'')+'</span><span class="'+(totG>0?'pos':'')+'">'+eur(totG)+'</span></div>' + (attente ? '<div><span>Net</span><span style="color:#b06000;font-weight:800">en attente</span></div>' : '<div><span>Net</span><span class="'+(totG-totM>=0?'pos':'neg')+'">'+(totG-totM>=0?'+':'−')+eur(Math.abs(totG-totM))+'</span></div>');
+      if (attente) h += '<p class="note2" style="color:#b06000">⚠ Au moins une combinaison gagnante attend son rapport : le net n\'est pas affiché tant qu\'il n\'est pas complet (jamais compté perdant à tort).</p>';
     } else h += '<p class="note2">Gagné et net s\'afficheront après l\'arrivée.</p>';
     h += '</div>';
     return h;

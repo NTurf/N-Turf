@@ -156,7 +156,11 @@ export async function ticketsQuinte(db) {
           const manuel = t.gainManuel !== undefined && t.gainManuel !== null && t.gainManuel !== '';
           return { auteur: t.auteur || 'N-TURF', pari: t.pari, mise: r2(NTT.cout(t, partants)), gagne: r2(manuel ? parseFloat(t.gainManuel) || 0 : (g ? g.gagne : 0)), detail: g ? g.detail : [] };
         });
-        r = { final: !attente, date: iso, arrivee: arr.slice(0, 5), tickets: tk };
+        r = { final: !attente, date: iso, arrivee: arr.slice(0, 5), tickets: tk,
+          // pour le contre-contrôle : les rapports lus et les combinaisons gagnantes sans rapport
+          manque: tk.flatMap((x) => (x.detail || []).filter((l) => /en attente/.test(l)).map((l) => x.pari + ' : ' + l)),
+          lus: raps.filter((x) => /Tiercé|Quarté|Quinté/.test(x.nom)).map((x) => x.nom + ' ' + String(x.euros).replace('.', ',') + ' €'),
+          bruts: blocs.filter((b) => ['TIERCE', 'QUARTE_PLUS', 'QUINTE_PLUS'].includes(b.typePari)).flatMap((b) => (b.rapports || []).map((x) => b.typePari + ' « ' + (x.libelle || '') + ' » ' + (x.combinaison || '') + ' : ' + (Number(x.dividendePourUnEuro) / 100) + ' €')) };
         if (r.final) await ecrireContenu(db, 'tdq-' + iso, r);
       } catch (e) { continue; }
     }
@@ -195,6 +199,7 @@ export async function statsContributeurs(db) {
     const k = /bruno/i.test(t.auteur) && adm ? adm.user_id : 'f-' + t.auteur;
     const x = S.get(k) || vide(/bruno/i.test(t.auteur) && adm ? adm.signature : t.auteur);
     const q = x.ticketsQuinte || (x.ticketsQuinte = { n: 0, gagnants: 0, mises: 0, gains: 0, jours: new Set() });
+    if (!jour.final) q.incomplet = true;
     q.n++; q.mises = r2(q.mises + t.mise); q.gains = r2(q.gains + t.gagne); if (t.gagne > 0) q.gagnants++; q.jours.add(jour.date);
     S.set(k, x);
   }
