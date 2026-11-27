@@ -15,10 +15,9 @@
 <h1>Études</h1>
 <div id="refus" class="note" hidden>🔒 Réservé aux membres. <a href="/inscription.html">S'inscrire gratuitement</a> ou <a href="/inscription.html#connexion">se connecter</a>.</div>
 <div id="zone" hidden>
-<nav class="tabs" style="padding:0 0 10px"><a href="#etquinte" data-g="etquinte" class="on">Études Quinté+</a><a href="#etr1" data-g="etr1">Études Réunion 1</a><a href="#etout" data-g="etout">Études outsiders</a><a href="#ettrot" data-g="ettrot">Études trotteurs</a></nav>
+<nav class="tabs" style="padding:0 0 10px"><a href="#etquinte" data-g="etquinte" class="on">Étude Quinté+</a><a href="#etout" data-g="etout">Outsiders</a><a href="#ettrot" data-g="ettrot">Trotteurs</a></nav>
 <p class="lead" id="titre"></p>
 <div id="pages"></div>
-<p class="note2">Touche une étude pour l'agrandir.</p>
 </div>
 </main>
 <div id="lb" hidden><img alt=""></div>
@@ -61,6 +60,48 @@ function trot(el, h){
     }).join('');
   }).catch(function(){ document.getElementById('trotZone').innerHTML = '<p class="empty">Données PMU indisponibles pour le moment.</p>'; });
 }
+var E2 = function(x){ return String(x == null ? '' : x).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); };
+var eur = function(v){ return (Math.round(v * 100) / 100).toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' €'; };
+function etQuinte(el){
+  el.innerHTML = '<p class="empty">Calcul en cours…</p>';
+  fetch('/api/membres/etude-quinte', {credentials:'same-origin'}).then(function(r){ return r.json(); }).then(function(d){
+    if (d.erreur) { el.innerHTML = '<p class="empty">' + E2(d.erreur) + '</p>'; return; }
+    if (d.vide) { el.innerHTML = '<p class="empty">L\'étude arrive dès que le Quinté+ du jour est publié.</p>'; return; }
+    var arr = d.arrivee || [];
+    var h = '<p class="lead"><b>' + E2(d.libelle) + '</b> · ' + E2(d.hippodrome) + ' · ' + E2(d.date) + ' · ' + d.partants + ' partants</p>';
+    h += '<p class="note2">Calculée automatiquement : chaque cheval avec son rang dans chaque liste N-TURF' + (d.trot ? ' et dans la formule du membre (trot)' : '') + ', et sa cote PMU. <b>Citations</b> = nombre de listes où il figure dans les 8 premiers. Les chevaux sont classés du plus cité au moins cité. 🎯 = outsider coté de 6 à 10.</p>';
+    if (arr.length) h += '<div class="arrivee"><b>Arrivée</b> ' + arr.map(function(n){ return '<span class="ch hit">' + n + '</span>'; }).join('') + '</div>';
+    h += '<div style="overflow-x:auto"><table class="st" style="font-size:14px"><tr><th>N°</th><th>Cheval</th><th>Cote</th>' + d.listes.map(function(l){ return '<th>' + E2(l) + '</th>'; }).join('') + '<th>Citations</th></tr>';
+    h += d.lignes.map(function(x){
+      var on = arr.indexOf(x.n) >= 0, st = on ? ' style="color:#c62832;font-weight:800"' : '';
+      return '<tr><td' + st + '><b>' + x.n + '</b></td><td' + st + '>' + E2(x.nom) + (x.outsider ? ' 🎯' : '') + '</td><td>' + (x.cote || '–') + '</td>' + x.rangs.map(function(r){ return '<td style="text-align:center">' + (r && r <= 8 ? '<b>' + r + '</b>' : (r ? '<small>' + r + '</small>' : '–')) + '</td>'; }).join('') + '<td style="text-align:center"><b>' + x.cite + '</b> / ' + d.listes.length + '</td></tr>';
+    }).join('') + '</table></div>';
+    el.innerHTML = h;
+  }).catch(function(){ el.innerHTML = '<p class="empty">Données PMU indisponibles pour le moment.</p>'; });
+}
+var OJ = 0;
+function etOut(el){
+  el.innerHTML = '<div class="pills" style="margin:6px 0 10px"><button type="button" class="pill'+(OJ===0?' on':'')+'" data-j="0">Aujourd\'hui ('+jourFr(0)+')</button><button type="button" class="pill'+(OJ===1?' on':'')+'" data-j="1">Demain ('+jourFr(1)+')</button></div><p class="note2">Calculée automatiquement : sur les réunions publiées en course par course et sur le Quinté+, les chevaux cotés de 6 à 10 au PMU. Bilan joué à 1 € gagnant + 1 € placé sur chacun, avec les rapports officiels du PMU. Les cotes bougent jusqu\'au départ.</p><div id="outZone"><p class="empty">Calcul en cours…</p></div>';
+  el.querySelectorAll('[data-j]').forEach(function(b){ b.onclick = function(){ OJ = +b.getAttribute('data-j'); etOut(el); }; });
+  fetch('/api/membres/outsiders?date=' + encodeURIComponent(jourFr(OJ)), {credentials:'same-origin'}).then(function(r){ return r.json(); }).then(function(d){
+    var z = document.getElementById('outZone');
+    if (d.erreur) { z.innerHTML = '<p class="empty">' + E2(d.erreur) + '</p>'; return; }
+    if (!d.reunions.length) { z.innerHTML = '<p class="empty">' + (OJ === 1 ? 'Les outsiders de demain apparaissent quand les réunions sont publiées et les cotes ouvertes.' : 'Pas encore d\'outsider : les réunions ne sont pas publiées ou les cotes pas encore ouvertes.') + '</p>'; return; }
+    var b = d.bilan, h = '';
+    if (b.joues) h += '<section class="card" style="padding:12px 14px"><b>Bilan du jour</b> : ' + b.joues + ' outsider' + (b.joues > 1 ? 's' : '') + ' joué' + (b.joues > 1 ? 's' : '') + ' · ' + b.gagnants + ' gagnant' + (b.gagnants > 1 ? 's' : '') + ' · ' + b.places + ' placé' + (b.places > 1 ? 's' : '') + '<br>Mise ' + eur(b.mise) + ' · retour ' + eur(b.retour) + ' · net <b style="color:' + (b.net >= 0 ? '#1e8e3e' : '#c62832') + '">' + (b.net > 0 ? '+' : '') + eur(b.net) + '</b></section>';
+    h += d.reunions.map(function(r){
+      return '<h2 style="margin:18px 0 6px">' + E2(r.h) + '</h2>' + r.courses.map(function(c){
+        return '<section class="card" style="padding:10px 14px;margin:8px 0"><h3 style="margin:0 0 4px">C' + c.c + (c.quinte ? ' · Quinté+' : '') + ' – ' + E2(c.nom) + '</h3><p class="note2" style="margin:0 0 6px">' + c.partants + ' partants' + (c.heure ? ' · ' + new Date(c.heure).toLocaleTimeString('fr-FR', {timeZone:'Europe/Paris', hour:'2-digit', minute:'2-digit'}) : '') + '</p>' +
+          c.chevaux.map(function(x){
+            var res = '';
+            if (c.fini) res = x.gagne ? ' → <b style="color:#c62832">gagnant</b> (' + eur(x.gagne) + ' + ' + eur(x.place) + ')' : (x.place ? ' → <b style="color:#c62832">placé ' + x.rang + 'e</b> (' + eur(x.place) + ')' : ' → ' + (x.rang ? x.rang + 'e' : 'non placé'));
+            return '<p style="margin:3px 0"><b>' + x.n + '</b> ' + E2(x.nom) + ' · cote ' + x.cote + res + '</p>';
+          }).join('') + (c.arrivee.length ? '<div class="arrivee"><b>Arrivée</b> ' + c.arrivee.map(function(n){ return '<span class="ch' + (c.chevaux.some(function(x){ return x.n === n; }) ? ' hit' : '') + '">' + n + '</span>'; }).join('') + '</div>' : '') + '</section>';
+      }).join('');
+    }).join('');
+    z.innerHTML = h;
+  }).catch(function(){ document.getElementById('outZone').innerHTML = '<p class="empty">Données PMU indisponibles pour le moment.</p>'; });
+}
 var vv = function(h){ return h && h.v ? parseInt(h.v, 36) || 0 : 0; };
 fetch('/api/membres/etudes', {credentials:'same-origin'})
   .then(function(r){ return r.ok ? r.json() : Promise.reject(); })
@@ -85,7 +126,9 @@ fetch('/api/membres/etudes', {credentials:'same-origin'})
       document.querySelectorAll('nav.tabs a[data-g]').forEach(function(a){ a.className = a.getAttribute('data-g') === g ? 'on' : ''; });
       var h = d[g];
       document.getElementById('titre').textContent = h && h.titre || '';
-      if (g === 'ettrot') { el.innerHTML = (h && h.n ? '' : '') ; trot(el, h); return; }
+      if (g === 'ettrot') { document.getElementById('titre').textContent = ''; trot(el, null); return; }
+      if (g === 'etquinte') { document.getElementById('titre').textContent = ''; etQuinte(el); return; }
+      if (g === 'etout') { document.getElementById('titre').textContent = ''; etOut(el); return; }
       if (!h || !h.n) { el.innerHTML = '<p class="empty">L\'étude du jour arrive.</p>'; return; }
       var t = ''; for (var i = 0; i < h.n; i++) t += '<img class="hpage" loading="lazy" src="'+(h.depot ? '/etudes-img/'+g+'-'+(i+1)+'.jpg?v='+encodeURIComponent(h.v) : '/api/membres/hippo-image?g='+g+'&i='+i+'&v='+encodeURIComponent(h.v||''))+'" alt="Étude '+(i+1)+'">';
       el.innerHTML = t;
@@ -93,7 +136,7 @@ fetch('/api/membres/etudes', {credentials:'same-origin'})
     }
     lb.onclick = function(){ lb.hidden = true; };
     document.querySelectorAll('nav.tabs a[data-g]').forEach(function(a){ a.onclick = function(e){ e.preventDefault(); montrer(a.getAttribute('data-g')); history.replaceState(null, '', '#' + a.getAttribute('data-g')); }; });
-    var hh = location.hash.slice(1); montrer(['etr1','etout','ettrot'].indexOf(hh) >= 0 ? hh : 'etquinte');
+    var hh = location.hash.slice(1); montrer(['etout','ettrot'].indexOf(hh) >= 0 ? hh : 'etquinte');
   }).catch(function(){ document.getElementById('refus').hidden = false; });
 </script>
 </body>
