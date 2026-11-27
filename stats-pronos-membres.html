@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Statistiques des Pronos des membres – N-TURF</title>
+<meta name="theme-color" content="#0D1E3D">
+<link rel="manifest" href="/manifest.webmanifest?v=2">
+<link rel="icon" href="/icone-nturf-192.png">
+<link rel="stylesheet" href="/style.css?v=20261127a">
+<style>
+.pos{color:#157a3a;font-weight:800}.neg{color:#c62832;font-weight:800}
+.kpi{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:10px 0}
+.kpi div{background:var(--navy2);border-radius:10px;padding:8px 10px}
+.kpi small{display:block;color:var(--mute);font-size:12px}
+.kpi b{font-size:18px}
+.wrap{overflow-x:auto}
+table.st td small{display:block;color:var(--mute)}
+.courbe{width:100%;height:120px;display:block;background:#fff;border:1px solid var(--line);border-radius:10px}
+.fictif{background:#FFF6DC;border:1px solid #f0be3c;border-radius:10px;padding:7px 10px;font-size:13px;margin:8px 0}
+select.big{font-size:16px;padding:9px;border-radius:10px;border:1.5px solid var(--line);width:100%}
+</style>
+</head>
+<body data-page="membres">
+<main>
+<h1>Statistiques des Pronos des membres</h1>
+<p><a href="/pronos-membres.html">← Retour aux Pronos des membres</a></p>
+<div id="refus" class="note" hidden>🔒 Réservé aux membres. <a href="/inscription.html">S'inscrire gratuitement</a> ou <a href="/inscription.html#connexion">se connecter</a>.</div>
+<div id="zone" hidden>
+<p class="fictif">🧲 <b>Mise fictive de 1 € par pari.</b> Les gains sont calculés avec les vrais rapports officiels du PMU : ce sont des simulations, pas des gains réellement encaissés.</p>
+<p class="note2">Seuls comptent les pronos donnés avant la course et vérifiés avec les rapports définitifs. Le nombre de pronos est toujours indiqué : de bons résultats sur 5 courses ne valent pas des résultats réguliers sur 100.</p>
+<div class="note" id="verrou" hidden></div>
+<nav class="tabs inner" id="ong"><a href="#" data-k="fiche" class="on">Fiche d'un membre</a><a href="#" data-k="comp">Tableau comparatif</a><a href="#" data-k="spec">Par spécialité</a></nav>
+<section id="s-fiche"><select class="big" id="qui"></select><div id="rFiche"></div></section>
+<section id="s-comp" hidden><div class="card" id="rComp"></div></section>
+<section id="s-spec" hidden><div id="rSpec"></div></section>
+</div>
+</main>
+<script src="/site.js?v=20261127b"></script>
+<script>
+(function(){
+  var $ = function(i){ return document.getElementById(i); };
+  var E = function(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); };
+  var EUR = function(v){ var x = Math.round((v || 0) * 100) / 100; return (x % 1 ? x.toFixed(2).replace('.', ',') : String(x)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' €'; };
+  var NET = function(x){ return '<span class="' + (x >= 0 ? 'pos' : 'neg') + '">' + (x >= 0 ? '+' : '−') + EUR(Math.abs(x)) + '</span>'; };
+  var REND = function(g, m){ return m ? Math.round(g / m * 100) + ' € rendus pour 100 € misés' : '–'; };
+  var fr = function(iso){ return iso.split('-').reverse().join('/'); };
+  var MOIS = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+  var S = null;
+  function courbe(c){
+    if (c.length < 2) return '<p class="empty">La courbe apparaîtra après 2 jours de pronos.</p>';
+    var W = 600, Hh = 120, P = 8, v = c.map(function(x){ return x.net; }), mn = Math.min(0, Math.min.apply(null, v)), mx = Math.max(0, Math.max.apply(null, v)), sp = (mx - mn) || 1;
+    var X = function(i){ return P + i * (W - 2 * P) / (c.length - 1); }, Y = function(y){ return Hh - P - (y - mn) * (Hh - 2 * P) / sp; };
+    return '<svg class="courbe" viewBox="0 0 ' + W + ' ' + Hh + '" preserveAspectRatio="none"><line x1="0" x2="' + W + '" y1="' + Y(0) + '" y2="' + Y(0) + '" stroke="#9aa8c0" stroke-dasharray="4 4"/><polyline fill="none" stroke="' + (v[v.length - 1] >= 0 ? '#157a3a' : '#c62832') + '" stroke-width="2.5" points="' + c.map(function(x, i){ return X(i).toFixed(1) + ',' + Y(x.net).toFixed(1); }).join(' ') + '"/></svg><p class="note2">Bilan net cumulé, jour après jour (pointillé = zéro), du ' + fr(c[0].date) + ' au ' + fr(c[c.length - 1].date) + '.</p>';
+  }
+  function fiche(p){
+    var x = S.membres.find(function(m){ return m.pseudo === p; });
+    if (!x) { $('rFiche').innerHTML = '<p class="empty">Pas encore de prono vérifié.</p>'; return; }
+    var h = '<div class="card"><h2>' + E(x.pseudo) + '</h2><p class="sub">' + x.pronos + ' prono' + (x.pronos > 1 ? 's' : '') + ' vérifié' + (x.pronos > 1 ? 's' : '') + ', du ' + fr(x.premier) + ' au ' + fr(x.dernier) + (x.pronos < S.min ? ' · moins de ' + S.min + ' pronos : résultats encore peu significatifs' : '') + '</p>';
+    h += '<h3>Bilan (mise fictive de 1 € par pari)</h3><div class="kpi"><div><small>Total des mises</small><b>' + EUR(x.mise) + '</b></div><div><small>Total des rapports</small><b>' + EUR(x.gains) + '</b></div><div><small>Bilan net (rapports − mises)</small><b>' + NET(x.net) + '</b></div><div><small>Retour sur mises</small><b>' + REND(x.gains, x.mise) + '</b></div></div>' + courbe(x.courbe) + '</div>';
+    h += '<div class="card"><h3>Jeu par jeu</h3><table class="st"><tr><th>Jeu</th><th>Réussites</th><th>Misé</th><th>Net</th></tr>' + x.types.map(function(t){ return '<tr><td><b>' + E(t.nom) + '</b></td><td>' + t.gagnes + ' sur ' + t.paris + '</td><td>' + EUR(t.mise) + '<small>rendu ' + EUR(t.gains) + '</small></td><td>' + NET(t.net) + '</td></tr>'; }).join('') + '</table><p class="note2">« 4 sur 12 » = 4 paris gagnants sur 12 joués dans ce jeu.</p>';
+    [['SG', 'simple gagnant'], ['SP', 'simple placé']].forEach(function(k){
+      var L = x.chevaux[k[0]];
+      h += '<p><b>Ses 3 chevaux les plus performants au ' + k[1] + ' :</b></p>' + (L.length ? '<table class="st">' + L.map(function(c){ return '<tr><td><b>Le ' + c.n + '</b><small>' + E(c.lieu) + ' du ' + fr(c.jour) + '</small></td><td>' + EUR(c.euros) + ' rendus pour 1 €</td></tr>'; }).join('') + '</table>' : '<p class="empty">Aucun pour l\'instant.</p>');
+    });
+    h += '</div><div class="card"><h3>Évolution mois par mois</h3><table class="st"><tr><th>Mois</th><th>Pronos</th><th>Misé</th><th>Net</th></tr>' + x.mois.map(function(m){ var a = m.mois.split('-'); return '<tr><td>' + MOIS[+a[1] - 1] + ' ' + a[0] + '</td><td>' + m.pronos + '</td><td>' + EUR(m.mise) + '<small>rendu ' + EUR(m.gains) + '</small></td><td>' + NET(m.net) + '</td></tr>'; }).join('') + '</table></div>';
+    $('rFiche').innerHTML = h;
+  }
+  function comparatif(){
+    if (!S.specialites) { $('rComp').innerHTML = '<p class="empty">🔒 Réservé à ceux qui donnent au moins ' + S.verrou.min + ' pronos par jour.</p>'; return; }
+    var court = { SG: 'Gagnant', SP: 'Placé', CG: 'Couplé G', CP: 'Couplé P', CO: 'Couplé ordre', TR: 'Trio', TO: 'Trio ordre', M4: 'Multi', S4: 'Super 4' };
+    $('rComp').innerHTML = '<h2>Tableau comparatif</h2><p class="sub">' + S.membres.length + ' membres · touche un pseudo pour ouvrir sa fiche.</p><table class="st"><tr><th>Membre</th><th>Pronos</th><th>Net</th></tr>' + S.membres.map(function(x){
+      return '<tr><td><a href="#" class="vf" data-p="' + E(x.pseudo) + '"><b>' + E(x.pseudo) + '</b></a></td><td>' + x.pronos + '</td><td>' + NET(x.net) + '<small>' + EUR(x.gains) + ' rendus pour ' + EUR(x.mise) + '</small></td></tr><tr><td colspan="3" style="font-size:13px;color:var(--mute);border-top:0;padding-top:0">' + x.types.map(function(t){ return court[t.t] + ' ' + t.gagnes + ' sur ' + t.paris; }).join(' · ') + '</td></tr>'; }).join('') + '</table><p class="note2">Pour chaque jeu : paris gagnants sur paris joués. Mises fictives de 1 € par pari.</p>';
+    document.querySelectorAll('.vf').forEach(function(a){ a.onclick = function(e){ e.preventDefault(); $('qui').value = a.getAttribute('data-p'); fiche(a.getAttribute('data-p')); montrer('fiche'); }; });
+  }
+  function specialites(){
+    if (!S.specialites) { $('rSpec').innerHTML = '<p class="empty">🔒 Réservé à ceux qui donnent au moins ' + S.verrou.min + ' pronos par jour.</p>'; return; }
+    var h = '<p class="note">Pour être classé, il faut au moins <b>' + S.min + ' pronos vérifiés</b>. On classe au bilan net du jeu, avec les réussites et le nombre de pronos à côté.</p>';
+    S.ordre.concat(['bilan']).forEach(function(k){
+      var L = S.specialites[k] || []; if (k !== 'bilan' && !L.length) return;
+      h += '<div class="card"><h3>' + (k === 'bilan' ? 'Meilleurs bilans' : 'Meilleurs au ' + E(S.types[k])) + '</h3>' + (L.length ? '<table class="st"><tr><th>#</th><th>Membre</th><th>' + (k === 'bilan' ? 'Misé' : 'Réussites') + '</th><th>Net</th></tr>' + L.slice(0, 10).map(function(x, i){ return '<tr><td>' + (i + 1) + '</td><td><b>' + E(x.pseudo) + '</b><small>' + x.pronos + ' pronos</small></td><td>' + (k === 'bilan' ? EUR(x.mise) : x.gagnes + ' sur ' + x.paris) + '</td><td>' + NET(x.net) + '</td></tr>'; }).join('') + '</table>' : '<p class="empty">Personne n\'a encore ' + S.min + ' pronos.</p>') + '</div>';
+    });
+    $('rSpec').innerHTML = h;
+  }
+  function montrer(k){ document.querySelectorAll('#ong a').forEach(function(a){ a.classList.toggle('on', a.getAttribute('data-k') === k); }); ['fiche', 'comp', 'spec'].forEach(function(x){ $('s-' + x).hidden = x !== k; }); }
+  document.querySelectorAll('#ong a').forEach(function(a){ a.onclick = function(e){ e.preventDefault(); montrer(a.getAttribute('data-k')); }; });
+  fetch('/api/pm/stats', {credentials:'same-origin', cache:'no-store'}).then(function(r){ if (!r.ok) throw 0; return r.json(); }).then(function(d){
+    S = d; $('zone').hidden = false;
+    if (d.verrou) { $('verrou').hidden = false; $('verrou').innerHTML = '🔒 <b>Les fiches des autres membres, le tableau comparatif et les classements sont réservés à ceux qui donnent au moins ' + d.verrou.min + ' pronos par jour.</b> Aujourd\'hui, tu en as donné ' + d.verrou.n + '. Ta propre fiche reste visible.'; }
+    $('qui').innerHTML = d.membres.map(function(x){ return '<option value="' + E(x.pseudo) + '">' + E(x.pseudo) + ' (' + x.pronos + ' prono' + (x.pronos > 1 ? 's' : '') + ')</option>'; }).join('');
+    var voulu = decodeURIComponent(location.hash.replace('#', '')) || d.moiPseudo;
+    if (!d.membres.some(function(x){ return x.pseudo === voulu; })) voulu = d.membres[0] && d.membres[0].pseudo;
+    if (voulu) { $('qui').value = voulu; fiche(voulu); } else $('rFiche').innerHTML = '<p class="empty">Pas encore de prono vérifié.</p>';
+    $('qui').onchange = function(){ fiche(this.value); };
+    comparatif(); specialites();
+  }).catch(function(){ $('refus').hidden = false; });
+})();
+</script>
+</body>
+</html>
