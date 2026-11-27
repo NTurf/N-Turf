@@ -14,7 +14,7 @@ export async function onRequestGet({ request, env }) {
   try { j = (await calculerSiPret(db, iso)) || (await courseDuJour(db, iso)); } catch (e) { erreurPmu = true; }
   if (j && j.statut !== 'calcule') { try { await ajouterRobots(db, iso, j); } catch (e) {} }
   const moi = await db.prepare('SELECT chevaux, retenu, gains, detail, saisi FROM concours_pronos WHERE date = ? AND user_id = ?').bind(iso, u.id).first();
-  const out = { date: iso, dateFr: isoVersFr(iso), maintenant: Date.now(), mises: misesDu(iso), miseJour: miseDu(iso), format: formatDu(iso), erreurPmu, course: null, moi: null, tous: null };
+  const out = { admin: u.role === 'admin', date: iso, dateFr: isoVersFr(iso), maintenant: Date.now(), mises: misesDu(iso), miseJour: miseDu(iso), format: formatDu(iso), erreurPmu, course: null, moi: null, tous: null };
   if (j) {
     out.course = { reunion: j.reunion, course: j.course, hippodrome: j.hippodrome, libelle: j.libelle, heure: j.heure,
       cloture: j.heure ? j.heure - 5 * 60000 : null, partants: JSON.parse(j.partants || '[]'), arrivee: JSON.parse(j.arrivee || '[]'),
@@ -32,6 +32,9 @@ export async function onRequestGet({ request, env }) {
       .sort((a, b) => calc ? (b.gains - a.gains || a.pseudo.localeCompare(b.pseudo)) : ((a.robot - b.robot) || String(a.saisi).localeCompare(String(b.saisi))));
     out.synthese = await syntheseCollective(db, iso);
   }
+  // l'analyse des grilles : ouverte à ceux qui ont validé leur pronostic du jour (ou du lendemain), et à l'administrateur
+  const auj = new Date().toLocaleDateString('fr-CA', { timeZone: 'Europe/Paris' });
+  out.grilles = u.role === 'admin' || !!(await db.prepare('SELECT 1 FROM concours_pronos WHERE user_id = ? AND date >= ? LIMIT 1').bind(u.id, auj).first());
   out.participants = (await db.prepare('SELECT COUNT(*) AS n FROM concours_pronos WHERE date = ?').bind(iso).first()).n;
   return json(out);
 }

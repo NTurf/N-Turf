@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#0D1E3D">
 <link rel="manifest" href="/manifest.webmanifest?v=2">
 <link rel="icon" href="/icone-nturf-192.png">
-<link rel="stylesheet" href="/style.css?v=20261127b">
+<link rel="stylesheet" href="/style.css?v=20261127d">
 <style>
 .pos{color:#157a3a;font-weight:800}.neg{color:#c62832;font-weight:800}
 .fictif{background:#FFF6DC;border:1px solid #f0be3c;border-radius:10px;padding:7px 10px;font-size:13px;margin:8px 0}
@@ -16,11 +16,11 @@ table.st td small{display:block;color:var(--mute)}
 table.st td,table.st th{padding:6px 4px}
 </style>
 </head>
-<body data-page="admin">
+<body data-page="membres">
 <main>
 <h1>Analyse des grilles de 5 à 8 chevaux</h1>
-<p><a href="/admin.html">← Administration</a> · <a href="/stats-concours.html">Statistiques du concours</a></p>
-<div id="refus" class="note" hidden>🔒 Réservé à l'administrateur.</div>
+<p><a href="/concours.html">← Concours Quinté+</a> · <a href="/stats-concours.html">Statistiques du concours</a></p>
+<div id="refus" class="note" hidden>🔒 L'analyse des grilles est réservée aux joueurs du concours : <a href="/concours.html">valide ton pronostic du Quinté+ du jour</a> et elle s'ouvre aussitôt.</div>
 <div id="zone" hidden>
 <p class="fictif">🧪 <b>Simulation sur l'historique</b> des Quinté+ du concours, avec les rapports officiels pour 1 € et les mises de base du PMU (Simple et Couplé 1 €, Tiercé 1 €, Quarté+ 1,50 €, Multi 3 €, Quinté+ 2 €). Aucun euro n'a été joué : ce ne sont pas des gains réalisés.</p>
 <p class="sub" id="base"></p>
@@ -71,7 +71,7 @@ table.st td,table.st th{padding:6px 4px}
     [['fStr', 'STR'], ['mStr', 'STR'], ['fN', 'NN'], ['mN', 'NN']].forEach(function(x){ var el = $(x[0]); if (el) el.onchange = function(){ if (x[1] === 'STR') STR = el.value; else NN = +el.value; dessiner(); }; });
   }
   document.querySelectorAll('#ong a').forEach(function(a){ a.onclick = function(e){ e.preventDefault(); ONG = a.getAttribute('data-k'); document.querySelectorAll('#ong a').forEach(function(x){ x.classList.toggle('on', x === a); }); dessiner(); }; });
-  fetch('/api/concours/grilles', {credentials:'same-origin', cache:'no-store'}).then(function(r){ if (!r.ok) throw 0; return r.json(); }).then(function(d){
+  fetch('/api/concours/grilles', {credentials:'same-origin', cache:'no-store'}).then(function(r){ if (r.status === 401) { location.href = '/inscription.html#connexion'; throw 0; } if (!r.ok) throw 0; return r.json(); }).then(function(d){
     D = d; $('zone').hidden = false;
     if (!d.sources.length) { $('base').textContent = 'Aucun Quinté+ calculé pour l\'instant.'; return; }
     $('base').textContent = d.courses + ' Quinté+ étudiés.';

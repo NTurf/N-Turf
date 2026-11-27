@@ -8,7 +8,7 @@
 <meta name="robots" content="noindex">
 <link rel="manifest" href="/manifest.webmanifest?v=2">
 <link rel="icon" href="/icone-nturf-192.png">
-<link rel="stylesheet" href="/style.css?v=20261127b">
+<link rel="stylesheet" href="/style.css?v=20261127d">
 </head>
 <body data-page="admin">
 <main>
@@ -17,6 +17,7 @@
 <div id="refus" class="note" hidden>🔒 Réservé à l'administrateur.</div>
 <div id="zone" hidden>
 <p class="note">Les contributeurs publient librement dans le Ticket du jour, sous leur nom de signature. Tu peux supprimer après coup toute publication (bouton « Supprimer » sur la page). Les droits ne sont pas figés : coche ou décoche à tout moment ce que chacun peut publier.</p>
+<p class="msg" id="msg" style="font-size:17px;font-weight:700"></p>
 <div id="liste"></div>
 <section class="card"><h2>Ajouter un contributeur</h2>
 <p><select id="nU" style="font-size:16px;padding:8px;border-radius:8px;width:100%"></select></p>
@@ -24,7 +25,6 @@
 <p class="note2">Il reçoit d'abord les droits de base du cahier : pronostics et tickets. Tu ajustes ensuite ci-dessus.</p>
 <button type="button" class="btn" id="bAdd">Ajouter</button></section>
 <section class="card"><h2>Publications supprimées</h2><div id="sup"></div></section>
-<p class="msg" id="msg"></p>
 </div>
 </main>
 <script src="/site.js?v=20261127c"></script>
@@ -34,8 +34,17 @@
   var E = function(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); };
   var D = null;
   function msg(t, ok){ var m = $('msg'); m.className = 'msg ' + (ok ? 'ok' : 'err'); m.textContent = t || ''; }
-  function enreg(b){ return fetch('/api/td/contributeurs', {method:'POST', credentials:'same-origin', headers:{'content-type':'application/json'}, body: JSON.stringify(b)}).then(function(r){ return r.json(); }).then(function(x){ if (x.ok) { msg('✓ Enregistré.', true); charger(); } else msg(x.erreur || 'Erreur.'); }); }
-  function charger(){
+  // la confirmation s'affiche sur le bouton lui-même (et non tout en bas de la page, invisible sur téléphone)
+  function enreg(b, bouton){
+    if (bouton) { bouton.disabled = true; bouton.textContent = 'Enregistrement…'; }
+    return fetch('/api/td/contributeurs', {method:'POST', credentials:'same-origin', headers:{'content-type':'application/json'}, body: JSON.stringify(b)})
+      .then(function(r){ return r.json().catch(function(){ return { erreur: 'Réponse illisible du site (code ' + r.status + ').' }; }); })
+      .then(function(x){
+        if (x.ok) { msg('✓ Enregistré : ' + (b.signature || 'contributeur') + (b.actif ? ' peut publier.' : ' ne peut plus publier.'), true); charger(true); }
+        else { msg(x.erreur || 'Erreur.'); if (bouton) { bouton.disabled = false; bouton.textContent = 'Réessayer'; } alert(x.erreur || 'Erreur.'); }
+      }).catch(function(){ if (bouton) { bouton.disabled = false; bouton.textContent = 'Réessayer'; } alert('Connexion impossible, réessaie.'); });
+  }
+  function charger(apres){
     fetch('/api/td/contributeurs', {credentials:'same-origin', cache:'no-store'}).then(function(r){ if (!r.ok) throw 0; return r.json(); }).then(function(d){
       D = d; $('zone').hidden = false;
       $('liste').innerHTML = d.contributeurs.map(function(c){
@@ -46,14 +55,15 @@
           '<p><label><input type="checkbox" class="ac"' + (c.actif ? ' checked' : '') + '> Peut publier</label></p><button type="button" class="btn ok">Enregistrer</button></section>';
       }).join('') || '<p class="empty">Aucun contributeur pour l\'instant.</p>';
       $('liste').querySelectorAll('.ok').forEach(function(b){ b.onclick = function(){ var s = b.closest('section');
-        enreg({ user: +s.getAttribute('data-u'), signature: s.querySelector('.sg').value, pronos: s.querySelector('.pr').checked, paris: [].map.call(s.querySelectorAll('.pa:checked'), function(x){ return x.value; }), actif: s.querySelector('.ac').checked }); }; });
+        enreg({ user: +s.getAttribute('data-u'), signature: s.querySelector('.sg').value, pronos: s.querySelector('.pr').checked, paris: [].map.call(s.querySelectorAll('.pa:checked'), function(x){ return x.value; }), actif: s.querySelector('.ac').checked }, b); }; });
       var deja = d.contributeurs.map(function(c){ return c.user_id; });
       $('nU').innerHTML = '<option value="">— choisir un membre —</option>' + d.pseudos.filter(function(p){ return deja.indexOf(p.id) < 0; }).map(function(p){ return '<option value="' + p.id + '">' + E(p.pseudo) + '</option>'; }).join('');
+      if (apres) $('msg').scrollIntoView({block:'center'});
       $('sup').innerHTML = d.supprimees.length ? '<table class="st">' + d.supprimees.map(function(s){ return '<tr><td>' + s.date.split('-').reverse().join('/') + ' R' + s.r + 'C' + s.c + ' ' + E(s.hippodrome || '') + '</td><td><b>' + E(s.signature) + '</b> · ' + (s.type === 'prono' ? 'pronostic' : 'ticket') + '<br><small>retiré par ' + E(s.par || '?') + (s.motif ? ' : ' + E(s.motif) : '') + '</small></td></tr>'; }).join('') + '</table>' : '<p class="empty">Aucune.</p>';
     }).catch(function(){ $('refus').hidden = false; });
   }
   $('nU').onchange = function(){ var o = this.options[this.selectedIndex]; if (!$('nS').value && this.value) $('nS').value = /hippodrome/i.test(o.text) ? 'Choix Hippodrome' : 'Choix ' + o.text; };
-  $('bAdd').onclick = function(){ if (!$('nU').value) return msg('Choisis un membre.'); enreg({ user: +$('nU').value, signature: $('nS').value, pronos: true, paris: D.paris, actif: true }).then(function(){ $('nS').value = ''; }); };
+  $('bAdd').onclick = function(){ if (!$('nU').value) return msg('Choisis un membre.'); var bt = $('bAdd'); enreg({ user: +$('nU').value, signature: $('nS').value, pronos: true, paris: D.paris, actif: true }, bt).then(function(){ $('nS').value = ''; bt.disabled = false; bt.textContent = 'Ajouter'; }); };
   charger();
 })();
 </script>

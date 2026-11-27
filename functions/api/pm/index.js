@@ -10,6 +10,15 @@ import { prepPm, coursePm, construire, choixDepuisParis, resume, verifierEnAtten
 // POST {jour, r, c, chevaux:[n…], choix:{s,c,t,m}, mot} : publier / modifier mon prono (jusqu'au départ)
 // POST {action:'supprimer', id} · {action:'reagir', id, texte} · {action:'retirerReaction', id}
 const isoOk = (j) => /^\d{4}-\d{2}-\d{2}$/.test(j || '');
+// Synthèse des pronos des membres sur une course : chaque membre donne 4 points à son 1er cheval, 3 au 2e, 2 au 3e, 1 au 4e
+function synthese(rows) {
+  const T = new Map();
+  for (const p of rows) {
+    let L = []; try { L = JSON.parse(p.chevaux || '[]').map((x) => (typeof x === 'object' ? +x.n : +x)); } catch (e) { L = []; }
+    L.slice(0, 4).forEach((n, i) => { if (!n) return; const x = T.get(n) || { n, nb: 0, pts: 0, premier: 0 }; x.nb++; x.pts += 4 - i; if (!i) x.premier++; T.set(n, x); });
+  }
+  return { membres: rows.length, chevaux: [...T.values()].sort((a, b) => b.pts - a.pts || b.nb - a.nb || b.premier - a.premier || a.n - b.n) };
+}
 
 async function base(env, request) {
   if (!env.DB) return { err: noDb() };
@@ -72,7 +81,15 @@ export async function onRequestGet({ request, env }) {
   if (!R || !C) {
     await verifierEnAttente(db);
     const r = await db.prepare('SELECT reunion, course, COUNT(*) AS n FROM pm_pronos WHERE jour = ? GROUP BY reunion, course').bind(jour).all();
-    return json({ comptes: (r.results || []).map((x) => ({ r: x.reunion, c: x.course, n: x.n })) });
+    const ac = await acces();
+    const out = { comptes: (r.results || []).map((x) => ({ r: x.reunion, c: x.course, n: x.n })), acces: ac.ok };
+    // la synthèse des membres, course par course : seulement pour ceux qui participent (3 pronos par jour)
+    if (ac.ok) {
+      const t = (await db.prepare('SELECT p.reunion, p.course, p.chevaux FROM pm_pronos p JOIN users u ON u.id = p.user_id WHERE p.jour = ? AND u.banni = 0').bind(jour).all()).results || [];
+      const G = {}; for (const x of t) (G[x.reunion + '-' + x.course] = G[x.reunion + '-' + x.course] || []).push(x);
+      out.syntheses = Object.fromEntries(Object.entries(G).map(([k, L]) => { const S = synthese(L); return [k, { membres: S.membres, top: S.chevaux.slice(0, 6).map((x) => x.n) }]; }));
+    }
+    return json(out);
   }
   let info = null;
   try { info = await coursePm(db, jour, R, C); } catch (e) { info = null; }
@@ -85,8 +102,15 @@ export async function onRequestGet({ request, env }) {
   const reac = L.length ? await db.prepare(`SELECT r.id, r.prono_id, r.user_id, u.pseudo, r.texte, r.cree FROM pm_reactions r JOIN users u ON u.id = r.user_id
     WHERE r.prono_id IN (${L.map(() => '?').join(',')}) AND u.banni = 0 ORDER BY r.id`).bind(...L.map((x) => x.id)).all() : { results: [] };
   const modo = u.role === 'admin' || u.moderateur;
+  // synthèse de tous les pronos de la course (réservée à ceux qui participent), et les membres gagnants une fois la course calculée
+  let synth = null;
+  if (ac.ok && (pr.results || []).length) {
+    synth = synthese(pr.results);
+    synth.gagnants = (pr.results || []).filter((p) => p.statut === 'calcule' && (p.gains || 0) > (p.mise || 0))
+      .map((p) => ({ pseudo: p.pseudo, mise: R2(p.mise || 0), gains: R2(p.gains || 0), net: R2((p.gains || 0) - (p.mise || 0)) })).sort((a, b) => b.net - a.net);
+  }
   return json({
-    course: info, moi: u.pseudo, modo, verrou: ac.ok ? null : { n: ac.n, min: ac.min, caches },
+    course: info, moi: u.pseudo, modo, verrou: ac.ok ? null : { n: ac.n, min: ac.min, caches }, synthese: synth,
     ouvert: !!(info && info.heure && Date.now() < info.heure && !(info.arrivee || []).length),
     pronos: L.map((p) => {
       const chevaux = JSON.parse(p.chevaux).map((x) => (typeof x === 'object' ? +x.n : +x));

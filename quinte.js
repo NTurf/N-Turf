@@ -355,7 +355,12 @@ var NT = (function(){
     var a = el.querySelector('.pmlien'); if (!a) return;
     fetch('/api/pm?jour=' + a.getAttribute('data-j'), {credentials:'same-origin'}).then(function(r){ return r.ok ? r.json() : null; }).then(function(t){
       if (!t) return; var C = {}; (t.comptes || []).forEach(function(x){ C[x.r + '-' + x.c] = x.n; });
-      el.querySelectorAll('.pmlien').forEach(function(l){ var n = C[l.getAttribute('data-pm')] || 0; l.textContent = n ? '👥 ' + n + ' prono' + (n > 1 ? 's' : '') + ' de membres' : '👥 Pronos des membres : donne le tien'; l.classList.toggle('pmn', n > 0); });
+      el.querySelectorAll('.pmlien').forEach(function(l){ var n = C[l.getAttribute('data-pm')] || 0; l.textContent = n ? '👥 ' + n + ' prono' + (n > 1 ? 's' : '') + ' de membres' : '👥 Pronos des membres : donne le tien'; l.classList.toggle('pmn', n > 0);
+        // la synthèse des membres sous le lien, seulement pour ceux qui participent (3 pronos par jour)
+        var S = t.syntheses && t.syntheses[l.getAttribute('data-pm')], z = l.nextElementSibling && l.nextElementSibling.classList.contains('pmsyn') ? l.nextElementSibling : null;
+        if (S && S.top.length) { if (!z) { z = document.createElement('div'); z.className = 'pmsyn'; l.parentNode.insertBefore(z, l.nextSibling); }
+          z.innerHTML = '<b>Synthèse des membres</b> <small>(' + S.membres + ')</small> ' + S.top.map(function(x, i){ return '<span class="' + (i < 3 ? 'pt3' : '') + '">' + x + '</span>'; }).join(''); }
+        else if (z) z.remove(); });
     }).catch(function(){});
   }
   // Archive du fichier (feuille « Archive ») : tous les Quinté+ passés, au même format que le jour (tableau de saisie, approches, arrivée, rapports, cotes).

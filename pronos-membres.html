@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#0D1E3D">
 <link rel="manifest" href="/manifest.webmanifest?v=2">
 <link rel="icon" href="/icone-nturf-192.png">
-<link rel="stylesheet" href="/style.css?v=20261127b">
+<link rel="stylesheet" href="/style.css?v=20261127d">
 <style>
 .cbt{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
 .cbt a{display:inline-flex;align-items:center;gap:4px;padding:6px 10px;border-radius:8px;border:1px solid #c9d6ea;background:#fff;text-decoration:none;color:inherit;font-weight:700}
@@ -150,7 +150,8 @@ function dessiner(){
   if (d.ouvert) h += FORM ? formulaire(mien) : '<p><button type="button" class="btn" id="plus">'+(mien ? '✏ Modifier mon prono' : '+ Mon prono')+'</button></p>';
   else if (!arr.length) h += '<p class="note2">Les pronos sont fermés pour cette course.</p>';
   h += '</section>';
-  if (d.verrou) h += '<div class="note">🔒 <b>Les pronos des autres membres sont réservés à ceux qui participent : au moins ' + d.verrou.min + ' pronos par jour.</b><br>' + (d.verrou.caches ? d.verrou.caches + ' prono' + (d.verrou.caches > 1 ? 's' : '') + ' d\'autres membres sur cette course. ' : '') + 'Aujourd\'hui, tu en as donné ' + d.verrou.n + ' sur ' + d.verrou.min + '. Encore ' + (d.verrou.min - d.verrou.n) + ' et tu y as accès.</div>';
+  if (d.synthese) h += synthMembres(d.synthese, arr);
+  if (d.verrou) h += '<div class="note">🔒 <b>La synthèse et les pronos des autres membres sont réservés à ceux qui participent : au moins ' + d.verrou.min + ' pronos par jour.</b><br>' + (d.verrou.caches ? d.verrou.caches + ' prono' + (d.verrou.caches > 1 ? 's' : '') + ' d\'autres membres sur cette course. ' : '') + 'Aujourd\'hui, tu en as donné ' + d.verrou.n + ' sur ' + d.verrou.min + '. Encore ' + (d.verrou.min - d.verrou.n) + ' et tu y as accès.</div>';
   h += d.pronos.length ? d.pronos.map(carte).join('') : (d.verrou ? '' : '<p class="empty">Pas encore de prono sur cette course. Sois le premier !</p>');
   $('course').innerHTML = h;
   if ($('plus')) $('plus').onclick = function(){ FORM = true; SEL = mien ? mien.chevaux.slice() : []; CH = mien ? JSON.parse(JSON.stringify(mien.choix)) : {s:[], c:{ch:[], g:0, p:0, to:0}, t:{ch:[], to:0}, m:0, mto:0}; dessiner(); };
@@ -158,6 +159,16 @@ function dessiner(){
   document.querySelectorAll('[data-sup]').forEach(function(b){ b.onclick = function(){ if (b.textContent !== 'Confirmer') { b.textContent = 'Confirmer'; return; } post({action:'supprimer', id:+b.getAttribute('data-sup')}).then(function(){ FORM = false; course(); charger(); }); }; });
   document.querySelectorAll('form[data-re]').forEach(function(f){ f.onsubmit = function(e){ e.preventDefault(); var i = f.querySelector('input'); if (!i.value.trim()) return; post({action:'reagir', id:+f.getAttribute('data-re'), texte:i.value}).then(course).catch(function(x){ alert(x.message); }); }; });
   document.querySelectorAll('[data-rr]').forEach(function(b){ b.onclick = function(e){ e.preventDefault(); post({action:'retirerReaction', id:+b.getAttribute('data-rr')}).then(course); }; });
+}
+// Synthèse des pronos des membres (réservée à ceux qui participent) : 4 points au 1er cheval de chacun, 3 au 2e, 2 au 3e, 1 au 4e
+function synthMembres(S, arr){
+  var top = S.chevaux.slice(0, 8);
+  var h = '<section class="card synthm"><h2 style="margin:0 0 4px">👥 Synthèse des membres</h2><p class="note2" style="margin:0 0 6px">' + S.membres + ' prono' + (S.membres > 1 ? 's' : '') + ' sur cette course. Réservée à ceux qui participent.</p>';
+  h += '<div class="rd">' + top.map(function(x, i){ return '<span class="' + (arr.indexOf(x.n) >= 0 ? 'hit' : i < 3 ? 'b' : '') + '">' + x.n + '</span>'; }).join('') + '</div>';
+  h += '<table class="mp"><tr><th>Cheval</th><th>Points</th><th>Cité par</th><th>En 1er</th></tr>' + top.map(function(x, i){ return '<tr' + (i < 3 ? ' style="background:#fdf3d6"' : '') + '><td>' + x.n + '</td><td><b>' + x.pts + '</b></td><td>' + x.nb + ' membre' + (x.nb > 1 ? 's' : '') + '</td><td>' + (x.premier || '–') + '</td></tr>'; }).join('') + '</table>';
+  h += '<p class="note2" style="margin:4px 0">Chaque membre donne 4 points à son 1er cheval, 3 au 2e, 2 au 3e et 1 au 4e. Les 3 premiers de la synthèse sont en doré.</p>';
+  if (S.gagnants && S.gagnants.length) h += '<p style="margin:6px 0 0"><b>🏆 Gagnants sur cette course :</b> ' + S.gagnants.map(function(g){ return '<b>' + E(g.pseudo) + '</b> <span class="pos">' + Fn(g.net) + '</span> <small>(mise ' + Fe(g.mise) + ')</small>'; }).join(' · ') + '</p>';
+  return h + '</section>';
 }
 function carte(p){
   var arr = (DATA.course && DATA.course.arrivee || []).slice(0, p.paris.some(function(x){ return x.t === 'M4' || x.t === 'S4'; }) ? 4 : 3);
