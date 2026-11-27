@@ -157,3 +157,35 @@ export async function detailReunion(db, d, reu) {
   } catch (e) { /* le cache n'est qu'une économie : l'affichage passe quand même */ }
   return courses;
 }
+
+// Lecture groupée du cache : 1 lecture pour toutes les clés, les appels manquants au PMU en parallèle, 1 écriture.
+// items : [{ cle, url, ttl: (data) => secondes ou 0 pour ne pas garder }] → Map cle → données (ou null)
+export async function lotCache(db, items) {
+  const now = Date.now(), vus = new Map(), out = new Map(), ecrire = [];
+  const cles = [...new Set(items.map((x) => x.cle))];
+  for (let i = 0; i < cles.length; i += 90) {
+    const lot = cles.slice(i, i + 90);
+    if (!lot.length) continue;
+    const r = await db.prepare(`SELECT cle, data, expire FROM pmu_cache WHERE cle IN (${lot.map(() => '?').join(',')})`).bind(...lot).all();
+    for (const x of r.results || []) vus.set(x.cle, x);
+  }
+  const faits = new Set();
+  await Promise.all(items.map(async (it) => {
+    if (faits.has(it.cle)) return; faits.add(it.cle);
+    const x = vus.get(it.cle);
+    if (x && x.expire > now) { out.set(it.cle, JSON.parse(x.data)); return; }
+    try {
+      const data = await get(it.url);
+      out.set(it.cle, data);
+      const ttl = data ? it.ttl(data) : 0;
+      if (ttl > 0) ecrire.push([it.cle, JSON.stringify(data), now + ttl * 1000]);
+    } catch (e) { out.set(it.cle, x ? JSON.parse(x.data) : null); }
+  }));
+  try {
+    for (let i = 0; i < ecrire.length; i += 30) {
+      const lot = ecrire.slice(i, i + 30);
+      await db.prepare(`INSERT INTO pmu_cache (cle, data, expire) VALUES ${lot.map(() => '(?, ?, ?)').join(', ')} ON CONFLICT(cle) DO UPDATE SET data = excluded.data, expire = excluded.expire`).bind(...lot.flat()).run();
+    }
+  } catch (e) {}
+  return out;
+}

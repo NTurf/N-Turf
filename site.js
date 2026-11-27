@@ -97,6 +97,8 @@
       if (m.connecte) {
         // Chat flottant sur toutes les pages, sauf la page Chat elle-même
         if (!/\/chat(\.html)?$/.test(location.pathname)) { var cs = document.createElement('script'); cs.src = '/chatflot.js?v=20261127a'; document.body.appendChild(cs); }
+        // La Balançoire : lien privé, seulement pour ses joueurs
+        if (m.balancoire) { var nav = side.querySelector('.mainnav'); var lb = document.createElement('a'); lb.href = '/balancoire'; lb.textContent = '🔒 La Balançoire'; if (location.pathname === '/balancoire') lb.className = 'on'; nav.appendChild(lb); }
         // Alertes de départ des courses, sur toutes les pages
         var al = document.createElement('script'); al.src = '/alertes.js?v=20261127a'; document.body.appendChild(al);
         var b = h.querySelector('.compte');
