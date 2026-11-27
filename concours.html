@@ -33,6 +33,7 @@
     <p class="msg" id="msg"></p>
   </section>
   <section class="card" id="cResultat" hidden></section>
+  <section class="card" id="cSynth" hidden></section>
   <section class="card" id="cTous" hidden></section>
 </section>
 
@@ -45,8 +46,9 @@
 <details id="dRegl"><summary><b>📜 Le règlement du concours</b></summary>
 <ul class="regl">
 <li>Concours gratuit, réservé aux membres inscrits (un seul compte par personne, majeurs uniquement). Monnaie du jeu : les fers à cheval.</li>
-<li>Chaque jour, tu classes 8 chevaux du Quinté+ : du 1er au 7e, plus un cheval de complément. Tu peux modifier ton pronostic jusqu'à 5 minutes avant le départ.</li>
-<li>Avant la course, tu ne vois que ton pronostic. Une fois l'arrivée validée, tout le monde voit les pronostics, les gains et le classement.</li>
+<li>Chaque jour, tu classes 8 chevaux du Quinté+ : du 1er au 7e, plus un cheval de complément. Les pronostics ferment 5 minutes avant le départ.</li>
+<li><b>Pronostic verrouillé</b> : une fois validé, ton pronostic ne peut plus être modifié. La date et l'heure de validation sont enregistrées et affichées. Seul l'administrateur peut, en cas exceptionnel, corriger un pronostic : la correction est enregistrée et signalée à côté du pronostic.</li>
+<li><b>Chacun s'engage avant de voir les autres</b> : dès que tu as validé ton pronostic, tu vois ceux des autres joueurs et la synthèse collective (brute et pondérée). Tant que tu n'as pas validé, tu ne vois rien. Une fois l'arrivée validée, tout le monde voit les pronostics, les gains et le classement.</li>
 <li><b>Non-partant</b> : le cheval de complément remplace le premier non-partant de tes 7. Les autres non-partants sont simplement retirés. Si le complément est lui-même non-partant, rien n'est remplacé.</li>
 <li><b>Tes jeux</b>, à chaque course (171,50 fers) :
   <ul>
@@ -88,12 +90,15 @@
     });
   }
   function ouvert(){ return D && D.course && !D.course.calcule && D.course.cloture && (Date.now() + ecart) < D.course.cloture; }
+  // Un pronostic validé est verrouillé : on ne peut plus le modifier
+  function modifiable(){ return ouvert() && !D.moi; }
+  function quand(s){ var d = new Date(String(s).replace(' ', 'T') + 'Z'); return isNaN(d) ? '' : d.toLocaleDateString('fr-FR', {timeZone:'Europe/Paris', day:'2-digit', month:'2-digit'}) + ' à ' + d.toLocaleTimeString('fr-FR', {timeZone:'Europe/Paris', hour:'2-digit', minute:'2-digit'}).replace(':', ' h '); }
 
   function dessinerJeu(){
     var c = D.course, s = document.getElementById('cSaisie');
     if (!c) { s.innerHTML = '<p class="empty">' + (D.erreurPmu ? 'Le programme du PMU ne répond pas pour le moment, réessaie dans un instant.' : 'Pas de Quinté+ trouvé pour le ' + D.dateFr + '.') + '</p>'; return; }
     var np = {}; c.partants.forEach(function(p){ if (p.np) np[p.n] = 1; });
-    var ok = ouvert();
+    var ok = modifiable();
     document.getElementById('pgrid').innerHTML = PL.map(function(l, i){
       var n = choix[i];
       return '<div class="pc' + (i === 7 ? ' comp' : '') + (n ? ' sel' : '') + (n && np[n] ? ' np' : '') + '" data-i="' + i + '"><small>' + l + '</small><b>' + (n || '–') + '</b></div>';
@@ -109,8 +114,8 @@
     document.getElementById('pal').innerHTML = pal.map(function(p){ return '<div><small>' + p[1] + '</small><b>' + p[0] + ' <i>' + F(p[2]) + '</i></b></div>'; }).join('');
     if (!ok) {
       var m = document.getElementById('msg');
-      m.className = 'msg';
-      m.textContent = c.calcule ? '' : (D.moi ? 'Pronostics fermés. Ton pronostic est enregistré, résultat dès l\'arrivée validée.' : 'Pronostics fermés pour le Quinté+ du ' + D.dateFr + '.');
+      m.className = 'msg' + (D.moi && !c.calcule ? ' ok' : '');
+      m.textContent = c.calcule ? '' : (D.moi ? '🔒 Pronostic validé' + (D.moi.saisi ? ' le ' + quand(D.moi.saisi) : '') + ' : il est verrouillé. Résultat dès l\'arrivée validée.' : 'Pronostics fermés pour le Quinté+ du ' + D.dateFr + '.');
       if (!D.moi && !c.calcule) document.getElementById('pgrid').innerHTML = '';
     }
     dessinerResultat();
@@ -118,6 +123,17 @@
 
   function dessinerResultat(){
     var c = D.course, z = document.getElementById('cResultat'), t = document.getElementById('cTous');
+    dessinerSynthese();
+    if (c && !c.calcule) {
+      z.hidden = true;
+      if (D.tous && D.tous.length) {
+        t.innerHTML = '<h2>Les pronostics validés (' + D.tous.length + ')</h2>' + D.tous.map(function(p){
+          return '<div class="ptous"><div class="summ"><b>' + (p.robot ? '🤖 ' : '') + E(p.pseudo) + '</b> <span class="lst">' + p.chevaux.slice(0, 7).map(function(n){ return '<i>' + n + '</i>'; }).join('') + '</span> <small>compl. ' + p.chevaux[7] + '</small>' + (p.saisi ? '<br><small class="note2">validé le ' + quand(p.saisi) + '</small>' : '') + (p.corrige ? ' <small class="note2">· ✎ corrigé par l\'administrateur</small>' : '') + '</div></div>';
+        }).join('') + '<p class="note2">Tu les vois parce que tu as validé le tien. Les gains apparaîtront dès l\'arrivée validée.</p>';
+        t.hidden = false;
+      } else t.hidden = true;
+      return;
+    }
     if (!c || !c.calcule) { z.hidden = true; t.hidden = true; return; }
     var arr = '<div class="arrivee"><b>Arrivée</b> ' + c.arrivee.slice(0, 5).map(function(n){ return '<span class="ch">' + n + '</span>'; }).join('') + '</div>';
     var h = '<h2>Résultat du ' + E(D.dateFr) + '</h2>' + arr;
@@ -129,10 +145,35 @@
     z.innerHTML = h; z.hidden = false;
     if (D.tous && D.tous.length) {
       t.innerHTML = '<h2>Les pronostics de tous (' + D.tous.length + ')</h2>' + D.tous.map(function(p, i){
-        return '<details class="ptous"><summary><span class="rg">' + (i + 1) + '</span><b>' + (p.robot ? '🤖 ' : '') + E(p.pseudo) + '</b><span class="lst">' + (p.retenu || p.chevaux).slice(0, 7).map(function(n){ return '<i' + (c.arrivee.slice(0,5).indexOf(n) >= 0 ? ' class="hit"' : '') + '>' + n + '</i>'; }).join('') + '</span><span class="' + (p.net >= 0 ? 'pos' : 'neg') + '">' + F(p.gains) + '</span></summary>' + lignes(p.detail) + '</details>';
+        return '<details class="ptous"><summary><span class="rg">' + (i + 1) + '</span><b>' + (p.robot ? '🤖 ' : '') + E(p.pseudo) + '</b><span class="lst">' + (p.retenu || p.chevaux).slice(0, 7).map(function(n){ return '<i' + (c.arrivee.slice(0,5).indexOf(n) >= 0 ? ' class="hit"' : '') + '>' + n + '</i>'; }).join('') + '</span><span class="' + (p.net >= 0 ? 'pos' : 'neg') + '">' + F(p.gains) + '</span></summary>' + (p.corrige ? '<p class="note2">✎ Pronostic corrigé par l\'administrateur.</p>' : '') + lignes(p.detail) + '</details>';
       }).join('') + '<p class="note2">Montants en fers gagnés (mise de 171,50 fers chacun). Touche un joueur pour voir le détail.</p>';
       t.hidden = false;
     } else t.hidden = true;
+  }
+  // Synthèse collective : brute (nombre de joueurs qui citent chaque cheval) et pondérée (selon les résultats passés de chaque joueur)
+  var ongS = 'brute';
+  function dessinerSynthese(){
+    var z = document.getElementById('cSynth'), S = D.synthese, c = D.course;
+    if (!S || !S.participants) { z.hidden = true; return; }
+    var arr = c && c.calcule ? c.arrivee.slice(0, 5) : [];
+    var ch = function(n){ return '<span class="ch' + (arr.indexOf(n) >= 0 ? ' hit' : '') + '">' + n + '</span>'; };
+    var N = S.participants;
+    var h = '<h2>Synthèse des joueurs</h2><p class="sub">' + N + (N > 1 ? ' membres ont validé leur pronostic.' : ' membre a validé son pronostic.') + ' Les pronostics du site (TCR, ALGO…) ne comptent pas dans cette synthèse.</p>';
+    h += '<nav class="tabs inner" id="ongS"><a href="#" data-k="brute"' + (ongS === 'brute' ? ' class="on"' : '') + '>Synthèse brute</a><a href="#" data-k="ponderee"' + (ongS === 'ponderee' ? ' class="on"' : '') + '>Synthèse pondérée</a></nav>';
+    if (ongS === 'brute') {
+      h += '<div class="sel">' + S.brute.slice(0, 8).map(function(x){ return ch(x.n); }).join('') + '</div>';
+      h += '<table class="st"><tr><th>Cheval</th><th>Cité par</th><th>Rang moyen</th></tr>' + S.brute.map(function(x){ return '<tr><td>' + ch(x.n) + '</td><td>' + x.nb + ' joueur' + (x.nb > 1 ? 's' : '') + ' sur ' + N + '</td><td>' + String(x.rangMoyen).replace('.', ',') + '</td></tr>'; }).join('') + '</table>';
+      if (N >= 2) h += '<p><b>Font consensus</b> (cités par au moins la moitié des joueurs) : ' + (S.consensus.length ? S.consensus.map(ch).join('') : '<span class="empty">aucun</span>') + '</p>' +
+        '<p><b>Divergences</b> (cités par un seul joueur) : ' + (S.divergences.length ? S.divergences.map(ch).join('') : '<span class="empty">aucun</span>') + '</p>';
+    } else {
+      h += '<div class="sel">' + S.ponderee.slice(0, 8).map(function(x){ return ch(x.n); }).join('') + '</div>';
+      h += '<table class="st"><tr><th>Cheval</th><th>Points</th><th>Cité par</th></tr>' + S.ponderee.map(function(x){ return '<tr><td>' + ch(x.n) + '</td><td><b>' + String(x.points).replace('.', ',') + '</b></td><td>' + x.nb + ' sur ' + N + '</td></tr>'; }).join('') + '</table>';
+      h += '<p class="note2">Chaque joueur qui cite un cheval lui donne son « poids ». Le poids vient de ses courses passées du concours : combien de ses 8 chevaux ont fini dans les 5 premiers. Un nouveau joueur pèse 1, comme tout le monde. Son poids ne bouge que petit à petit, car on lui compte ' + S.k + ' courses moyennes en plus des siennes : il faut beaucoup de courses pour peser lourd. Le poids reste entre 0,5 et 2.</p>';
+      h += '<table class="st"><tr><th>Joueur</th><th>Courses jouées</th><th>Chevaux dans les 5</th><th>Poids</th></tr>' + S.joueurs.map(function(j){ return '<tr><td><b>' + E(j.pseudo) + '</b></td><td>' + j.courses + '</td><td>' + j.touches + '</td><td><b>' + String(j.poids).replace('.', ',') + '</b></td></tr>'; }).join('') + '</table>';
+      if (S.coursesHistorique) h += '<p class="note2">En moyenne, un joueur met ' + String(S.moyenne).replace('.', ',') + ' de ses 8 chevaux dans les 5 premiers (sur ' + S.coursesHistorique + ' pronostics déjà joués).</p>';
+    }
+    z.innerHTML = h; z.hidden = false;
+    z.querySelectorAll('#ongS a').forEach(function(a){ a.onclick = function(e){ e.preventDefault(); ongS = a.getAttribute('data-k'); dessinerSynthese(); }; });
   }
   function lignes(d){
     if (!d || !d.length) return '<p class="empty">Aucun jeu gagnant.</p>';
@@ -141,21 +182,22 @@
 
   document.addEventListener('click', function(e){
     var pa = e.target.closest('.pa'), pc = e.target.closest('.pc');
-    if (pa && ouvert()) {
+    if (pa && modifiable()) {
       var n = parseInt(pa.getAttribute('data-n'), 10), k = choix.indexOf(n);
       if (k >= 0) choix[k] = undefined;
       else { var libre = -1; for (var i = 0; i < 8; i++) if (!choix[i]) { libre = i; break; } if (libre < 0) return; choix[libre] = n; }
       dessinerJeu();
-    } else if (pc && ouvert()) { choix[parseInt(pc.getAttribute('data-i'), 10)] = undefined; dessinerJeu(); }
+    } else if (pc && modifiable()) { choix[parseInt(pc.getAttribute('data-i'), 10)] = undefined; dessinerJeu(); }
   });
   document.getElementById('valider').onclick = function(){
     var m = document.getElementById('msg'), L = [];
     for (var i = 0; i < 8; i++) L.push(choix[i]);
     if (L.some(function(x){ return !x; })) { m.className = 'msg err'; m.textContent = 'Il faut remplir les 8 cases.'; return; }
+    if (!confirm('Valider ce pronostic : ' + L.slice(0, 7).join(' - ') + ' (complément ' + L[7] + ') ?\n\nUne fois validé, il ne pourra plus être modifié. En échange, tu verras les pronostics des autres et la synthèse.')) return;
     m.className = 'msg'; m.textContent = 'Enregistrement…';
     fetch('/api/concours/prono', {method:'POST', credentials:'same-origin', headers:{'content-type':'application/json'}, body: JSON.stringify({chevaux: L})})
       .then(function(r){ return r.json(); }).then(function(d){
-        if (d.ok) { m.className = 'msg ok'; m.textContent = '✓ Pronostic enregistré : ' + d.chevaux.join(' - ') + '. Modifiable jusqu\'à 5 minutes avant le départ.'; D.moi = {chevaux: d.chevaux}; }
+        if (d.ok) { D.moi = {chevaux: d.chevaux, saisi: d.saisi}; chargerJour(); }
         else { m.className = 'msg err'; m.textContent = d.erreur || 'Erreur.'; }
       }).catch(function(){ m.className = 'msg err'; m.textContent = 'Connexion impossible, réessaie.'; });
   };

@@ -1,5 +1,5 @@
 import { json, initDb, currentUser, noDb } from '../../_auth.js';
-import { initConcours, calculerSiPret, courseDuJour, ajouterRobots, jourConcours, isoVersFr, MISE, MISE_JOUR, classementJour } from '../../_concours.js';
+import { initConcours, initCorrections, calculerSiPret, courseDuJour, ajouterRobots, jourConcours, isoVersFr, MISE, MISE_JOUR, syntheseCollective } from '../../_concours.js';
 
 // Le concours Quinté+ d'un jour : la course, mon pronostic ; après la course, les pronostics de tous
 export async function onRequestGet({ request, env }) {
@@ -21,11 +21,16 @@ export async function onRequestGet({ request, env }) {
       calcule: j.statut === 'calcule', rapports: j.rapports ? JSON.parse(j.rapports) : null };
   }
   if (moi) out.moi = { chevaux: JSON.parse(moi.chevaux), retenu: moi.retenu ? JSON.parse(moi.retenu) : null, gains: moi.gains, detail: moi.detail ? JSON.parse(moi.detail) : null, saisi: moi.saisi };
-  // Les pronostics des autres ne sont visibles qu'une fois la course validée et calculée
-  if (j && j.statut === 'calcule') {
-    const rows = (await db.prepare(`SELECT u.pseudo, u.role, p.chevaux, p.retenu, p.gains, p.detail FROM concours_pronos p JOIN users u ON u.id = p.user_id WHERE p.date = ?`).bind(iso).all()).results || [];
-    out.tous = rows.map((r) => ({ pseudo: r.pseudo, robot: r.role === 'robot', chevaux: JSON.parse(r.chevaux), retenu: r.retenu ? JSON.parse(r.retenu) : null, gains: r.gains || 0, net: Math.round(((r.gains || 0) - MISE_JOUR) * 100) / 100, detail: r.detail ? JSON.parse(r.detail) : [] }))
-      .sort((a, b) => b.gains - a.gains || a.pseudo.localeCompare(b.pseudo));
+  // Les pronostics des autres : visibles dès que le joueur a validé le sien (et par tous une fois la course calculée)
+  const calc = j && j.statut === 'calcule';
+  if (j && (moi || calc || u.role === 'admin')) {
+    await initCorrections(db);
+    const corr = new Set(((await db.prepare('SELECT DISTINCT user_id FROM concours_corrections WHERE date = ?').bind(iso).all()).results || []).map((x) => x.user_id));
+    const rows = (await db.prepare(`SELECT u.id, u.pseudo, u.role, p.chevaux, p.retenu, p.gains, p.detail, p.saisi FROM concours_pronos p JOIN users u ON u.id = p.user_id WHERE p.date = ?`).bind(iso).all()).results || [];
+    out.tous = rows.map((r) => ({ pseudo: r.pseudo, robot: r.role === 'robot', chevaux: JSON.parse(r.chevaux), saisi: r.role === 'robot' ? null : r.saisi, corrige: corr.has(r.id),
+      retenu: calc && r.retenu ? JSON.parse(r.retenu) : null, gains: calc ? r.gains || 0 : null, net: calc ? Math.round(((r.gains || 0) - MISE_JOUR) * 100) / 100 : null, detail: calc && r.detail ? JSON.parse(r.detail) : [] }))
+      .sort((a, b) => calc ? (b.gains - a.gains || a.pseudo.localeCompare(b.pseudo)) : ((a.robot - b.robot) || String(a.saisi).localeCompare(String(b.saisi))));
+    out.synthese = await syntheseCollective(db, iso);
   }
   out.participants = (await db.prepare('SELECT COUNT(*) AS n FROM concours_pronos WHERE date = ?').bind(iso).first()).n;
   return json(out);

@@ -1,7 +1,9 @@
 import { json, initDb, currentUser, noDb } from '../../_auth.js';
 import { initConcours, courseDuJour, jourConcours } from '../../_concours.js';
 
-// Enregistre (ou modifie) le pronostic du jour : 8 chevaux classés, jusqu'à 5 minutes avant le départ
+// Enregistre le pronostic du jour : 8 chevaux classés, jusqu'à 5 minutes avant le départ.
+// Une fois validé, il est VERROUILLÉ : plus aucune modification (sauf correction exceptionnelle de l'administrateur, tracée).
+// En échange, le joueur voit les pronostics des autres et la synthèse collective.
 export async function onRequestPost({ request, env }) {
   if (!env.DB) return noDb();
   const db = env.DB;
@@ -13,10 +15,15 @@ export async function onRequestPost({ request, env }) {
   let j; try { j = await courseDuJour(db, iso); } catch (e) { return json({ erreur: 'Le programme du PMU ne répond pas, réessaie dans un instant.' }, 502); }
   if (!j) return json({ erreur: "Pas de Quinté+ trouvé aujourd'hui." }, 400);
   if (j.statut === 'calcule' || !j.heure || Date.now() > j.heure - 5 * 60000) return json({ erreur: 'Les pronostics sont fermés : ils se ferment 5 minutes avant le départ.' }, 400);
+  const deja = await db.prepare('SELECT saisi FROM concours_pronos WHERE date = ? AND user_id = ?').bind(iso, u.id).first();
+  if (deja) return json({ erreur: 'Ton pronostic est déjà validé : il est verrouillé et ne peut plus être modifié.' }, 400);
   const ch = (b.chevaux || []).map((x) => parseInt(x, 10));
   const partants = JSON.parse(j.partants || '[]').filter((p) => !p.np).map((p) => p.n);
   if (ch.length !== 8 || ch.some((x) => !partants.includes(x)) || new Set(ch).size !== 8) return json({ erreur: 'Il faut classer 8 chevaux différents, tous partants (pas de non-partant).' }, 400);
-  await db.prepare(`INSERT INTO concours_pronos (date, user_id, chevaux, saisi) VALUES (?, ?, ?, datetime('now'))
-    ON CONFLICT(date, user_id) DO UPDATE SET chevaux = excluded.chevaux, saisi = excluded.saisi`).bind(iso, u.id, JSON.stringify(ch)).run();
-  return json({ ok: true, chevaux: ch });
+  // INSERT simple : si deux validations arrivent en même temps, la seconde échoue (pas d'écrasement)
+  try {
+    await db.prepare(`INSERT INTO concours_pronos (date, user_id, chevaux, saisi) VALUES (?, ?, ?, datetime('now'))`).bind(iso, u.id, JSON.stringify(ch)).run();
+  } catch (e) { return json({ erreur: 'Ton pronostic est déjà validé : il est verrouillé.' }, 400); }
+  const r = await db.prepare('SELECT saisi FROM concours_pronos WHERE date = ? AND user_id = ?').bind(iso, u.id).first();
+  return json({ ok: true, chevaux: ch, saisi: r && r.saisi });
 }

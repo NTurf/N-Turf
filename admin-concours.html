@@ -24,7 +24,7 @@
 <script>
 (function(){
   var E = function(s){ return String(s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); };
-  var heure = function(s){ var d = new Date(String(s).replace(' ', 'T') + 'Z'); return isNaN(d) ? '' : d.toLocaleTimeString('fr-FR', {timeZone:'Europe/Paris', hour:'2-digit', minute:'2-digit'}); };
+  var heure = function(s){ var d = new Date(String(s).replace(' ', 'T') + 'Z'); return isNaN(d) ? '' : d.toLocaleDateString('fr-FR', {timeZone:'Europe/Paris', day:'2-digit', month:'2-digit'}) + ' ' + d.toLocaleTimeString('fr-FR', {timeZone:'Europe/Paris', hour:'2-digit', minute:'2-digit', second:'2-digit'}); };
   function charger(date){
     fetch('/api/admin/concours' + (date ? '?date=' + date : ''), {credentials:'same-origin', cache:'no-store'}).then(function(r){
       if (!r.ok) { document.getElementById('refus').hidden = false; return null; } return r.json();
@@ -35,10 +35,18 @@
       var h = '<h2>Quinté+ du ' + E(d.dateFr) + '</h2>';
       if (d.course) h += '<p class="sub">' + E(d.course.hippodrome || '') + ' R' + d.course.reunion + ' C' + d.course.course + (d.course.statut === 'calcule' ? ' · arrivée calculée' : ' · en attente de l\'arrivée') + '</p>';
       h += '<p><b>' + d.joueurs.length + '</b> joueur' + (d.joueurs.length > 1 ? 's' : '') + ' ce jour-là · <b>' + d.inscrits + '</b> joueur' + (d.inscrits > 1 ? 's' : '') + ' au total depuis le début.</p>';
-      h += d.joueurs.length ? '<table class="st cl"><tr><th>Joueur</th><th>8 chevaux</th><th>Saisi à</th></tr>' + d.joueurs.map(function(j){
-        return '<tr><td><b>' + E(j.pseudo) + '</b>' + (j.gains != null ? '<small>' + String(j.gains).replace('.', ',') + ' fers gagnés</small>' : '') + '</td><td>' + j.chevaux.slice(0, 7).join(' - ') + ' <small>compl. ' + j.chevaux[7] + '</small></td><td>' + heure(j.saisi) + '</td></tr>';
+      h += d.joueurs.length ? '<table class="st cl"><tr><th>Joueur</th><th>8 chevaux</th><th>Validé à</th><th></th></tr>' + d.joueurs.map(function(j){
+        return '<tr><td><b>' + E(j.pseudo) + '</b>' + (j.gains != null ? '<small>' + String(j.gains).replace('.', ',') + ' fers gagnés</small>' : '') + '</td><td>' + j.chevaux.slice(0, 7).join(' - ') + ' <small>compl. ' + j.chevaux[7] + '</small></td><td>' + (j.robot ? '<small>site</small>' : heure(j.saisi)) + '</td><td>' + (j.robot ? '' : '<button type="button" class="btn ghost corr" data-u="' + j.id + '" data-p="' + E(j.pseudo) + '" data-c="' + j.chevaux.join(' ') + '">Corriger</button>') + '</td></tr>';
       }).join('') + '</table>' : '<p class="empty">Personne n\'a encore joué ce jour-là.</p>';
+      h += '<h3>Corrections exceptionnelles</h3>' + (d.corrections.length ? '<table class="st">' + d.corrections.map(function(c){ return '<tr><td><b>' + E(c.pseudo) + '</b><small>' + heure(c.quand) + ' · ' + E(c.motif || '') + '</small></td><td>' + (c.ancien || []).join(' - ') + '<br>→ ' + c.nouveau.join(' - ') + '</td></tr>'; }).join('') + '</table>' : '<p class="empty">Aucune correction ce jour-là.</p>') +
+        '<p class="note2">Un pronostic validé est verrouillé pour le joueur. Toi seul peux le corriger, en cas exceptionnel : la correction est gardée ici et signalée à côté de son pronostic (« corrigé par l\'administrateur »). Si la course est déjà calculée, ses gains sont recalculés.</p>';
       document.getElementById('rendu').innerHTML = h;
+      document.querySelectorAll('.corr').forEach(function(bt){ bt.onclick = function(){
+        var nv = prompt('Nouveau pronostic de ' + bt.getAttribute('data-p') + ' : 8 numéros séparés par des espaces (le 8e = complément)', bt.getAttribute('data-c')); if (!nv) return;
+        var motif = prompt('Motif de la correction (gardé dans l\'historique) :'); if (!motif) return;
+        fetch('/api/admin/concours', { method:'POST', credentials:'same-origin', headers:{'content-type':'application/json'}, body: JSON.stringify({ date: d.date, user: +bt.getAttribute('data-u'), chevaux: nv.trim().split(/[^0-9]+/), motif: motif }) })
+          .then(function(r){ return r.json(); }).then(function(x){ if (x.ok) charger(d.date); else alert(x.erreur || 'Erreur.'); });
+      }; });
     });
   }
   document.getElementById('jour').onchange = function(){ charger(this.value); };

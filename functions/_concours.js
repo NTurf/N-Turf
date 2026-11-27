@@ -298,3 +298,69 @@ export async function dernierJourCalcule(db) {
   const r = await db.prepare("SELECT date FROM concours_jours WHERE statut = 'calcule' ORDER BY date DESC LIMIT 1").first();
   return r ? r.date : null;
 }
+
+// ---------- Corrections exceptionnelles de l'administrateur (toujours tracées) ----------
+export async function initCorrections(db) {
+  await db.prepare(`CREATE TABLE IF NOT EXISTS concours_corrections (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, date TEXT NOT NULL, user_id INTEGER NOT NULL, ancien TEXT, nouveau TEXT NOT NULL,
+    motif TEXT, par INTEGER NOT NULL, quand TEXT NOT NULL DEFAULT (datetime('now')))`).run();
+}
+
+// ---------- Synthèse collective des pronostics des membres ----------
+// Brute : combien de joueurs citent chaque cheval (et à quel rang en moyenne).
+// Pondérée : chaque citation vaut le « poids » du joueur, calculé sur ses courses passées du concours :
+//   on compte combien de ses 8 chevaux finissent dans les 5 premiers, course après course.
+//   Un nouveau joueur part à 1 (comme tout le monde) ; son poids ne bouge que petit à petit,
+//   car on lui ajoute 10 courses « moyennes » fictives : il faut beaucoup de courses pour peser lourd.
+//   Le poids reste entre 0,5 et 2.
+export const K_FIABILITE = 10;
+export async function poidsJoueurs(db, avant) {
+  const rows = (await db.prepare(`SELECT p.user_id, p.chevaux, j.arrivee FROM concours_pronos p
+    JOIN concours_jours j ON j.date = p.date JOIN users u ON u.id = p.user_id
+    WHERE j.statut = 'calcule' AND p.date < ? AND u.role != 'robot'`).bind(avant).all()).results || [];
+  const S = new Map(); let tot = 0, nb = 0;
+  for (const r of rows) {
+    const top5 = JSON.parse(r.arrivee || '[]').slice(0, 5), ch = JSON.parse(r.chevaux || '[]');
+    const t = ch.filter((h) => top5.includes(h)).length;
+    const x = S.get(r.user_id) || { courses: 0, touches: 0 }; x.courses++; x.touches += t; S.set(r.user_id, x);
+    tot += t; nb++;
+  }
+  const moy = nb ? tot / nb : 0;
+  const out = new Map();
+  for (const [id, x] of S) {
+    const lisse = moy ? (x.touches + K_FIABILITE * moy) / (x.courses + K_FIABILITE) : 0;
+    const poids = moy ? Math.min(2, Math.max(0.5, lisse / moy)) : 1;
+    out.set(id, { courses: x.courses, touches: x.touches, poids: Math.round(poids * 100) / 100 });
+  }
+  return { parJoueur: out, moyenne: Math.round(moy * 100) / 100, courses: nb };
+}
+
+export async function syntheseCollective(db, iso) {
+  const rows = (await db.prepare(`SELECT p.user_id, u.pseudo, p.chevaux FROM concours_pronos p JOIN users u ON u.id = p.user_id
+    WHERE p.date = ? AND u.role != 'robot'`).bind(iso).all()).results || [];
+  const N = rows.length;
+  const P = await poidsJoueurs(db, iso);
+  const C = new Map();
+  const joueurs = [];
+  for (const r of rows) {
+    const ch = JSON.parse(r.chevaux || '[]');
+    const pj = P.parJoueur.get(r.user_id) || { courses: 0, touches: 0, poids: 1 };
+    joueurs.push({ pseudo: r.pseudo, courses: pj.courses, touches: pj.touches, poids: pj.poids });
+    ch.forEach((h, i) => {
+      const x = C.get(h) || { n: h, nb: 0, rangs: 0, points: 0 };
+      x.nb++; x.rangs += i + 1; x.points += pj.poids; C.set(h, x);
+    });
+  }
+  const L = [...C.values()].map((x) => ({ n: x.n, nb: x.nb, rangMoyen: Math.round(x.rangs / x.nb * 10) / 10, points: Math.round(x.points * 10) / 10 }));
+  const brute = L.slice().sort((a, b) => b.nb - a.nb || a.rangMoyen - b.rangMoyen || a.n - b.n);
+  const ponderee = L.slice().sort((a, b) => b.points - a.points || a.rangMoyen - b.rangMoyen || a.n - b.n);
+  const seuil = Math.ceil(N / 2);
+  return {
+    participants: N,
+    brute, ponderee,
+    consensus: N >= 2 ? brute.filter((x) => x.nb >= seuil).map((x) => x.n) : [],
+    divergences: N >= 2 ? brute.filter((x) => x.nb === 1).map((x) => x.n) : [],
+    joueurs: joueurs.sort((a, b) => b.poids - a.poids || b.courses - a.courses || a.pseudo.localeCompare(b.pseudo)),
+    moyenne: P.moyenne, coursesHistorique: P.courses, k: K_FIABILITE,
+  };
+}
