@@ -23,12 +23,12 @@
 <section id="zJeu" hidden>
   <div class="sectit"><span>Mon pronostic</span></div>
   <section class="card" id="cSaisie">
-    <p class="sub" id="aide">Touche les chevaux dans l'ordre de ton classement : 1er, 2e… jusqu'au 7e, puis ton cheval de complément. Touche une case pour la vider.</p>
+    <p class="sub" id="aide">Touche les chevaux dans l'ordre de ton classement : 1er, 2e… jusqu'au 8e. Touche une case pour la vider.</p>
     <div class="pgrid" id="pgrid"></div>
     <div class="partants" id="partants"></div>
     <div class="sectit petit"><span>Mes jeux</span></div>
     <div class="pal" id="pal"></div>
-    <div class="misebar"><span>💰</span><div><small>Mise du jour</small><b>171,50 fers</b></div><div class="cap"><small>Capital du mois</small><b id="cap">—</b></div></div>
+    <div class="misebar"><span>💰</span><div><small>Mise du jour</small><b id="miseJ">241,50 fers</b></div><div class="cap"><small>Capital du mois</small><b id="cap">—</b></div></div>
     <button class="valider" id="valider" type="button">✓ Valider mon pronostic</button>
     <p class="msg" id="msg"></p>
   </section>
@@ -46,22 +46,23 @@
 <details id="dRegl"><summary><b>📜 Le règlement du concours</b></summary>
 <ul class="regl">
 <li>Concours gratuit, réservé aux membres inscrits (un seul compte par personne, majeurs uniquement). Monnaie du jeu : les fers à cheval.</li>
-<li>Chaque jour, tu classes 8 chevaux du Quinté+ : du 1er au 7e, plus un cheval de complément. Les pronostics ferment 5 minutes avant le départ.</li>
+<li>Chaque jour, tu classes 8 chevaux du Quinté+, du 1er au 8e. Les 8 jouent. Les pronostics ferment 5 minutes avant le départ.</li>
 <li><b>Pronostic verrouillé</b> : une fois validé, ton pronostic ne peut plus être modifié. La date et l'heure de validation sont enregistrées et affichées. Seul l'administrateur peut, en cas exceptionnel, corriger un pronostic : la correction est enregistrée et signalée à côté du pronostic.</li>
 <li><b>Chacun s'engage avant de voir les autres</b> : dès que tu as validé ton pronostic, tu vois ceux des autres joueurs et la synthèse collective (brute et pondérée). Tant que tu n'as pas validé, tu ne vois rien. Une fois l'arrivée validée, tout le monde voit les pronostics, les gains et le classement.</li>
-<li><b>Non-partant</b> : le cheval de complément remplace le premier non-partant de tes 7. Les autres non-partants sont simplement retirés. Si le complément est lui-même non-partant, rien n'est remplacé.</li>
-<li><b>Tes jeux</b>, à chaque course (171,50 fers) :
+<li><b>Non-partant</b> : il est simplement retiré de ton classement (il n'y a pas de cheval de complément). Les chevaux suivants remontent d'un rang.</li>
+<li><b>Tes jeux</b>, à chaque course (241,50 fers) :
   <ul>
   <li>Simple gagnant-placé sur tes chevaux 1 et 2 : 4 fers gagnant + 16 fers placé chacun (40 fers).</li>
   <li>Couplé sur tes chevaux 1 à 3 (3 paires) : 2 fers gagnant + 2 fers placé par paire (12 fers).</li>
   <li>Tiercé combiné sur tes chevaux 1 à 5 : 10 combinaisons à 1 fer (10 fers).</li>
   <li>Quarté+ combiné sur tes chevaux 1 à 6 : 15 combinaisons à 1,50 fer (22,50 fers), avec le bonus 3.</li>
   <li>Multi en 4 sur tes chevaux 1 à 6 : 15 combinaisons à 3 fers (45 fers).</li>
-  <li>Quinté+ combiné sur tes chevaux 1 à 7 : 21 combinaisons à 2 fers (42 fers), avec les bonus 4, 4 sur 5 et 3.</li>
+  <li>Quinté+ combiné sur tes 8 chevaux : 56 combinaisons à 2 fers (112 fers), avec les bonus 4, 4 sur 5 et 3.</li>
   </ul></li>
 <li><b>Gains</b> : exactement les rapports officiels du PMU pour 1 €, multipliés par la mise d'une combinaison. Exemple : Quarté+ désordre à 80 pour 1 € = 80 × 1,50 = 120 fers.</li>
 <li><b>Ordre ou désordre</b> : c'est l'ordre si les chevaux arrivés sont dans le même ordre que dans ton classement, même avec des chevaux sautés entre eux (tu classes 4-11-7-2-9, arrivée 4-7-9 : Tiercé ordre). Sinon c'est le désordre. Jamais les deux.</li>
-<li><b>Mises</b> : à partir de ton premier pronostic, 171,50 fers sont retirés pour chaque jour de Quinté+, que tu joues ou non. Celui qui joue tous les jours n'est donc jamais pénalisé.</li>
+<li><b>Mises</b> : à partir de ton premier pronostic, 241,50 fers sont retirés pour chaque jour de Quinté+, que tu joues ou non. Celui qui joue tous les jours n'est donc jamais pénalisé.</li>
+<li><b>Ancien format</b> : jusqu'au 27 novembre 2026, le concours se jouait sur 7 chevaux plus un complément (Quinté+ sur 7 chevaux, 42 fers, mise du jour 171,50 fers). Ces journées gardent leurs règles, leurs gains et leurs mises d'origine : rien n'est recalculé ni mélangé.</li>
 <li><b>Les pronostics du site jouent aussi</b> : TCR, ALGO, PERSO, Études Quinté et Formule du membre (les jours de Quinté au trot) jouent chaque jour avec les mêmes règles et la même mise. Ils sont affichés en tête des classements pour que chacun sache s'il fait mieux qu'eux, mais ils ne montent jamais sur le podium : seuls les membres sont récompensés.</li>
 <li><b>Trois podiums</b> : celui du jour, celui de la semaine (du lundi au dimanche) et le Globe de Cristal du mois. Tous se classent en gains moins mises.</li>
 <li>Tout est calculé automatiquement dès que le PMU publie les rapports définitifs.</li>
@@ -74,7 +75,8 @@
 (function(){
   var E = function(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); };
   var F = function(x){ var v = Math.round(x * 100) / 100; return (v % 1 ? v.toFixed(2).replace('.', ',') : String(v)).replace(/\B(?=(\d{3})+(?!\d))/g, ' '); };
-  var PL = ['1er','2e','3e','4e','5e','6e','7e','Compl.'];
+  var PL8 = ['1er','2e','3e','4e','5e','6e','7e','8e'], PL7 = ['1er','2e','3e','4e','5e','6e','7e','Compl.'], PL = PL8;
+  var F7 = function(){ return D && D.format === 7; };
   var D = null, choix = [], ecart = 0, globeMoi = null;
 
   function chargerJour(){
@@ -83,7 +85,8 @@
       return r.json();
     }).then(function(d){
       if (!d) return;
-      D = d; ecart = d.maintenant - Date.now();
+      D = d; ecart = d.maintenant - Date.now(); PL = d.format === 7 ? PL7 : PL8;
+      document.getElementById('miseJ').textContent = F(d.miseJour) + ' fers';
       document.getElementById('zJeu').hidden = false;
       if (d.moi && !choix.length) choix = d.moi.chevaux.slice();
       dessinerJeu();
@@ -101,7 +104,7 @@
     var ok = modifiable();
     document.getElementById('pgrid').innerHTML = PL.map(function(l, i){
       var n = choix[i];
-      return '<div class="pc' + (i === 7 ? ' comp' : '') + (n ? ' sel' : '') + (n && np[n] ? ' np' : '') + '" data-i="' + i + '"><small>' + l + '</small><b>' + (n || '–') + '</b></div>';
+      return '<div class="pc' + (i === 7 && F7() ? ' comp' : '') + (n ? ' sel' : '') + (n && np[n] ? ' np' : '') + '" data-i="' + i + '"><small>' + l + '</small><b>' + (n || '–') + '</b></div>';
     }).join('');
     document.getElementById('partants').innerHTML = ok ? c.partants.map(function(p){
       var pris = choix.indexOf(p.n) >= 0;
@@ -110,7 +113,7 @@
     document.getElementById('aide').hidden = !ok;
     document.getElementById('valider').hidden = !ok;
     var L = choix.filter(Boolean);
-    var pal = [['Simple', 'chevaux 1-2', 40], ['Couplé', 'chevaux 1 à 3', 12], ['Tiercé', 'chevaux 1 à 5', 10], ['Quarté+', 'chevaux 1 à 6', 22.5], ['Multi en 4', 'chevaux 1 à 6', 45], ['Quinté+', 'chevaux 1 à 7', 42]];
+    var pal = [['Simple', 'chevaux 1-2', 40], ['Couplé', 'chevaux 1 à 3', 12], ['Tiercé', 'chevaux 1 à 5', 10], ['Quarté+', 'chevaux 1 à 6', 22.5], ['Multi en 4', 'chevaux 1 à 6', 45], ['Quinté+', F7() ? 'chevaux 1 à 7' : 'les 8 chevaux', D.mises.quinte]];
     document.getElementById('pal').innerHTML = pal.map(function(p){ return '<div><small>' + p[1] + '</small><b>' + p[0] + ' <i>' + F(p[2]) + '</i></b></div>'; }).join('');
     if (!ok) {
       var m = document.getElementById('msg');
@@ -128,7 +131,7 @@
       z.hidden = true;
       if (D.tous && D.tous.length) {
         t.innerHTML = '<h2>Les pronostics validés (' + D.tous.length + ')</h2>' + D.tous.map(function(p){
-          return '<div class="ptous"><div class="summ"><b>' + (p.robot ? '🤖 ' : '') + E(p.pseudo) + '</b> <span class="lst">' + p.chevaux.slice(0, 7).map(function(n){ return '<i>' + n + '</i>'; }).join('') + '</span> <small>compl. ' + p.chevaux[7] + '</small>' + (p.saisi ? '<br><small class="note2">validé le ' + quand(p.saisi) + '</small>' : '') + (p.corrige ? ' <small class="note2">· ✎ corrigé par l\'administrateur</small>' : '') + '</div></div>';
+          return '<div class="ptous"><div class="summ"><b>' + (p.robot ? '🤖 ' : '') + E(p.pseudo) + '</b> <span class="lst">' + p.chevaux.slice(0, F7() ? 7 : 8).map(function(n){ return '<i>' + n + '</i>'; }).join('') + '</span>' + (F7() ? ' <small>compl. ' + p.chevaux[7] + '</small>' : '') + (p.saisi ? '<br><small class="note2">validé le ' + quand(p.saisi) + '</small>' : '') + (p.corrige ? ' <small class="note2">· ✎ corrigé par l\'administrateur</small>' : '') + '</div></div>';
         }).join('') + '<p class="note2">Tu les vois parce que tu as validé le tien. Les gains apparaîtront dès l\'arrivée validée.</p>';
         t.hidden = false;
       } else t.hidden = true;
@@ -145,8 +148,8 @@
     z.innerHTML = h; z.hidden = false;
     if (D.tous && D.tous.length) {
       t.innerHTML = '<h2>Les pronostics de tous (' + D.tous.length + ')</h2>' + D.tous.map(function(p, i){
-        return '<details class="ptous"><summary><span class="rg">' + (i + 1) + '</span><b>' + (p.robot ? '🤖 ' : '') + E(p.pseudo) + '</b><span class="lst">' + (p.retenu || p.chevaux).slice(0, 7).map(function(n){ return '<i' + (c.arrivee.slice(0,5).indexOf(n) >= 0 ? ' class="hit"' : '') + '>' + n + '</i>'; }).join('') + '</span><span class="' + (p.net >= 0 ? 'pos' : 'neg') + '">' + F(p.gains) + '</span></summary>' + (p.corrige ? '<p class="note2">✎ Pronostic corrigé par l\'administrateur.</p>' : '') + lignes(p.detail) + '</details>';
-      }).join('') + '<p class="note2">Montants en fers gagnés (mise de 171,50 fers chacun). Touche un joueur pour voir le détail.</p>';
+        return '<details class="ptous"><summary><span class="rg">' + (i + 1) + '</span><b>' + (p.robot ? '🤖 ' : '') + E(p.pseudo) + '</b><span class="lst">' + (p.retenu || p.chevaux).slice(0, F7() ? 7 : 8).map(function(n){ return '<i' + (c.arrivee.slice(0,5).indexOf(n) >= 0 ? ' class="hit"' : '') + '>' + n + '</i>'; }).join('') + '</span><span class="' + (p.net >= 0 ? 'pos' : 'neg') + '">' + F(p.gains) + '</span></summary>' + (p.corrige ? '<p class="note2">✎ Pronostic corrigé par l\'administrateur.</p>' : '') + lignes(p.detail) + '</details>';
+      }).join('') + '<p class="note2">Montants en fers gagnés (mise de ' + F(D.miseJour) + ' fers chacun). Touche un joueur pour voir le détail.</p>';
       t.hidden = false;
     } else t.hidden = true;
   }
@@ -193,7 +196,7 @@
     var m = document.getElementById('msg'), L = [];
     for (var i = 0; i < 8; i++) L.push(choix[i]);
     if (L.some(function(x){ return !x; })) { m.className = 'msg err'; m.textContent = 'Il faut remplir les 8 cases.'; return; }
-    if (!confirm('Valider ce pronostic : ' + L.slice(0, 7).join(' - ') + ' (complément ' + L[7] + ') ?\n\nUne fois validé, il ne pourra plus être modifié. En échange, tu verras les pronostics des autres et la synthèse.')) return;
+    if (!confirm('Valider ce pronostic : ' + (F7() ? L.slice(0, 7).join(' - ') + ' (complément ' + L[7] + ')' : L.join(' - ')) + ' ?\n\nUne fois validé, il ne pourra plus être modifié. En échange, tu verras les pronostics des autres et la synthèse.')) return;
     m.className = 'msg'; m.textContent = 'Enregistrement…';
     fetch('/api/concours/prono', {method:'POST', credentials:'same-origin', headers:{'content-type':'application/json'}, body: JSON.stringify({chevaux: L})})
       .then(function(r){ return r.json(); }).then(function(d){
@@ -247,7 +250,7 @@
     h += '<div class="podium">' + pod(L[1], 2) + pod(L[0], 1) + pod(L[2], 3) + '</div>';
     if (L.length) h += '<table class="st bil cl"><tr><th>#</th><th>Joueur</th><th>Mises</th><th>Gains</th><th>Net</th></tr>' + L.map(function(x, i){
       return '<tr><td>' + (i + 1) + '</td><td><b>' + E(x.pseudo) + '</b><small>' + x.joues + ' joué' + (x.joues > 1 ? 's' : '') + ' sur ' + x.jours + ' j.</small></td><td>' + F(x.mises) + '</td><td>' + F(x.gains) + '</td><td class="' + (x.net >= 0 ? 'pos' : 'neg') + '">' + (x.net >= 0 ? '+' : '') + F(x.net) + '</td></tr>';
-    }).join('') + '</table><p class="note2">En fers à cheval. Les mises comptent 171,50 fers par jour depuis le premier pronostic du joueur, qu\'il ait joué ou non.</p>';
+    }).join('') + '</table><p class="note2">En fers à cheval. Les mises comptent la mise du jour (241,50 fers, 171,50 avant le 28/11) pour chaque jour depuis le premier pronostic du joueur, qu\'il ait joué ou non.</p>';
     else h += '<p class="empty">Aucun joueur classé pour l\'instant.</p>';
     z.innerHTML = h;
   }

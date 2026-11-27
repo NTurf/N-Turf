@@ -5,8 +5,17 @@ import { lireContenu } from './_auth.js';
 import { limites, classer, chevauxFormule, estTrot } from './_formule.js';
 import ETUDES from './_etude_liste.js';
 
-export const MISE = { sgp: 40, couple: 12, tierce: 10, quarte: 22.5, multi: 45, quinte: 42 };
-export const MISE_JOUR = 171.5;
+// Deux formats, l'historique de l'ancien est gardé tel quel :
+//  - jusqu'au 27/11/2026 : 7 chevaux + 1 complément (Quinté+ sur les 7 : 21 combinaisons, 42 fers) → 171,50 fers par jour
+//  - à partir du 28/11/2026 : 8 chevaux, pas de complément (Quinté+ sur les 8 : 56 combinaisons, 112 fers) → 241,50 fers par jour
+export const DEBUT_8 = '2026-11-28';
+export const formatDu = (iso) => (String(iso) >= DEBUT_8 ? 8 : 7);
+export const misesDu = (iso) => formatDu(iso) === 8
+  ? { sgp: 40, couple: 12, tierce: 10, quarte: 22.5, multi: 45, quinte: 112 }
+  : { sgp: 40, couple: 12, tierce: 10, quarte: 22.5, multi: 45, quinte: 42 };
+export const miseDu = (iso) => formatDu(iso) === 8 ? 241.5 : 171.5;
+export const MISE = misesDu(DEBUT_8);
+export const MISE_JOUR = 171.5; // ancien format (gardé pour l'historique)
 const r2 = (x) => Math.round(x * 100) / 100;
 
 export const parisJour = () => new Date().toLocaleDateString('fr-CA', { timeZone: 'Europe/Paris' }); // AAAA-MM-JJ
@@ -68,9 +77,12 @@ export function lireRapportsConcours(blocs) {
   return R;
 }
 
-// ---------- Non-partants : le complément remplace le 1er non-partant ----------
-export function pronoRetenu(ch, np) {
+// ---------- Non-partants ----------
+// Format 8 : les non-partants sont simplement retirés (pas de complément).
+// Format 7 (ancien) : le complément remplace le 1er non-partant.
+export function pronoRetenu(ch, np, fmt) {
   const NP = new Set(np || []);
+  if (fmt === 8) return ch.slice(0, 8).filter((x) => !NP.has(x));
   const p = ch.slice(0, 7), comp = ch[7];
   const i = p.findIndex((x) => NP.has(x));
   if (i < 0) return p;
@@ -88,7 +100,8 @@ function combis(a, k) {
 const dansLOrdre = (liste, top) => top.every((h, i) => i === 0 || liste.indexOf(top[i - 1]) < liste.indexOf(h));
 
 // ---------- Calcul des gains d'un pronostic ----------
-export function calculer(liste, arr, R) {
+export function calculer(liste, arr, R, fmt) {
+  const nQ = fmt === 8 ? 8 : 7; // chevaux joués au Quinté+
   const L = [], add = (pari, type, fers) => { if (fers > 0) L.push({ pari, type, fers: r2(fers) }); };
   const top = (k) => arr.slice(0, k);
   // SGP : chevaux 1 et 2, 4 fers gagnant + 16 fers placé chacun
@@ -121,9 +134,9 @@ export function calculer(liste, arr, R) {
   });
   // Multi en 4 : chevaux 1 à 6, 3 fers la combinaison
   if (R.m4 && arr.length >= 4) combis(s6, 4).forEach((c) => { if (top(4).every((h) => c.includes(h))) add('Multi en 4', 'Multi en 4', R.m4 * 3); });
-  // Quinté+ : chevaux 1 à 7 combiné, 2 fers la combinaison, + bonus 4, 4 sur 5, 3
-  odr('Quinté+', liste.slice(0, 7), 5, 2, R.qi);
-  if (arr.length >= 5) combis(liste.slice(0, 7), 5).forEach((c) => {
+  // Quinté+ : chevaux 1 à 7 (ancien format) ou 1 à 8, combiné, 2 fers la combinaison, + bonus 4, 4 sur 5, 3
+  odr('Quinté+', liste.slice(0, nQ), 5, 2, R.qi);
+  if (arr.length >= 5) combis(liste.slice(0, nQ), 5).forEach((c) => {
     const k5 = top(5).filter((h) => c.includes(h)).length;
     if (k5 === 4) {
       if (top(4).every((h) => c.includes(h))) { if (R.qi.b4) add('Quinté+', 'Bonus 4', R.qi.b4 * 2); }
@@ -242,8 +255,8 @@ export async function calculerSiPret(db, iso) {
   const pr = await db.prepare('SELECT user_id, chevaux FROM concours_pronos WHERE date = ?').bind(iso).all();
   const maj = [];
   for (const p of pr.results || []) {
-    const ret = pronoRetenu(JSON.parse(p.chevaux), np);
-    const c = calculer(ret, arr, R);
+    const ret = pronoRetenu(JSON.parse(p.chevaux), np, formatDu(iso));
+    const c = calculer(ret, arr, R, formatDu(iso));
     maj.push(db.prepare('UPDATE concours_pronos SET retenu = ?, gains = ?, detail = ? WHERE date = ? AND user_id = ?')
       .bind(JSON.stringify(ret), c.gains, JSON.stringify(c.detail), iso, p.user_id));
   }
@@ -254,7 +267,7 @@ export async function calculerSiPret(db, iso) {
 }
 
 // ---------- Classements : gains moins mises ----------
-// À partir de son premier pronostic (du mois pour le Globe), 171,50 fers retirés chaque jour de Quinté+ calculé, joué ou non.
+// À partir de son premier pronostic (du mois pour le Globe), la mise du jour (171,50 ou 241,50 fers selon le format) est retirée chaque jour de Quinté+ calculé, joué ou non.
 function ajoute(iso, k) { const t = new Date(iso + 'T12:00:00Z'); t.setUTCDate(t.getUTCDate() + k); return t.toISOString().slice(0, 10); }
 export function bornesSemaine(iso) { const t = new Date(iso + 'T12:00:00Z'); const j = (t.getUTCDay() + 6) % 7; return [ajoute(iso, -j), ajoute(iso, 6 - j)]; }
 export function bornesMois(iso) { const [a, m] = iso.split('-').map(Number); const fin = new Date(Date.UTC(a, m, 0)).getUTCDate(); return [`${a}-${String(m).padStart(2, '0')}-01`, `${a}-${String(m).padStart(2, '0')}-${String(fin).padStart(2, '0')}`]; }
@@ -279,9 +292,10 @@ export async function classement(db, du, au, depuisDebutPeriode) {
     const debut = depuisDebutPeriode
       ? (rows.filter((r) => r.user_id === x.id && r.date >= du).map((r) => r.date).sort()[0] || du)
       : (premiers.get(x.id) || du);
-    const compte = jours.filter((d) => d >= debut).length;
+    const comptes = jours.filter((d) => d >= debut);
+    const compte = comptes.length;
     if (!compte) continue;
-    const mises = r2(compte * MISE_JOUR);
+    const mises = r2(comptes.reduce((s, d) => s + miseDu(d), 0));
     out.push({ pseudo: x.pseudo, id: x.id, robot: x.robot, joues: x.joues, jours: compte, mises, gains: r2(x.gains), net: r2(x.gains - mises) });
   }
   out.sort((a, b) => b.net - a.net || b.gains - a.gains || a.pseudo.localeCompare(b.pseudo));
@@ -290,7 +304,7 @@ export async function classement(db, du, au, depuisDebutPeriode) {
 
 export async function classementJour(db, iso) {
   const rows = (await db.prepare(`SELECT u.id, u.pseudo, u.role, p.gains FROM concours_pronos p JOIN users u ON u.id = p.user_id WHERE p.date = ?`).bind(iso).all()).results || [];
-  return rows.map((r) => ({ id: r.id, pseudo: r.pseudo, robot: r.role === 'robot', joues: 1, jours: 1, mises: MISE_JOUR, gains: r2(r.gains || 0), net: r2((r.gains || 0) - MISE_JOUR) }))
+  return rows.map((r) => ({ id: r.id, pseudo: r.pseudo, robot: r.role === 'robot', joues: 1, jours: 1, mises: miseDu(iso), gains: r2(r.gains || 0), net: r2((r.gains || 0) - miseDu(iso)) }))
     .sort((a, b) => b.net - a.net || a.pseudo.localeCompare(b.pseudo));
 }
 

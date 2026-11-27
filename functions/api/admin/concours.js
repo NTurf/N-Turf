@@ -1,5 +1,5 @@
 import { json, initDb, currentUser, noDb } from '../../_auth.js';
-import { initConcours, initCorrections, jourConcours, isoVersFr, pronoRetenu, calculer } from '../../_concours.js';
+import { initConcours, initCorrections, jourConcours, isoVersFr, pronoRetenu, calculer, formatDu } from '../../_concours.js';
 
 // Vue de l'administrateur (Bruno seul) : les joueurs du concours et leurs pronostics, même avant la course
 export async function onRequestGet({ request, env }) {
@@ -14,7 +14,7 @@ export async function onRequestGet({ request, env }) {
   const rows = (await db.prepare(`SELECT u.id, u.pseudo, u.role, p.chevaux, p.saisi, p.gains FROM concours_pronos p JOIN users u ON u.id = p.user_id WHERE p.date = ? ORDER BY p.saisi`).bind(iso).all()).results || [];
   const inscrits = (await db.prepare('SELECT COUNT(DISTINCT user_id) AS n FROM concours_pronos').first()).n;
   const corr = (await db.prepare(`SELECT c.ancien, c.nouveau, c.motif, c.quand, u.pseudo FROM concours_corrections c JOIN users u ON u.id = c.user_id WHERE c.date = ? ORDER BY c.id`).bind(iso).all()).results || [];
-  return json({ date: iso, dateFr: isoVersFr(iso), course: j || null, inscrits,
+  return json({ date: iso, dateFr: isoVersFr(iso), format: formatDu(iso), course: j || null, inscrits,
     joueurs: rows.map((r) => ({ id: r.id, robot: r.role === 'robot', pseudo: r.pseudo, chevaux: JSON.parse(r.chevaux), saisi: r.saisi, gains: r.gains })),
     corrections: corr.map((c) => ({ pseudo: c.pseudo, ancien: c.ancien ? JSON.parse(c.ancien) : null, nouveau: JSON.parse(c.nouveau), motif: c.motif, quand: c.quand })) });
 }
@@ -44,7 +44,7 @@ export async function onRequestPost({ request, env }) {
   ];
   if (j.statut === 'calcule' && j.rapports) {
     const np = JSON.parse(j.partants || '[]').filter((x) => x.np).map((x) => x.n);
-    const ret = pronoRetenu(ch, np), c = calculer(ret, JSON.parse(j.arrivee || '[]'), JSON.parse(j.rapports));
+    const ret = pronoRetenu(ch, np, formatDu(iso)), c = calculer(ret, JSON.parse(j.arrivee || '[]'), JSON.parse(j.rapports), formatDu(iso));
     q.push(db.prepare('UPDATE concours_pronos SET chevaux = ?, retenu = ?, gains = ?, detail = ? WHERE date = ? AND user_id = ?').bind(JSON.stringify(ch), JSON.stringify(ret), c.gains, JSON.stringify(c.detail), iso, parseInt(b.user, 10)));
   } else q.push(db.prepare('UPDATE concours_pronos SET chevaux = ? WHERE date = ? AND user_id = ?').bind(JSON.stringify(ch), iso, parseInt(b.user, 10)));
   await db.batch(q);
