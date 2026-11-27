@@ -44,6 +44,17 @@
 .vide2{text-align:center;font-style:italic;color:#666;padding:20px 0}
 .frm2 label{display:block;margin:6px 0;font-size:13px;color:var(--mute)}
 .frm2 select,.frm2 input,.frm2 textarea{display:block;width:100%;box-sizing:border-box;font-size:16px;padding:8px;border-radius:8px;border:1.5px solid var(--line);margin-top:3px}
+.bloc{border:2px solid var(--dark,#0D1E3D);border-radius:12px;padding:8px 12px 10px;margin:10px 0;background:#fff}
+.bloc legend{font-weight:800;padding:0 6px;color:var(--navy,#0D1E3D)}
+.choixT{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:6px;margin:4px 0 8px}
+.tbt{border:1.5px solid var(--line);background:#f4f7fc;border-radius:10px;padding:8px 6px;font-weight:700;cursor:pointer;font-size:14px;color:var(--navy,#0D1E3D)}
+.tbt span{display:block;font-size:20px}
+.tbt.on{background:var(--navy,#0D1E3D);color:#fff;border-color:var(--navy,#0D1E3D)}
+.lig{display:flex;gap:16px;flex-wrap:wrap}
+.frm2 label.cc{display:flex;align-items:center;gap:6px;color:var(--txt,#111);font-size:15px}
+.frm2 label.cc input{width:auto;display:inline;margin:0}
+.frm2 textarea{font-family:inherit}
+.recap{font-size:16px;text-align:center;margin:6px 0}
 .charte{background:#FFF6DC;border:1px solid #f0be3c;border-radius:10px;padding:8px 10px}
 </style>
 </head>
@@ -137,6 +148,12 @@
   function corps(p, c){
     var arr = (p.resultat && p.resultat.arrivee) || (c.arrivee || []).slice(0, 5), h = actions(p, c);
     if (p.type === 'prono') h += '<div class="sel">' + p.chevaux.map(function(n, i){ return '<span class="ch' + (i < 3 ? ' piv' : '') + (arr.indexOf(n) >= 0 ? ' hit' : '') + '">' + n + '</span>'; }).join('') + '</div>';
+    else if (p.type === 'jeu') {
+      var j = p.ticket || {}, NOM = { SG: 'Gagnant', SP: 'Placé', CG: 'Couplé gagnant', CP: 'Couplé placé', CO: 'Couplé ordre' }, grp = {};
+      (j.paris || []).forEach(function(x){ (grp[x.t] = grp[x.t] || []).push(x.c.join('-')); });
+      h += '<div class="ou">' + ((j.paris || []).some(function(x){ return x.t === 'SG' || x.t === 'SP'; }) ? 'Jeu simple' : 'Couplé') + '</div><div class="sel">' + (p.chevaux || []).map(function(n){ return '<span class="ch piv' + (arr.indexOf(n) >= 0 ? ' hit' : '') + '">' + n + '</span>'; }).join('') + '</div>';
+      h += '<div class="res">' + Object.keys(grp).map(function(k){ return NOM[k] + (k === 'SG' || k === 'SP' ? '' : ' ' + grp[k].join(', ')); }).join(' · ') + '<br>Mise : <b>' + EUR(p.cout) + '</b> (' + EUR(j.mise) + ' par pari)' + (p.joue ? ' · <b>joué réellement</b>' : ' · <span class="fictif">non joué : gains en simulation</span>') + '</div>';
+    }
     else {
       var t = p.ticket;
       h += '<div class="ou">Ticket ' + E(t.pari) + ' · ' + E(NTT.FORMULES[t.formule] || '') + '</div><div class="sel">' + NTT.vue(t).map(function(n){ return '<span class="ch' + (n === 'X' ? ' xx' : '') + (arr.indexOf(n) >= 0 ? ' hit' : '') + '">' + E(n) + '</span>'; }).join('') + '</div>';
@@ -158,7 +175,7 @@
     return h;
   }
 
-  // ---------- Formulaire de publication (contributeurs autorisés) ----------
+  // ---------- Formulaire de publication (contributeurs autorisés) : 1. la course, 2. ce que je publie, 3. mon commentaire ----------
   function formulaire(){
     var C = D.moi.contributeur, z = $('fPub');
     $('cPub').hidden = !C || D.date !== D.aujourdhui;
@@ -171,24 +188,36 @@
     }
     var R = D.reunions.filter(function(r){ return r.courses.some(function(c){ return c.heure > now(); }); });
     if (!R.length) { z.innerHTML = '<p class="empty">Plus aucune course à venir aujourd\'hui.</p>'; return; }
-    var types = []; if (C.droits.pronos) { types.push(['coeur', '❤ Coup de cœur du jour (1 cheval, à la une)']); types.push(['prono', 'Pronostic (1 à 8 chevaux)']); } if ((C.droits.paris || []).length) types.push(['ticket', 'Ticket']);
-    z.innerHTML = '<div class="frm2"><label>Réunion<select id="pR">' + R.map(function(r){ return '<option value="' + r.r + '">R' + r.r + ' ' + E(r.h) + '</option>'; }).join('') + '</select></label><label>Course<select id="pC"></select></label>' +
-      '<label>Je publie<select id="pT">' + types.map(function(t){ return '<option value="' + t[0] + '">' + t[1] + '</option>'; }).join('') + '</select></label><div id="pZ"></div>' +
-      '<label>Commentaire (facultatif)<textarea id="pCom" rows="2" maxlength="300"></textarea></label><p class="note2" id="pCout"></p><button type="button" class="btn" id="pGo">Publier</button></div>';
+    var T = [];
+    if (C.droits.pronos) T.push(['coeur', '❤', 'Coup de cœur'], ['simple', '🎯', 'Jeu simple'], ['couple', '🔗', 'Couplé'], ['prono', '📋', 'Pronostic']);
+    if ((C.droits.paris || []).length) T.push(['ticket', '🎟️', 'Ticket (Tiercé, Quarté+…)']);
+    var TYPE = T[0][0];
+    z.innerHTML = '<div class="frm2">' +
+      '<fieldset class="bloc"><legend>1. La course</legend><label>Réunion<select id="pR">' + R.map(function(r){ return '<option value="' + r.r + '">R' + r.r + ' ' + E(r.h) + '</option>'; }).join('') + '</select></label><label>Course<select id="pC"></select></label></fieldset>' +
+      '<fieldset class="bloc"><legend>2. Ce que je publie</legend><div class="choixT">' + T.map(function(t){ return '<button type="button" class="tbt" data-t="' + t[0] + '"><span>' + t[1] + '</span>' + E(t[2]) + '</button>'; }).join('') + '</div><div id="pZ"></div></fieldset>' +
+      '<fieldset class="bloc"><legend>3. Mon commentaire</legend><textarea id="pCom" rows="4" maxlength="500" placeholder="Ton analyse, ton avis sur la course, pourquoi ce cheval… (facultatif)"></textarea></fieldset>' +
+      '<p class="recap" id="pCout"></p><button type="button" class="btn" id="pGo" style="width:100%;font-size:17px">Publier dans le Ticket du jour</button></div>';
     function course(){ var r = D.reunions.find(function(x){ return x.r === +$('pR').value; }); return r && r.courses.find(function(c){ return c.c === +$('pC').value; }); }
     function remplirC(){ var r = D.reunions.find(function(x){ return x.r === +$('pR').value; }); $('pC').innerHTML = r.courses.filter(function(c){ return c.heure > now(); }).map(function(c){ return '<option value="' + c.c + '">C' + c.c + ' · ' + hm(c.heure) + ' · ' + E(c.libelle) + (c.quinte ? ' (Quinté+)' : '') + '</option>'; }).join(''); zone(); }
+    var coche = function(id, lib, on){ return '<label class="cc"><input type="checkbox" id="' + id + '"' + (on ? ' checked' : '') + '> ' + lib + '</label>'; };
+    var miseC = '<label>Mise par pari (€)<input id="pMi" inputmode="decimal" value="1"></label>';
+    var joue = '<label class="cc"><input type="checkbox" id="pJ"> Je joue réellement ce jeu</label>';
     function zone(){
-      var c = course(), t = $('pT').value;
-      if (t === 'coeur') $('pZ').innerHTML = '<label>Numéro de ton coup de cœur<input id="pCh" inputmode="numeric" placeholder="ex. 9"></label>';
-      else if (t === 'prono') $('pZ').innerHTML = '<label>Tes chevaux, dans l\'ordre<input id="pCh" inputmode="numeric" placeholder="ex. 9 12 3 7 1 14 5 8"></label>';
+      var c = course(), petit = c && c.partants > 0 && c.partants <= 7;
+      document.querySelectorAll('.tbt').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-t') === TYPE); });
+      var h = '';
+      if (TYPE === 'coeur') h = '<label>Numéro de ton coup de cœur<input id="pCh" inputmode="numeric" placeholder="ex. 9"></label><p class="note2">Il passe à la une du journal, dans un encadré.</p>';
+      else if (TYPE === 'prono') h = '<label>Tes chevaux, dans l\'ordre (1 à 8)<input id="pCh" inputmode="numeric" placeholder="ex. 9 12 3 7 1 14 5 8"></label>';
+      else if (TYPE === 'simple') h = '<label>Cheval ou chevaux joués en simple<input id="pS" inputmode="numeric" placeholder="ex. 9  (ou 9 12)"></label><div class="lig">' + coche('pSG', 'Gagnant', true) + coche('pSP', 'Placé', true) + '</div>' + miseC + joue;
+      else if (TYPE === 'couple') h = '<label>Chevaux du couplé (2 à 5)<input id="pK" inputmode="numeric" placeholder="ex. 9 12  (ou 9 12 3)"></label>' + (petit ? '<p class="note2">Course de 7 partants ou moins : seul le couplé ordre existe, joué dans les deux sens.</p>' : '<div class="lig">' + coche('pCG', 'Gagnant', true) + coche('pCP', 'Placé', false) + '</div>') + miseC + joue;
       else {
         var P = (D.moi.contributeur.droits.paris || []).filter(function(p){ return c && c.paris.indexOf(p) >= 0; });
-        $('pZ').innerHTML = P.length ? '<label>Pari<select id="pPari">' + P.map(function(p){ return '<option>' + E(p) + '</option>'; }).join('') + '</select></label><label>Formule<select id="pF">' + Object.keys(NTT.FORMULES).map(function(f){ return '<option value="' + f + '">' + E(NTT.FORMULES[f]) + '</option>'; }).join('') + '</select></label>' +
-          '<label>Chevaux (en champ : X à la place voulue, ex. 9 X 12)<input id="pCh" autocapitalize="characters" placeholder="ex. 9 12 13 14 6"></label><label>Mise par combinaison (€)<input id="pMi" inputmode="decimal"></label><label>Associés (facultatif, pour X)<input id="pAs" inputmode="numeric"></label><label style="display:flex;gap:8px;align-items:center;color:var(--txt)"><input type="checkbox" id="pJ" style="width:auto;display:inline"> Je joue réellement ce ticket</label>'
+        h = P.length ? '<label>Pari<select id="pPari">' + P.map(function(p){ return '<option>' + E(p) + '</option>'; }).join('') + '</select></label><label>Formule<select id="pF">' + Object.keys(NTT.FORMULES).map(function(f){ return '<option value="' + f + '">' + E(NTT.FORMULES[f]) + '</option>'; }).join('') + '</select></label>' +
+          '<label>Chevaux (en champ : X à la place voulue, ex. 9 X 12)<input id="pCh" autocapitalize="characters" placeholder="ex. 9 12 13 14 6"></label><label>Mise par combinaison (€)<input id="pMi" inputmode="decimal"></label><label>Associés (facultatif, pour X)<input id="pAs" inputmode="numeric"></label>' + joue
           : '<p class="empty">Aucun des paris qui te sont ouverts n\'existe sur cette course.</p>';
-        if (P.length) $('pMi').value = String(NTT.PARIS[P[0]].mise).replace('.', ',');
-        if ($('pPari')) $('pPari').onchange = function(){ $('pMi').value = String(NTT.PARIS[this.value].mise).replace('.', ','); calc(); };
       }
+      $('pZ').innerHTML = h;
+      if (TYPE === 'ticket' && $('pPari')) { $('pMi').value = String(NTT.PARIS[$('pPari').value].mise).replace('.', ','); $('pPari').onchange = function(){ $('pMi').value = String(NTT.PARIS[this.value].mise).replace('.', ','); calc(); }; }
       $('pZ').querySelectorAll('input,select').forEach(function(el){ el.addEventListener('input', calc); el.addEventListener('change', calc); });
       calc();
     }
@@ -200,17 +229,27 @@
       else t.chevaux = NTT.nums(txt);
       return t;
     }
-    function calc(){
-      var c = course(); if (!c || $('pT').value !== 'ticket') { $('pCout').textContent = ''; return; }
-      var t = ticket(); if (!t) { $('pCout').textContent = ''; return; }
-      var nb = NTT.combinaisons(t, c.partants);
-      $('pCout').textContent = nb ? nb + ' combinaison' + (nb > 1 ? 's' : '') + ' × ' + EUR(t.mise) + ' = ' + EUR(NTT.cout(t, c.partants)) : 'Aucune combinaison pour l\'instant : vérifie les chevaux et la formule.';
+    function jeu(){
+      var m = parseFloat(String(($('pMi') || {}).value || '').replace(',', '.')) || 0, c = course(), petit = c && c.partants > 0 && c.partants <= 7;
+      if (TYPE === 'simple') { var S = NTT.nums($('pS').value), g = $('pSG').checked, p = $('pSP').checked; return { mise: m, simple: S, sg: g, sp: p, nb: S.length * ((g ? 1 : 0) + (p ? 1 : 0)) }; }
+      var K = NTT.nums($('pK').value), n = K.length, paires = n >= 2 ? n * (n - 1) / 2 : 0;
+      if (petit) return { mise: m, couple: K, nb: paires * 2 };
+      var cg = $('pCG').checked, cp = $('pCP').checked; return { mise: m, couple: K, cg: cg, cp: cp, nb: paires * ((cg ? 1 : 0) + (cp ? 1 : 0)) };
     }
-    $('pR').onchange = remplirC; $('pC').onchange = zone; $('pT').onchange = zone; remplirC();
+    function calc(){
+      var c = course(), out = '';
+      if (TYPE === 'ticket') { var t = ticket(); if (t && c) { var nb = NTT.combinaisons(t, c.partants); out = nb ? nb + ' combinaison' + (nb > 1 ? 's' : '') + ' × ' + EUR(t.mise) + ' = <b>' + EUR(NTT.cout(t, c.partants)) + '</b>' : 'Aucune combinaison pour l\'instant : vérifie les chevaux et la formule.'; } }
+      else if (TYPE === 'simple' || TYPE === 'couple') { var j = jeu(); if (j.nb) out = j.nb + ' pari' + (j.nb > 1 ? 's' : '') + ' × ' + EUR(j.mise) + ' = <b>' + EUR(j.nb * j.mise) + '</b>'; }
+      $('pCout').innerHTML = out;
+    }
+    $('pR').onchange = remplirC; $('pC').onchange = zone;
+    z.querySelectorAll('.tbt').forEach(function(b){ b.onclick = function(){ TYPE = b.getAttribute('data-t'); zone(); }; });
+    remplirC();
     $('pGo').onclick = function(){
-      var t = $('pT').value, b = { r: +$('pR').value, c: +$('pC').value, type: t, commentaire: $('pCom').value };
-      if (t === 'prono' || t === 'coeur') b.chevaux = NTT.nums($('pCh').value);
-      else { b.ticket = ticket(); if (!b.ticket) return; b.joue = $('pJ').checked; }
+      var b = { r: +$('pR').value, c: +$('pC').value, commentaire: $('pCom').value };
+      if (TYPE === 'prono' || TYPE === 'coeur') { b.type = TYPE; b.chevaux = NTT.nums($('pCh').value); }
+      else if (TYPE === 'simple' || TYPE === 'couple') { b.type = 'jeu'; var j = jeu(); if (TYPE === 'simple') b.jeu = { mise: j.mise, simple: j.simple, sg: j.sg, sp: j.sp }; else b.jeu = { mise: j.mise, couple: j.couple, cg: j.cg, cp: j.cp }; b.joue = $('pJ').checked; }
+      else { b.type = 'ticket'; b.ticket = ticket(); if (!b.ticket) return; b.joue = $('pJ').checked; }
       post('/api/td/publier', b).then(function(x){
         if (x.ok) { msg('✓ Publié dans le Ticket du jour.', true); $('cPub').open = false; charger(D.date); }
         else msg(x.erreur || 'Erreur.');

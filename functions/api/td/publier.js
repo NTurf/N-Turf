@@ -41,6 +41,30 @@ export async function onRequestPost({ request, env }) {
       if (h && h.statut === 'NON_PARTANT') return json({ erreur: `Le ${n} est non partant.` }, 400);
       if (h) ticket = { nom: h.nom };
     } catch (e) {}
+  } else if (b.type === 'jeu') {
+    // Jeu simple et couplé : chaque pari à la mise choisie, payé aux rapports officiels du PMU
+    if (!c.droits.pronos) return json({ erreur: 'Tu n\'as pas le droit de publier des pronostics.' }, 403);
+    const j = b.jeu || {}, mise = Math.round(Number(j.mise) * 100) / 100, paris = [];
+    if (!(mise > 0) || mise > 500) return json({ erreur: 'Indique la mise par pari (en euros).' }, 400);
+    const petit = (course.partants || 0) > 0 && course.partants <= 7;
+    const sc = [...new Set((j.simple || []).map(num))];
+    if (sc.some((x) => !x)) return json({ erreur: `Numéros de 1 à ${max} pour le jeu simple.` }, 400);
+    if (sc.length) { if (!j.sg && !j.sp) return json({ erreur: 'Jeu simple : coche Gagnant, Placé ou les deux.' }, 400); for (const n of sc) { if (j.sg) paris.push({ t: 'SG', c: [n] }); if (j.sp) paris.push({ t: 'SP', c: [n] }); } }
+    const cc = [...new Set((j.couple || []).map(num))];
+    if (cc.some((x) => !x)) return json({ erreur: `Numéros de 1 à ${max} pour le couplé.` }, 400);
+    if (cc.length) {
+      if (cc.length < 2 || cc.length > 5) return json({ erreur: 'Couplé : de 2 à 5 chevaux.' }, 400);
+      if (petit) { for (const a of cc) for (const z of cc) if (a !== z) paris.push({ t: 'CO', c: [a, z] }); }
+      else {
+        if (!j.cg && !j.cp) return json({ erreur: 'Couplé : coche Gagnant, Placé ou les deux.' }, 400);
+        for (let i = 0; i < cc.length; i++) for (let k = i + 1; k < cc.length; k++) { if (j.cg) paris.push({ t: 'CG', c: [cc[i], cc[k]] }); if (j.cp) paris.push({ t: 'CP', c: [cc[i], cc[k]] }); }
+      }
+    }
+    if (!paris.length) return json({ erreur: 'Indique au moins un cheval en jeu simple ou en couplé.' }, 400);
+    chevaux = [...new Set([...sc, ...cc])];
+    ticket = { jeu: true, mise, paris, petit };
+    cout = Math.round(paris.length * mise * 100) / 100;
+    type = 'jeu';
   } else if (b.type === 'ticket') {
     const t = b.ticket || {};
     if (!NTT.PARIS[t.pari]) return json({ erreur: 'Pari inconnu.' }, 400);

@@ -4,6 +4,7 @@
 // Tout est enregistré sous forme de données (pas d'images) pour les statistiques de chaque contributeur.
 import { BASE, cache, get, preparer, lotCache, lireRapports } from './_pmu.js';
 import NTT from './_ntt.js';
+import { evaluer } from './_pm.js';
 
 export const PARIS = Object.keys(NTT.PARIS); // Tiercé, Quarté+, Quinté+, Multi, 2 sur 4, Trio, Super 4
 // Codes PMU de chaque pari, pour ne proposer que ce qui existe sur la course
@@ -99,7 +100,13 @@ export async function resoudre(db, iso, P) {
       let g = 0, pl = 0;
       for (const x of raps) { if (x.nom === 'Gagnant' && rang === 1) g = x.euros; const m = String(x.nom).match(/^Placé\s+(\d+)$/); if (m && +m[1] === n) pl = x.euros; }
       res = { arrivee: arr.slice(0, 5), rang: rang || null, gagne: r2(g), place: r2(pl), mise: 2 };
-    } else if (p.type === 'prono') res = { arrivee: arr.slice(0, 5), ...resultatProno(JSON.parse(p.chevaux || '[]'), arr) };
+    } else if (p.type === 'jeu') {
+      const t = JSON.parse(p.ticket || '{}'), np = ((parts && parts.participants) || []).filter((x) => x.statut === 'NON_PARTANT').map((x) => x.numPmu);
+      const ev = evaluer(t.paris || [], blocs, np, arr), m = t.mise || 1;
+      const NOM = { SG: 'Gagnant', SP: 'Placé', CG: 'Couplé gagnant', CP: 'Couplé placé', CO: 'Couplé ordre' };
+      res = { arrivee: arr.slice(0, 5), mise: r2(ev.mise * m), gagne: r2(ev.gains * m), detail: ev.detail.filter((x) => x.r > 0 || x.np).map((x) => `${NOM[x.t] || x.t} ${x.c.join('-')} : ${x.np ? 'remboursé' : (x.r * m).toFixed(2).replace('.', ',') + ' €'}`) };
+    }
+    else if (p.type === 'prono') res = { arrivee: arr.slice(0, 5), ...resultatProno(JSON.parse(p.chevaux || '[]'), arr) };
     else {
       const t = JSON.parse(p.ticket || '{}');
       const g = NTT.gains(t, arr, raps, partants);
