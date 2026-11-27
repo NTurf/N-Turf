@@ -1,4 +1,14 @@
-@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Barlow:wght@400;500;600;700;800&display=swap');
+/* Polices hébergées sur le site lui-même : avant, la page attendait Google Fonts et pouvait rester bloquée en chargement */
+@font-face{font-family:'Barlow';font-style:normal;font-weight:400;font-display:swap;src:url(/fonts/barlow-latin-400-normal.woff2) format('woff2')}
+@font-face{font-family:'Barlow';font-style:normal;font-weight:500;font-display:swap;src:url(/fonts/barlow-latin-500-normal.woff2) format('woff2')}
+@font-face{font-family:'Barlow';font-style:normal;font-weight:600;font-display:swap;src:url(/fonts/barlow-latin-600-normal.woff2) format('woff2')}
+@font-face{font-family:'Barlow';font-style:normal;font-weight:700;font-display:swap;src:url(/fonts/barlow-latin-700-normal.woff2) format('woff2')}
+@font-face{font-family:'Barlow';font-style:normal;font-weight:800;font-display:swap;src:url(/fonts/barlow-latin-800-normal.woff2) format('woff2')}
+@font-face{font-family:'Barlow Condensed';font-style:normal;font-weight:600;font-display:swap;src:url(/fonts/barlow-condensed-latin-600-normal.woff2) format('woff2')}
+@font-face{font-family:'Barlow Condensed';font-style:normal;font-weight:700;font-display:swap;src:url(/fonts/barlow-condensed-latin-700-normal.woff2) format('woff2')}
+@font-face{font-family:'Barlow Condensed';font-style:normal;font-weight:800;font-display:swap;src:url(/fonts/barlow-condensed-latin-800-normal.woff2) format('woff2')}
+@font-face{font-family:'Barlow Condensed';font-style:normal;font-weight:900;font-display:swap;src:url(/fonts/barlow-condensed-latin-900-normal.woff2) format('woff2')}
+
 :root{--navy:#0D1E3D;--navy2:#F3F6FC;--gold:#F0B429;--gold-t:#A87C06;--blue:#1E5BB5;--blue2:#2470D4;--dark:#1A2F58;--bg:#EEF3FB;--txt:#0D1E3D;--soft:#3B5078;--mute:#7586A3;--card:#FFFFFF;--line:#C3D0E6;--green:#1E8A4C}
 *{box-sizing:border-box}
 body{margin:0;background:var(--navy);color:var(--txt);font-family:'Barlow',-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;font-size:16px;line-height:1.5}
