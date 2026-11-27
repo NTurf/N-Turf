@@ -32,9 +32,9 @@ function dessiner(){
   var L = M.filter(function(m){ return !f || m.pseudo.toLowerCase().indexOf(f) >= 0; });
   $('nb').textContent = M.length + ' membre(s) inscrit(s).';
   $('liste').innerHTML = L.map(function(m){
-    if (m.role === 'admin') return '<div class="mbr"><div><b>'+esc(m.pseudo)+'</b> <span class="tag adm">Administrateur</span><br><small>'+esc(m.email)+'</small></div></div>';
     function sw(k, lib){ return '<label class="sw"><input type="checkbox" data-id="'+m.id+'" data-k="'+k+'"'+(m[k]?' checked':'')+'> '+lib+'</label>'; }
-    return '<div class="mbr'+(m.banni?' ban':'')+'"><div><b>'+esc(m.pseudo)+'</b><br><small>'+esc(m.email)+' · inscrit le '+dt(m.created_at).split(' ')[0]+' · dernière connexion : '+dt(m.last_login)+'</small></div><div class="sws">'+sw('moderateur','Modérateur')+sw('publier','Administration')+sw('hippo','Hippodrome')+sw('redacteur','Rédacteur (Journal)')+sw('equipe','Tchat équipe')+sw('banni','Suspendu')+'<label class="sw">Analyste : <select data-an="'+m.id+'"><option value="">non</option><option value="__pseudo__"'+(m.analyste && m.analyste===m.pseudo?' selected':'')+'>oui (rubrique « '+esc(m.pseudo)+' »)</option>'+AUT.map(function(a){ return '<option'+(m.analyste===a && a!==m.pseudo?' selected':'')+'>'+esc(a)+'</option>'; }).join('')+'</select></label></div></div>';
+    if (m.role === 'admin') return '<div class="mbr"><div><b>'+esc(m.pseudo)+'</b> <span class="tag adm">Administrateur</span><br><small>'+esc(m.email)+'</small></div><div class="sws">'+sw('balancoire','🔒 La Balançoire')+'</div></div>';
+    return '<div class="mbr'+(m.banni?' ban':'')+'"><div><b>'+esc(m.pseudo)+'</b><br><small>'+esc(m.email)+' · inscrit le '+dt(m.created_at).split(' ')[0]+' · dernière connexion : '+dt(m.last_login)+'</small></div><div class="sws">'+sw('moderateur','Modérateur')+sw('publier','Administration')+sw('hippo','Hippodrome')+sw('redacteur','Rédacteur (Journal)')+sw('equipe','Tchat équipe')+sw('balancoire','🔒 La Balançoire')+sw('banni','Suspendu')+'<label class="sw">Analyste : <select data-an="'+m.id+'"><option value="">non</option><option value="__pseudo__"'+(m.analyste && m.analyste===m.pseudo?' selected':'')+'>oui (rubrique « '+esc(m.pseudo)+' »)</option>'+AUT.map(function(a){ return '<option'+(m.analyste===a && a!==m.pseudo?' selected':'')+'>'+esc(a)+'</option>'; }).join('')+'</select></label></div></div>';
   }).join('') || '<p class="empty">Aucun membre trouvé.</p>';
   $('liste').querySelectorAll('select[data-an]').forEach(function(sel){
     sel.onchange = function(){
@@ -51,6 +51,7 @@ function dessiner(){
     c.onchange = function(){
       var id = +c.getAttribute('data-id'), k = c.getAttribute('data-k'), v = c.checked, corps = { id: id }; corps[k] = v;
       if (k === 'publier' && v && !confirm('Donner à ce membre l\'accès à l\'Administration (publier les fichiers, tickets et pages) ?')) { c.checked = false; return; }
+      if (k === 'balancoire' && !confirm(v ? 'Donner à ce membre l\'accès à La Balançoire ? Il démarre à 100 neurones.' : 'Retirer à ce membre l\'accès à La Balançoire ? Son historique est gardé.')) { c.checked = !v; return; }
       if (k === 'banni' && v && !confirm('Suspendre ce membre ? Il sera déconnecté et ne pourra plus se connecter.')) { c.checked = false; return; }
       fetch('/api/admin/membres', { method: 'POST', headers: {'content-type':'application/json'}, body: JSON.stringify(corps) })
         .then(function(r){ return r.json().then(function(d){ return {ok:r.ok, d:d}; }); })

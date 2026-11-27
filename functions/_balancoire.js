@@ -33,7 +33,16 @@ export async function initBal(db) {
     db.prepare('CREATE INDEX IF NOT EXISTS bal_jeux_date ON bal_jeux (date, joueur_id)'),
     db.prepare(`CREATE TABLE IF NOT EXISTS bal_jours (date TEXT PRIMARY KEY, statut TEXT NOT NULL DEFAULT 'ouvert', texte TEXT, maj TEXT)`),
     db.prepare(`CREATE TABLE IF NOT EXISTS bal_trace (id INTEGER PRIMARY KEY AUTOINCREMENT, quand TEXT NOT NULL DEFAULT (datetime('now')), par INTEGER, action TEXT, detail TEXT)`),
+    db.prepare('CREATE TABLE IF NOT EXISTS bal_meta (cle TEXT PRIMARY KEY, val TEXT)'),
   ]);
+  // 27/11/2026 : Bruno remet les compteurs à zéro (l'historique d'avant le site n'est pas repris). Fait une seule fois.
+  const z = await db.prepare("SELECT val FROM bal_meta WHERE cle = 'remise_a_zero'").first();
+  if (!z) {
+    await db.batch([
+      db.prepare('DELETE FROM bal_jeux'), db.prepare('DELETE FROM bal_etat'), db.prepare('DELETE FROM bal_jours'), db.prepare('DELETE FROM bal_joueurs'),
+      db.prepare("INSERT INTO bal_meta (cle, val) VALUES ('remise_a_zero', datetime('now'))"),
+    ]);
+  }
   pret = true;
 }
 
@@ -225,29 +234,31 @@ export function controler(jeux, e, P, admin) {
   return { jeux: out, ajout };
 }
 
-// ---------- Reprise de l'historique tenu avant le site (du 21 au 24/11/2026) ----------
-export async function reprendreHistorique(db) {
-  const n = await db.prepare('SELECT COUNT(*) AS n FROM bal_joueurs').first();
-  if (n && n.n) return false;
-  const H = (await import('./_balancoire_histo.js')).default;
-  const noms = Object.keys(H.jours[H.dates[0]].cagnottes);
-  await db.prepare(`INSERT INTO bal_joueurs (nom) VALUES ${noms.map(() => '(?)').join(', ')}`).bind(...noms).run();
-  const ids = new Map(((await db.prepare('SELECT id, nom FROM bal_joueurs').all()).results || []).map((x) => [x.nom, x.id]));
-  const lignes = [], jours = [];
-  for (const d of H.dates) {
-    const J = H.jours[d];
-    for (const nom of Object.keys(J.cagnottes)) {
-      const palier = (H.palier[nom] && d >= (H.palierDepuis[nom] || '0')) ? H.palier[nom] : 0;
-      lignes.push([d, ids.get(nom), J.cagnottes[nom], palier, J.retours[nom] ?? null, J.lendemain[nom] ?? null]);
-    }
-    jours.push([d, J.texte]);
+// ---------- Accès donné par l'administrateur (Administration > Membres) ----------
+// Activer un membre : il devient joueur (son nom = son pseudo) et démarre à 100 neurones prêtés par la banque.
+export async function activer(db, user, oui) {
+  await initBal(db);
+  const j = await db.prepare('SELECT * FROM bal_joueurs WHERE user_id = ?').bind(user.id).first();
+  if (!oui) { if (j) await db.prepare('UPDATE bal_joueurs SET actif = 0 WHERE id = ?').bind(j.id).run(); return; }
+  let id = j && j.id;
+  if (j) await db.prepare('UPDATE bal_joueurs SET actif = 1, nom = ? WHERE id = ?').bind(user.pseudo, j.id).run();
+  else { const r = await db.prepare('INSERT INTO bal_joueurs (nom, user_id) VALUES (?, ?)').bind(user.pseudo, user.id).run(); id = r.meta.last_row_id; }
+  await completerJour(db, auj());
+}
+// Chaque joueur actif doit avoir sa cagnotte du jour : celle du lendemain de sa dernière journée,
+// ou sa dernière cagnotte s'il n'a pas joué, ou 100 s'il débute (100 prêtés par la banque).
+export async function completerJour(db, iso) {
+  const jr = await db.prepare('SELECT statut FROM bal_jours WHERE date = ?').bind(iso).first();
+  if (jr && jr.statut === 'clos') return;
+  const manque = (await db.prepare(`SELECT j.id FROM bal_joueurs j WHERE j.actif = 1 AND NOT EXISTS (SELECT 1 FROM bal_etat e WHERE e.date = ? AND e.joueur_id = j.id)`).bind(iso).all()).results || [];
+  if (!manque.length) return;
+  const q = [];
+  for (const m of manque) {
+    const der = await db.prepare('SELECT * FROM bal_etat WHERE joueur_id = ? AND date < ? ORDER BY date DESC LIMIT 1').bind(m.id, iso).first();
+    const cag = der ? (der.lendemain != null ? der.lendemain : der.cagnotte) : PRET;
+    q.push(db.prepare('INSERT OR IGNORE INTO bal_etat (date, joueur_id, cagnotte, palier, dette, dette_connue) VALUES (?, ?, ?, ?, ?, 1)')
+      .bind(iso, m.id, cag, der ? der.palier : 0, der ? der.dette : PRET));
   }
-  const fin = lendemainIso(H.dates[H.dates.length - 1]), Jf = H.jours[H.dates[H.dates.length - 1]];
-  for (const nom of Object.keys(Jf.lendemain)) lignes.push([fin, ids.get(nom), Jf.lendemain[nom], H.palier[nom] || 0, null, null]);
-  for (let i = 0; i < lignes.length; i += 15) {
-    const lot = lignes.slice(i, i + 15);
-    await db.prepare(`INSERT OR IGNORE INTO bal_etat (date, joueur_id, cagnotte, palier, retour, lendemain) VALUES ${lot.map(() => '(?, ?, ?, ?, ?, ?)').join(', ')}`).bind(...lot.flat()).run();
-  }
-  await db.prepare(`INSERT OR IGNORE INTO bal_jours (date, statut, texte) VALUES ${jours.map(() => "(?, 'clos', ?)").join(', ')}, (?, 'ouvert', NULL)`).bind(...jours.flat(), fin).run();
-  return true;
+  q.push(db.prepare("INSERT OR IGNORE INTO bal_jours (date, statut) VALUES (?, 'ouvert')").bind(iso));
+  await db.batch(q);
 }

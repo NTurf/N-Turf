@@ -1,5 +1,5 @@
 import { entrer, json } from './_commun.js';
-import { auj, programme, calculerJour, depart } from '../../_balancoire.js';
+import { auj, programme, calculerJour, depart, completerJour } from '../../_balancoire.js';
 
 // La journée de La Balançoire : cagnottes, jeux de chacun, retours. /api/balancoire?date=2026-11-27
 export async function onRequestGet({ request, env }) {
@@ -11,6 +11,7 @@ export async function onRequestGet({ request, env }) {
   const ouverts = ((await db.prepare("SELECT date FROM bal_jours WHERE statut = 'ouvert' AND date <= ? ORDER BY date DESC LIMIT 3").bind(today).all()).results || []).map((r) => r.date);
   const P = {};
   for (const d of ouverts) { try { P[d] = await programme(db, d); await calculerJour(db, d, P[d]); } catch (e) {} }
+  try { await completerJour(db, today); } catch (e) {}
   const jours = ((await db.prepare('SELECT DISTINCT date FROM bal_etat ORDER BY date DESC').all()).results || []).map((r) => r.date);
   const iso = /^\d{4}-\d{2}-\d{2}$/.test(q || '') ? q : today;
   if (!P[iso] && iso >= today) { try { P[iso] = await programme(db, iso); } catch (e) { P[iso] = []; } }
