@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Analyse des grilles – N-TURF</title>
+<meta name="theme-color" content="#0D1E3D">
+<link rel="manifest" href="/manifest.webmanifest?v=2">
+<link rel="icon" href="/icone-nturf-192.png">
+<link rel="stylesheet" href="/style.css?v=20261127a">
+<style>
+.pos{color:#157a3a;font-weight:800}.neg{color:#c62832;font-weight:800}
+.fictif{background:#FFF6DC;border:1px solid #f0be3c;border-radius:10px;padding:7px 10px;font-size:13px;margin:8px 0}
+select.big{font-size:16px;padding:9px;border-radius:10px;border:1.5px solid var(--line);width:100%;margin:4px 0}
+table.st td small{display:block;color:var(--mute)}
+table.st td,table.st th{padding:6px 4px}
+</style>
+</head>
+<body data-page="admin">
+<main>
+<h1>Analyse des grilles de 5 à 8 chevaux</h1>
+<p><a href="/admin.html">← Administration</a> · <a href="/stats-concours.html">Statistiques du concours</a></p>
+<div id="refus" class="note" hidden>🔒 Réservé à l'administrateur.</div>
+<div id="zone" hidden>
+<p class="fictif">🧪 <b>Simulation sur l'historique</b> des Quinté+ du concours, avec les rapports officiels pour 1 € et les mises de base du PMU (Simple et Couplé 1 €, Tiercé 1 €, Quarté+ 1,50 €, Multi 3 €, Quinté+ 2 €). Aucun euro n'a été joué : ce ne sont pas des gains réalisés.</p>
+<p class="sub" id="base"></p>
+<label class="sub">Méthode (sélection de départ)</label><select class="big" id="src"></select>
+<nav class="tabs inner" id="ong"><a href="#" data-k="comp" class="on">Grilles 5 à 8</a><a href="#" data-k="couv">Couverture</a><a href="#" data-k="rangs">Associations</a><a href="#" data-k="prof">Profils</a><a href="#" data-k="valid">Contrôle</a><a href="#" data-k="methodes">Méthodes</a></nav>
+<div id="rendu"></div>
+</div>
+</main>
+<script src="/site.js?v=20261127b"></script>
+<script>
+(function(){
+  var $ = function(i){ return document.getElementById(i); };
+  var E = function(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); };
+  var EUR = function(v){ var x = Math.round((v || 0) * 100) / 100; return (x % 1 ? x.toFixed(2).replace('.', ',') : String(x)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' €'; };
+  var NET = function(x){ return '<span class="' + (x >= 0 ? 'pos' : 'neg') + '">' + (x >= 0 ? '+' : '−') + EUR(Math.abs(x)) + '</span>'; };
+  var R100 = function(g, c){ return c ? Math.round(g / c * 100) + ' rendus pour 100' : '–'; };
+  var fr = function(iso){ return iso.split('-').reverse().join('/'); };
+  var D = null, S = null, ONG = 'comp', STR = 'quinte', NN = 6;
+  function nomS(k){ return (D.structures.find(function(x){ return x.k === k; }) || {}).nom || k; }
+  function ligne(lib, a, sous){ return '<tr><td><b>' + lib + '</b>' + (sous ? '<small>' + sous + '</small>' : '') + '</td><td>' + a.gagnees + ' sur ' + a.courses + '<small>' + a.comb + ' comb. gagnante' + (a.comb > 1 ? 's' : '') + '</small></td><td>' + EUR(a.cout) + '<small>rendu ' + EUR(a.gains) + '</small></td><td>' + NET(a.net) + '<small>' + R100(a.gains, a.cout) + '</small></td></tr>'; }
+  var TETE = '<table class="st"><tr><th></th><th>Courses gagnées</th><th>Misé</th><th>Net</th></tr>';
+  function sel(id, opts, v){ return '<select class="big" id="' + id + '">' + opts.map(function(o){ return '<option value="' + o[0] + '"' + (String(o[0]) === String(v) ? ' selected' : '') + '>' + E(o[1]) + '</option>'; }).join('') + '</select>'; }
+  function dessiner(){
+    var h = '';
+    if (ONG === 'comp') {
+      h += '<div class="card"><h2>Mêmes courses, mêmes chevaux de départ : 5, 6, 7 ou 8 chevaux</h2>' + sel('fStr', D.structures.map(function(x){ return [x.k, x.nom]; }), STR) + TETE +
+        D.ns.map(function(N){ var a = S.grilles[N][STR]; return a.courses ? ligne(N + ' chevaux', a) : ''; }).join('') + '</table></div>';
+      h += '<div class="card"><h2>Toutes les structures, grille de ' + NN + ' chevaux</h2>' + sel('fN', D.ns.map(function(N){ return [N, N + ' chevaux']; }), NN) + TETE +
+        D.structures.map(function(x){ var a = S.grilles[NN][x.k]; return a.courses ? ligne(x.nom, a) : ''; }).join('') + '</table><p class="note2">Courses gagnées = courses où la grille a rapporté quelque chose dans ce jeu (ordre, désordre ou bonus du PMU).</p></div>';
+    } else if (ONG === 'couv') {
+      h += '<div class="card"><h2>Couverture des arrivées</h2><table class="st"><tr><th>Grille</th><th>3 premiers dedans</th><th>4 premiers</th><th>5 premiers</th></tr>' + D.ns.map(function(N){ var c = S.couverture[N], n = S.grilles[N].sg.courses; if (!n) return ''; return '<tr><td><b>' + N + ' chevaux</b><small>en moyenne ' + String(Math.round(c.dans5 / n * 10) / 10).replace('.', ',') + ' des 5 premiers</small></td><td>' + c.t3 + ' sur ' + n + '</td><td>' + c.t4 + ' sur ' + n + '</td><td>' + c.t5 + ' sur ' + n + '</td></tr>'; }).join('') + '</table></div>';
+    } else if (ONG === 'rangs') {
+      var n = S.courses;
+      h += '<div class="card"><h2>Chaque rang de la sélection</h2><p class="note2">Pas seulement les mieux classés : combien de fois chaque rang de la sélection finit dans les 5 premiers, gagnant ou dans les 3.</p><table class="st"><tr><th>Rang</th><th>Gagnant</th><th>Dans les 3</th><th>Dans les 5</th></tr>' + S.rangs.map(function(r, i){ return '<tr><td><b>' + (i + 1) + (i ? 'e' : 'er') + ' cité</b></td><td>' + r.gagnant + ' sur ' + n + '</td><td>' + r.place + ' sur ' + n + '</td><td>' + r.top5 + ' sur ' + n + '</td></tr>'; }).join('') + '</table></div>';
+      h += '<div class="card"><h2>Les paires de rangs qui arrivent ensemble</h2><p class="note2">Les deux rangs de la sélection qui se retrouvent le plus souvent ensemble dans les 5 premiers : la complémentarité de la méthode.</p>' + (S.paires.length ? '<table class="st"><tr><th>Rangs</th><th>Ensemble dans les 5</th></tr>' + S.paires.map(function(p){ var r = p.rangs.split('-'); return '<tr><td><b>' + r[0] + (r[0] === '1' ? 'er' : 'e') + ' et ' + r[1] + 'e cités</b></td><td>' + p.fois + ' fois sur ' + n + '</td></tr>'; }).join('') + '</table>' : '<p class="empty">Pas encore assez de courses.</p>') + '</div>';
+    } else if (ONG === 'prof') {
+      h += '<div class="card"><h2>Selon le profil de la course</h2><p class="note2">La meilleure grille (nombre de chevaux et jeu) dans chaque type de course.</p><table class="st"><tr><th>Profil</th><th>Meilleure grille</th><th>Net</th></tr>' + S.profils.map(function(p){ var m = p.meilleure; if (!m) return ''; var k = m.k.split('|'); return '<tr><td><b>' + E(p.profil) + '</b><small>' + m.courses + ' course' + (m.courses > 1 ? 's' : '') + '</small></td><td>' + nomS(k[1]) + ' en ' + k[0] + '<small>gagné ' + m.gagnees + ' sur ' + m.courses + '</small></td><td>' + NET(m.net) + '<small>pour ' + EUR(m.cout) + ' misés</small></td></tr>'; }).join('') + '</table><p class="note2">Avec peu de courses par profil, ces résultats sont fragiles : regarde toujours le nombre de courses.</p></div>';
+    } else if (ONG === 'valid') {
+      var v = S.validation;
+      h += '<div class="card"><h2>Contrôle sur des courses non utilisées</h2>' + (v ? '<p>La meilleure grille est choisie sur les <b>' + v.construction.courses + ' premières courses</b> (du ' + fr(v.construction.du) + ' au ' + fr(v.construction.au) + ') : <b>' + nomS(v.choix.structure) + ' en ' + v.choix.N + ' chevaux</b>.</p>' +
+        TETE + ligne('Sur les courses de choix', v.surConstruction, v.construction.courses + ' courses') + ligne('Sur les courses de contrôle', v.surControle, v.controle.courses + ' courses, du ' + fr(v.controle.du) + ' au ' + fr(v.controle.au)) + '</table>' +
+        '<p class="note2">Les courses de contrôle n\'ont pas servi à choisir la grille. Si le résultat s\'effondre sur le contrôle, la grille avait surtout « collé » au passé.</p>' : '<p class="empty">Il faut au moins 6 courses pour faire ce contrôle (' + S.courses + ' pour l\'instant).</p>') + '</div>';
+    } else if (ONG === 'methodes') {
+      h += '<div class="card"><h2>Comparer les méthodes</h2>' + sel('mStr', D.structures.map(function(x){ return [x.k, x.nom]; }), STR) + sel('mN', D.ns.map(function(N){ return [N, N + ' chevaux']; }), NN) + TETE +
+        D.sources.map(function(s){ var a = s.grilles[NN][STR]; return a.courses ? ligne((s.robot ? '🤖 ' : '') + E(s.nom), a, s.courses + ' courses') : ''; }).join('') + '</table><p class="note2">Chaque méthode est comptée sur les courses où elle avait une sélection : compare toujours le nombre de courses.</p></div>';
+    }
+    $('rendu').innerHTML = h;
+    [['fStr', 'STR'], ['mStr', 'STR'], ['fN', 'NN'], ['mN', 'NN']].forEach(function(x){ var el = $(x[0]); if (el) el.onchange = function(){ if (x[1] === 'STR') STR = el.value; else NN = +el.value; dessiner(); }; });
+  }
+  document.querySelectorAll('#ong a').forEach(function(a){ a.onclick = function(e){ e.preventDefault(); ONG = a.getAttribute('data-k'); document.querySelectorAll('#ong a').forEach(function(x){ x.classList.toggle('on', x === a); }); dessiner(); }; });
+  fetch('/api/concours/grilles', {credentials:'same-origin', cache:'no-store'}).then(function(r){ if (!r.ok) throw 0; return r.json(); }).then(function(d){
+    D = d; $('zone').hidden = false;
+    if (!d.sources.length) { $('base').textContent = 'Aucun Quinté+ calculé pour l\'instant.'; return; }
+    $('base').textContent = d.courses + ' Quinté+ étudiés.';
+    $('src').innerHTML = d.sources.map(function(s, i){ return '<option value="' + i + '">' + (s.robot ? '🤖 ' : '') + E(s.nom) + ' (' + s.courses + ' courses)</option>'; }).join('');
+    S = d.sources[0]; $('src').onchange = function(){ S = D.sources[+this.value]; dessiner(); }; dessiner();
+  }).catch(function(){ $('refus').hidden = false; });
+})();
+</script>
+</body>
+</html>
