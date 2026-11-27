@@ -18,7 +18,8 @@ export async function cache(db, cle, ttlSec, fn) {
 }
 
 export async function get(url) {
-  const r = await fetch(url, { headers: { 'accept': 'application/json', 'user-agent': 'Mozilla/5.0 (N-TURF)' } });
+  // 8 secondes au plus : si le PMU ne répond pas, la page n'attend pas indéfiniment (on garde la donnée en cache)
+  const r = await fetch(url, { headers: { 'accept': 'application/json', 'user-agent': 'Mozilla/5.0 (N-TURF)' }, signal: AbortSignal.timeout(8000) });
   if (r.status === 204 || r.status === 404) return null;
   if (!r.ok) throw new Error('PMU ' + r.status);
   return r.json();
