@@ -16,6 +16,7 @@
 <p class="lead" id="hello">🔒 Réservé aux membres inscrits. Les rubriques ouvrent au fur et à mesure.</p>
 <div class="grid">
 <a class="tile" id="tAdmin" href="/admin.html" hidden style="border-color:var(--gold)"><b>Administration</b><small>Mettre à jour le site avec ton fichier</small></a>
+<a class="tile" id="tBal" href="/balancoire" hidden style="border-color:#1E5BB5"><b>🔒 La Balançoire</b><small>Espace privé de l'équipe</small></a>
 <a class="tile" href="/pronostics.html"><b>Pronostics</b><small>Quinté+ et course par course, synthèse complète</small><span class="soon" style="color:var(--green)">Ouvert</span></a>
 <a class="tile" href="/tickets.html"><b>Tickets</b><small>Mise, gagné, net</small><span class="soon" style="color:var(--green)">Ouvert</span></a>
 <a class="tile" href="/hippodrome.html"><b>Pronos Hippodrome</b><small>Les pages du jour</small><span class="soon" style="color:var(--green)">Ouvert</span></a>
@@ -32,13 +33,14 @@
 </div>
 <p style="text-align:center;margin-top:20px" id="cta"><a class="btn" href="/inscription.html">S'inscrire gratuitement</a> <a class="btn ghost" href="/inscription.html#connexion">Se connecter</a></p>
 </main>
-<script src="/site.js?v=20261127a"></script>
+<script src="/site.js?v=20261127b"></script>
 <script>
 NTURF_MOI.then(function(m){
   if(m.connecte){
     document.getElementById('hello').textContent='Bienvenue '+m.pseudo+'. Les rubriques ouvrent au fur et à mesure.';
     document.getElementById('cta').hidden=true;
     if(m.publier) document.getElementById('tAdmin').hidden=false;
+    if(m.balancoire) document.getElementById('tBal').hidden=false;
   }
 });
 </script>

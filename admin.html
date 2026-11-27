@@ -15,6 +15,7 @@
 <h1>Administration</h1>
 <div id="refus" class="note" hidden>Cette page est réservée à l'administrateur. <a href="/inscription.html#connexion">Se connecter</a></div>
 <div id="zone" hidden>
+<section class="card" id="cBal" hidden><h2>🔒 La Balançoire</h2><p style="color:var(--soft)">Espace privé de l'équipe : jeux du jour, cagnottes, joueurs (onglet Gestion).</p><p><a class="btn" href="/balancoire">Ouvrir La Balançoire</a></p></section>
 <section class="card" id="cConcours" hidden><h2>Joueurs du concours</h2><p style="color:var(--soft)">Qui a joué le Quinté+ du jour et avec quels chevaux, même avant la course. Visible de toi seul.</p><p><a class="btn" href="/admin-concours.html">Voir les joueurs</a></p></section>
 <section class="card" id="cMembres" hidden><h2>Membres et droits</h2><p style="color:var(--soft)">Donne le rôle de modérateur ou l'accès à l'Administration aux membres de ton choix.</p><p><a class="btn" href="/admin-membres.html">Gérer les membres</a></p></section>
 <section class="card" id="cAttente" hidden style="border-color:var(--gold)">
@@ -47,7 +48,7 @@
 </section>
 </div>
 </main>
-<script src="/site.js?v=20261127a"></script>
+<script src="/site.js?v=20261127b"></script>
 <script src="/vendor/xlsx.full.min.js"></script>
 <script src="/quinte.js?v=20261127a"></script>
 <script>
@@ -125,5 +126,6 @@ document.getElementById('basculer').onclick = function(){
 };
 NTURF_MOI.then(function(m){ if (m.connecte && (m.role === 'admin' || m.publier)) etatAttente(); });
 </script>
+<script>NTURF_MOI.then(function(m){ if (m.balancoire) document.getElementById('cBal').hidden = false; });</script>
 </body>
 </html>
