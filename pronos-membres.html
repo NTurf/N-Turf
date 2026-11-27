@@ -81,8 +81,8 @@ Le site t'affiche ta mise totale avant de publier.</li>
 </div>
 <div id="vC" hidden>
 <p><a class="btn ghost" href="/stats-pronos-membres.html">📊 Fiches et statistiques complètes des membres</a></p>
-<div class="pills"><button type="button" class="pill on" data-cl="mois">Ce mois-ci</button><button type="button" class="pill" data-cl="tout">Depuis le début</button></div>
-<p class="note2">Mise de 1 € par pari, aux vrais rapports PMU. Le net est le gain mise déduite. 🔒 Le classement et les stats des autres membres sont réservés à ceux qui donnent au moins 3 pronos par jour.</p>
+<div class="pills"><button type="button" class="pill" data-cl="jour">Aujourd'hui</button><button type="button" class="pill" data-cl="semaine">Cette semaine</button><button type="button" class="pill on" data-cl="mois">Ce mois-ci</button><button type="button" class="pill" data-cl="tout">Depuis le début</button></div>
+<p class="note2">Mise de 1 € par pari, aux vrais rapports PMU. <b>Classement selon ce que rapporte chaque euro misé</b> (rapports ÷ mises), la somme misée affichée à côté. Pour être classé, il faut un minimum de pronos vérifiés sur la période : 3 pour le jour, 10 pour la semaine, 20 pour le mois (et depuis le début). Chaque classement repart de zéro : le jour à minuit, la semaine le lundi, le mois le 1er. 🔒 Le classement et les stats des autres membres sont réservés à ceux qui donnent au moins 3 pronos par jour.</p>
 <div id="mb"></div>
 <div id="cl"></div>
 </div>
@@ -296,11 +296,19 @@ function detailTypes(T){
 function classement(k){
   document.querySelectorAll('[data-cl]').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-cl') === k); });
   fetch('/api/pm?classement=' + k, {credentials:'same-origin'}).then(function(r){ return r.json(); }).then(function(d){
-    var L = d.classement || [], MB = d.moi || [];
+    var L = (d.classement || []).concat([]), MB = d.moi || [];
     var tm = MB.reduce(function(s, x){ return {m: s.m + x.mise, g: s.g + x.gains}; }, {m:0, g:0}), tn = Math.round((tm.g - tm.m) * 100) / 100;
     $('mb').innerHTML = '<section class="card" style="padding:10px 14px"><h3 style="margin:0 0 6px">Mon bilan, pari par pari</h3>' + (MB.length ? '<table class="st"><tr><th>Jeu</th><th>Paris</th><th>Gagnés</th><th>Mise</th><th>Net</th></tr>' + MB.map(function(x){ return '<tr><td>'+TYPES[x.t]+'</td><td>'+x.paris+'</td><td>'+x.gagnes+'</td><td>'+Fe(x.mise)+'</td><td class="'+cl(x.net)+'"><b>'+Fn(x.net)+'</b></td></tr>'; }).join('') + '<tr><td><b>Total</b></td><td></td><td></td><td><b>'+Fe(tm.m)+'</b></td><td class="'+cl(tn)+'"><b>'+Fn(tn)+'</b></td></tr></table>' : '<p class="empty">Pas encore de prono vérifié sur cette période.</p>') + '</section>';
     if (d.verrou) { $('cl').innerHTML = '<div class="note">🔒 <b>Le classement et les stats des autres membres sont réservés à ceux qui participent : au moins ' + d.verrou.min + ' pronos par jour.</b><br>Aujourd\'hui, tu en as donné ' + d.verrou.n + ' sur ' + d.verrou.min + '. Encore ' + (d.verrou.min - d.verrou.n) + ' et tu y as accès.</div>'; return; }
-    $('cl').innerHTML = L.length ? '<p class="note2">Touche un membre pour voir son détail jeu par jeu.</p><table class="st"><tr><th>#</th><th>Membre</th><th>Pronos</th><th>Gagnés</th><th>Mise</th><th>Net</th></tr>'+L.map(function(x, i){ return '<tr data-dt="'+i+'" style="cursor:pointer"><td>'+(i+1)+'</td><td><b class="psn">'+E(x.pseudo)+'</b> ▾</td><td>'+x.n+'</td><td>'+x.gagnes+'</td><td>'+Fe(x.mise)+'</td><td class="'+(x.net >= 0 ? 'pos' : 'neg')+'"><b>'+(x.net >= 0 ? '+' : '')+Fe(x.net)+'</b></td></tr><tr id="dt'+i+'" hidden><td colspan="6">'+detailTypes(x.types)+'<p style="margin:4px 0"><a href="/fiche.html?p='+encodeURIComponent(x.pseudo)+'">Voir la fiche de '+E(x.pseudo)+'</a></p></td></tr>'; }).join('')+'</table>' : '<p class="empty">Pas encore de prono vérifié sur cette période.</p>';
+    var NOMP = {jour:'du jour', semaine:'de la semaine', mois:'du mois', tout:'depuis le début'}[d.periode] || '';
+    var per = d.du ? (d.du === d.au ? 'Le ' + frc(d.du) : 'Du ' + frc(d.du) + ' au ' + frc(d.au)) : '';
+    var R1 = function(x){ return '<b>' + Fe(x.rendu) + '</b><small style="display:block;color:var(--soft)">pour 1 € misé</small>'; };
+    var ligne = function(x, i, rg){ return '<tr data-dt="'+i+'" style="cursor:pointer"><td>'+(rg || '–')+'</td><td><b class="psn">'+E(x.pseudo)+'</b> ▾<small style="display:block;color:var(--soft)">'+x.n+' prono'+(x.n > 1 ? 's' : '')+' · '+x.gagnes+' gagnant'+(x.gagnes > 1 ? 's' : '')+'</small></td><td>'+R1(x)+'</td><td>'+Fe(x.mise)+'</td><td class="'+(x.net >= 0 ? 'pos' : 'neg')+'"><b>'+(x.net >= 0 ? '+' : '')+Fe(x.net)+'</b></td></tr><tr id="dt'+i+'" hidden><td colspan="5">'+detailTypes(x.types)+'<p style="margin:4px 0"><a href="/fiche.html?p='+encodeURIComponent(x.pseudo)+'">Voir la fiche de '+E(x.pseudo)+'</a></p></td></tr>'; };
+    var TT = '<table class="st"><tr><th>#</th><th>Membre</th><th>Rendu</th><th>Misé</th><th>Net</th></tr>';
+    var NC = d.nonClasses || [], h = '<h3 style="margin:8px 0 2px">Classement ' + NOMP + '</h3>' + (per ? '<p class="note2" style="margin:0 0 6px">' + per + '</p>' : '');
+    h += L.length ? '<p class="note2">Touche un membre pour voir son détail jeu par jeu.</p>' + TT + L.map(function(x, i){ return ligne(x, i, i + 1); }).join('') + '</table>' : '<p class="empty">Personne n\'a encore ' + d.min + ' pronos vérifiés sur cette période.</p>';
+    if (NC.length) h += '<h3 style="margin:14px 0 2px">Pas encore classés</h3><p class="note2" style="margin:0 0 6px">Moins de ' + d.min + ' pronos vérifiés sur la période.</p>' + TT + NC.map(function(x, i){ return ligne(x, L.length + i, ''); }).join('') + '</table>';
+    $('cl').innerHTML = h;
     document.querySelectorAll('[data-dt]').forEach(function(t){ t.onclick = function(){ var z = $('dt' + t.getAttribute('data-dt')); z.hidden = !z.hidden; }; });
   });
 }

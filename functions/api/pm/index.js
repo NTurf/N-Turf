@@ -34,8 +34,11 @@ export async function onRequestGet({ request, env }) {
   const moisCourant = () => new Date().toLocaleDateString('fr-CA', { timeZone: 'Europe/Paris' }).slice(0, 7);
   const R2 = (v) => Math.round(v * 100) / 100;
   // bilan d'un membre, pari par pari, regroupé par type de jeu
+  // période : null (tout), 'AAAA-MM' (un mois) ou { du, au } (dates AAAA-MM-JJ incluses)
+  const filtre = (per) => !per ? ['', []] : typeof per === 'string' ? ['AND substr(jour, 1, 7) = ?', [per]] : ['AND jour BETWEEN ? AND ?', [per.du, per.au]];
   async function bilan(uid, mois) {
-    const m = await db.prepare(`SELECT detail FROM pm_pronos WHERE user_id = ? AND statut = 'calcule' ${mois ? 'AND substr(jour, 1, 7) = ?' : ''}`).bind(uid, ...(mois ? [mois] : [])).all();
+    const [fw, fb] = filtre(mois);
+    const m = await db.prepare(`SELECT detail FROM pm_pronos WHERE user_id = ? AND statut = 'calcule' ${fw}`).bind(uid, ...fb).all();
     const T = {};
     for (const x of m.results || []) {
       let d = []; try { d = JSON.parse(x.detail || '[]'); } catch (e) { d = []; }
@@ -64,16 +67,30 @@ export async function onRequestGet({ request, env }) {
   }
   if (q.get('classement')) {
     await verifierEnAttente(db);
-    const mois = q.get('classement') === 'mois' ? moisCourant() : null;
+    // Classements du jour, de la semaine (lundi-dimanche) et du mois, chacun repartant de zéro, plus « depuis le début ».
+    // On classe selon ce que rapporte chaque euro misé (gains ÷ mises), à partir d'un nombre minimum de pronos sur la période :
+    // en dessous, le membre est affiché à part, « pas encore classé » (sinon celui qui joue un seul prono et le gagne passerait premier).
+    const auj = new Date().toLocaleDateString('fr-CA', { timeZone: 'Europe/Paris' });
+    const k = ['jour', 'semaine', 'mois', 'tout'].includes(q.get('classement')) ? q.get('classement') : 'mois';
+    const lundi = (() => { const t = new Date(auj + 'T12:00:00Z'); t.setUTCDate(t.getUTCDate() - ((t.getUTCDay() + 6) % 7)); return t.toISOString().slice(0, 10); })();
+    const dimanche = (() => { const t = new Date(lundi + 'T12:00:00Z'); t.setUTCDate(t.getUTCDate() + 6); return t.toISOString().slice(0, 10); })();
+    const per = k === 'jour' ? { du: auj, au: auj } : k === 'semaine' ? { du: lundi, au: dimanche } : k === 'mois' ? moisCourant() : null;
+    const MIN = { jour: 3, semaine: 10, mois: 20, tout: 20 }[k];
     const ac = await acces();
-    if (!ac.ok) return json({ moiPseudo: u.pseudo, moi: (await bilan(u.id, mois)).types, verrou: ac, classement: [] });
+    const info = { periode: k, du: per && per.du ? per.du : null, au: per && per.au ? per.au : null, min: MIN };
+    if (!ac.ok) return json({ moiPseudo: u.pseudo, moi: (await bilan(u.id, per)).types, verrou: ac, classement: [], nonClasses: [], ...info });
+    const [fw, fb] = filtre(per);
     const r = await db.prepare(`SELECT u.id, u.pseudo, COUNT(*) AS n, SUM(CASE WHEN p.gains > 0 THEN 1 ELSE 0 END) AS gagnes, SUM(p.mise) AS mise, SUM(p.gains) AS gains
-      FROM pm_pronos p JOIN users u ON u.id = p.user_id WHERE p.statut = 'calcule' AND u.banni = 0 ${mois ? 'AND substr(p.jour, 1, 7) = ?' : ''}
-      GROUP BY p.user_id ORDER BY (SUM(p.gains) - SUM(p.mise)) DESC`).bind(...(mois ? [mois] : [])).all();
+      FROM pm_pronos p JOIN users u ON u.id = p.user_id WHERE p.statut = 'calcule' AND u.banni = 0 ${fw.replace(/jour/g, 'p.jour')}
+      GROUP BY p.user_id`).bind(...fb).all();
     const L = r.results || [];
-    const det = await Promise.all(L.map((x) => bilan(x.id, mois)));
-    const moi = (await bilan(u.id, mois)).types;
-    return json({ moiPseudo: u.pseudo, moi, classement: L.map((x, i) => ({ pseudo: x.pseudo, n: x.n, gagnes: x.gagnes, mise: R2(x.mise), gains: R2(x.gains), net: R2(x.gains - x.mise), types: det[i].types })) });
+    const det = await Promise.all(L.map((x) => bilan(x.id, per)));
+    const moi = (await bilan(u.id, per)).types;
+    const tous = L.map((x, i) => ({ pseudo: x.pseudo, n: x.n, gagnes: x.gagnes, mise: R2(x.mise), gains: R2(x.gains), net: R2(x.gains - x.mise), rendu: x.mise > 0 ? R2(x.gains / x.mise) : 0, types: det[i].types }));
+    const tri = (a, b) => b.rendu - a.rendu || b.mise - a.mise || b.net - a.net;
+    return json({ moiPseudo: u.pseudo, moi, ...info,
+      classement: tous.filter((x) => x.n >= MIN).sort(tri),
+      nonClasses: tous.filter((x) => x.n < MIN).sort((a, b) => b.n - a.n || tri(a, b)) });
   }
   const jour = q.get('jour');
   if (!isoOk(jour)) return json({ erreur: 'Jour invalide.' }, 400);
