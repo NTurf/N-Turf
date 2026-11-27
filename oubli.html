@@ -21,7 +21,10 @@
 <li><b>iPhone</b> : Réglages → Mots de passe (ou l'app « Mots de passe »), cherche « n-turf ».</li>
 <li><b>Samsung</b> : Paramètres → Sécurité → Samsung Pass, ou bien passwords.google.com.</li>
 </ul>Tu y verras ton pseudo et ton mot de passe : recopie-les ici à la connexion.</div>
-<p><b>Mot de passe oublié :</b> laisse ta demande ci-dessous. L'administrateur te renvoie un mot de passe provisoire : tu te connectes avec, puis tu le changes dans <b>Mon compte</b>.</p>
+<h2 style="margin-top:16px">Choisir un nouveau mot de passe</h2>
+<form class="frm" id="fN"><label>Ton pseudo<input id="nL" required autocomplete="username" autocapitalize="off"></label><label>Ton adresse e-mail d'inscription<input id="nE" type="email" required autocomplete="email"></label><label>Nouveau mot de passe (8 caractères minimum)<input id="nP" type="text" required minlength="8" autocomplete="new-password" autocapitalize="off" spellcheck="false"></label><button class="btn" type="submit">Changer mon mot de passe</button><p class="msg" id="nM"></p></form>
+<h2 style="margin-top:22px">Tu ne te souviens plus de ton adresse e-mail ?</h2>
+<p>Laisse une demande : l'administrateur te renvoie un mot de passe provisoire, puis tu le changes dans <b>Mon compte</b>.</p>
 <form class="frm" id="fD"><label>Ton pseudo (ou ton adresse e-mail d'inscription)<input id="dL" required autocomplete="username"></label><label>Comment te joindre ? (e-mail, téléphone, pseudo du tchat…)<input id="dC" autocomplete="email"></label><button class="btn" type="submit">Envoyer ma demande</button><p class="msg" id="dM"></p></form>
 <p style="margin-top:14px">Tu peux aussi nous écrire directement :</p>
 <p><a class="btn ghost" href="mailto:n.turf.contact@gmail.com?subject=Mot%20de%20passe%20oubli%C3%A9%20N-TURF&body=Mon%20pseudo%20%3A%20%0AMon%20adresse%20e-mail%20d'inscription%20%3A%20">Écrire à N-TURF</a></p>
@@ -31,6 +34,11 @@
 </main>
 <script src="/site.js?v=20261127c"></script>
 <script>
+document.getElementById('fN').onsubmit = function(e){ e.preventDefault(); var m = document.getElementById('nM'), bt = this.querySelector('button'); bt.disabled = true; m.className = 'msg'; m.textContent = 'Un instant…';
+  fetch('/api/compte/nouveau-mdp', {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({ login: document.getElementById('nL').value, email: document.getElementById('nE').value, password: document.getElementById('nP').value })})
+    .then(function(r){ return r.json(); }).then(function(d){ if (d.ok) { m.className = 'msg ok'; m.textContent = '✓ C\'est fait, ' + d.pseudo + ' ! Note bien ton nouveau mot de passe. Tu es connecté…'; setTimeout(function(){ location.href = '/membres.html'; }, 1800); } else { m.className = 'msg err'; m.textContent = d.erreur || 'Erreur.'; bt.disabled = false; } })
+    .catch(function(){ m.className = 'msg err'; m.textContent = 'Connexion impossible, réessaie.'; bt.disabled = false; });
+};
 document.getElementById('fD').onsubmit = function(e){ e.preventDefault(); var m = document.getElementById('dM'), bt = this.querySelector('button'); bt.disabled = true; m.className = 'msg'; m.textContent = 'Un instant…';
   fetch('/api/compte/demande-mdp', {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({ login: document.getElementById('dL').value, contact: document.getElementById('dC').value })})
     .then(function(r){ return r.json(); }).then(function(d){ m.className = 'msg ' + (d.ok ? 'ok' : 'err'); m.textContent = d.ok ? d.texte : (d.erreur || 'Erreur.'); if (!d.ok) bt.disabled = false; })
