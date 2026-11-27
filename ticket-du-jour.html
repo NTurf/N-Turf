@@ -76,7 +76,7 @@
 </div>
 </main>
 <script src="/site.js?v=20261127c"></script>
-<script src="/tickets.js?v=20261125a"></script>
+<script src="/tickets.js?v=20261127n"></script>
 <script>
 (function(){
   var $ = function(i){ return document.getElementById(i); };
@@ -150,7 +150,7 @@
   var LIVEQ = null;
   function ctxQ(cq){
     var L = LIVEQ && LIVEQ.date === D.date && LIVEQ.d && LIVEQ.d.trouve ? LIVEQ.d : null;
-    return { arrivee: (L && L.arrivee && L.arrivee.length ? L.arrivee : (cq && cq.arrivee) || []), rapports: (L && L.rapports) || [], partants: L && L.partants && L.partants.length ? L.partants.filter(function(p){ return !p.np; }).length : (cq && cq.partants) || 0 };
+    return { arrivee: (L && L.arrivee && L.arrivee.length ? L.arrivee : (cq && cq.arrivee) || []), rapports: (L && L.rapports) || [], partants: L && L.partants && L.partants.length ? L.partants.filter(function(p){ return !p.np; }).length : (cq && cq.partants) || 0, np: L && L.partants ? L.partants.filter(function(p){ return p.np; }).map(function(p){ return p.n; }) : [] };
   }
   function chargerQ(){
     if (!D || !D.anciens) return;

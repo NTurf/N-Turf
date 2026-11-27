@@ -110,7 +110,7 @@ export async function resoudre(db, iso, P) {
     else if (p.type === 'prono') res = { arrivee: arr.slice(0, 5), ...resultatProno(JSON.parse(p.chevaux || '[]'), arr) };
     else {
       const t = JSON.parse(p.ticket || '{}');
-      const g = NTT.gains(t, arr, raps, partants);
+      const g = NTT.gains(t, arr, raps, partants, ((parts && parts.participants) || []).filter((x) => x.statut === 'NON_PARTANT').map((x) => x.numPmu));
       if (g && g.attente) continue; // un rapport manque encore : on réessaiera
       const mise = r2(NTT.cout(t, partants));
       res = { arrivee: arr.slice(0, 5), mise, gagne: r2(g ? g.gagne : 0), detail: g ? g.detail : [] };
@@ -149,9 +149,10 @@ export async function ticketsQuinte(db) {
         const parts = await cache(db, `tdqpart-${d}`, 3600, () => get(`${BASE}/${d}/R${R.r}/C${C.c}/participants`));
         const partants = ((parts && parts.participants) || []).filter((x) => x.statut !== 'NON_PARTANT').length || C.partants;
         const raps = lireRapports(blocs), arr = C.arrivee;
+        const np = ((parts && parts.participants) || []).filter((x) => x.statut === 'NON_PARTANT').map((x) => x.numPmu);
         let attente = false;
         const tk = T.tickets.map((t) => {
-          const g = NTT.gains(t, arr, raps, partants); if (g && g.attente) attente = true;
+          const g = NTT.gains(t, arr, raps, partants, np); if (g && g.attente) attente = true;
           const manuel = t.gainManuel !== undefined && t.gainManuel !== null && t.gainManuel !== '';
           return { auteur: t.auteur || 'N-TURF', pari: t.pari, mise: r2(NTT.cout(t, partants)), gagne: r2(manuel ? parseFloat(t.gainManuel) || 0 : (g ? g.gagne : 0)), detail: g ? g.detail : [] };
         });

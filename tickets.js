@@ -63,7 +63,7 @@ var NTT = (function(){
     return undefined;
   }
   var CLES = {
-    'Tiercé ordre': ['tierceordre'], 'Tiercé désordre': ['tiercedesordre'],
+    'Tiercé ordre': ['tierceordre'], 'Tiercé désordre': ['tiercedesordre'], 'Tiercé 1 NP': ['tierce1np'],
     'Quarté ordre': ['quarteordre'], 'Quarté désordre': ['quartedesordre'], 'Quarté bonus 3': ['quartebonus3', 'quartebonus'],
     'Quinté ordre': ['quinteordre'], 'Quinté désordre': ['quintedesordre'], 'Quinté bonus 4': ['quintebonus4'],
     'Quinté bonus 4 sur 5': ['quintebonus4sur5'], 'Quinté bonus 3': ['quintebonus3'],
@@ -83,17 +83,35 @@ var NTT = (function(){
     if (m < 0) return;
     (function rec(s, acc){ if (acc.length === m) { cb(fixe.concat(acc)); return; } for (var i = s; i < reste.length; i++){ acc.push(reste[i]); rec(i+1, acc); acc.pop(); } })(0, []);
   }
-  function gains(t, arrivee, raps, partants){
+  // np = numéros des non-partants. Règlement PMU (Tiercé art. 79, Quarté+ art. 101, Quinté+ art. 124) :
+  //  - 2 non-partants ou plus dans une combinaison : remboursée ;
+  //  - Tiercé avec 1 non-partant : rapport « Tiercé 1 NP » si les 2 autres chevaux sont aux 2 premières places, sinon perdue ;
+  //  - Quarté+ avec 1 non-partant : 2 fois le rapport Bonus si les 3 autres sont les 3 premiers (dans n'importe quel ordre), sinon perdue ;
+  //  - Quinté+ avec 1 non-partant : requalifiée en Quarté+ sur les 4 autres chevaux (ordre, désordre, bonus 3).
+  function gains(t, arrivee, raps, partants, np){
     var P = PARIS[t.pari]; if (!P || !arrivee || arrivee.length < Math.min(P.k, 4)) return null;
-    var A = arrivee, T3 = A.slice(0,3), T4 = A.slice(0,4), T5 = A.slice(0,5);
+    var A = arrivee, T3 = A.slice(0,3), T4 = A.slice(0,4), T5 = A.slice(0,5), NP = np || [];
     var lignes = {}, manque = false;
     function ajoute(nom){ lignes[nom] = (lignes[nom] || 0) + 1; }
+    function memeOrdre(R, T){ return R.length >= T.length && T.every(function(n, i){ return R[i] === n; }); }
     function evalue(S, ordreExact){
+      var nNP = NP.length ? S.filter(function(n){ return NP.indexOf(n) >= 0; }).length : 0;
+      if (nNP >= 2 && (t.pari === 'Tiercé' || t.pari === 'Quarté+' || t.pari === 'Quinté+')) { ajoute('Remboursé (non-partants)'); return; }
+      if (nNP === 1) {
+        var R = S.filter(function(n){ return NP.indexOf(n) < 0; }), ord = ordreExact !== false && ordreExact !== null;
+        if (t.pari === 'Tiercé') { if (contient(R, A.slice(0,2))) ajoute('Tiercé 1 NP'); return; }
+        if (t.pari === 'Quarté+') { if (contient(R, T3)) { ajoute('Quarté bonus 3'); ajoute('Quarté bonus 3'); } return; }
+        if (t.pari === 'Quinté+') {
+          if (contient(R, T4)) ajoute(ord && memeOrdre(R, T4) ? 'Quarté ordre' : 'Quarté désordre');
+          else if (contient(R, T3)) ajoute('Quarté bonus 3');
+          return;
+        }
+      }
       switch (t.pari) {
-        case 'Tiercé': if (contient(S, T3)) ajoute(ordreExact ? 'Tiercé ordre' : 'Tiercé désordre'); break;
-        case 'Quarté+': if (contient(S, T4)) ajoute(ordreExact ? 'Quarté ordre' : 'Quarté désordre'); else if (contient(S, T3)) ajoute('Quarté bonus 3'); break;
+        case 'Tiercé': if (contient(S, T3)) ajoute(ordreExact === true ? 'Tiercé ordre' : 'Tiercé désordre'); break;
+        case 'Quarté+': if (contient(S, T4)) ajoute(ordreExact === true ? 'Quarté ordre' : 'Quarté désordre'); else if (contient(S, T3)) ajoute('Quarté bonus 3'); break;
         case 'Quinté+':
-          if (T5.length === 5 && contient(S, T5)) ajoute(ordreExact ? 'Quinté ordre' : 'Quinté désordre');
+          if (T5.length === 5 && contient(S, T5)) ajoute(ordreExact === true ? 'Quinté ordre' : 'Quinté désordre');
           else if (contient(S, T4)) ajoute('Quinté bonus 4');
           else if (T5.length === 5 && inter(S, T5) === 4) ajoute('Quinté bonus 4 sur 5');
           else if (contient(S, T3)) ajoute('Quinté bonus 3');
@@ -101,15 +119,15 @@ var NTT = (function(){
         case 'Multi': if (contient(S, T4)) ajoute('Multi en 4'); break;
         case '2 sur 4': if (contient(T4, S)) ajoute('2 sur 4'); break;
         case 'Trio': if (contient(S, T3)) ajoute('Trio'); break;
-        case 'Super 4': if (ordreExact) ajoute('Super 4'); break;
+        case 'Super 4': if (ordreExact === true) ajoute('Super 4'); break;
       }
     }
     if (parPlace(t)) {
-      tuples(t, function(L){ evalue(L, L.every(function(n, i){ return A[i] === n; })); }, partants);
+      tuples(t, function(L){ evalue(L, L.every(function(n, i){ return A[i] === n; }) ? true : 'rang'); }, partants);
     } else if (t.formule === 'ligne') {
       var L = t.chevaux || [];
       var exact = L.slice(0, P.k).every(function(n, i){ return A[i] === n; });
-      evalue(L, exact);
+      evalue(L, exact ? true : 'rang');
     } else if (P.ordre) {
       // Super 4 combiné ou en champ : gagnant si les 4 premiers sont tous dans le jeu
       var pl = pool(t, partants), bs = t.formule === 'champ' ? (t.bases || []) : [];
@@ -119,6 +137,7 @@ var NTT = (function(){
     }
     var total = 0, detail = [];
     Object.keys(lignes).forEach(function(nom){
+      if (nom === 'Remboursé (non-partants)') { var rb = (t.mise || 0) * lignes[nom]; total += rb; detail.push(lignes[nom] + ' × ' + nom + ' : ' + eur(rb)); return; }
       var r = rapport(nom, raps);
       if (r === undefined) { manque = true; detail.push(lignes[nom] + ' × ' + nom + ' (rapport en attente)'); return; }
       var g = r * (t.mise || 0) * lignes[nom];
@@ -141,7 +160,7 @@ var NTT = (function(){
     var h = '<p class="lead">Tickets du Quinté+ du '+esc(T.date || '')+'</p>';
     T.tickets.forEach(function(t, i){
       var P = PARIS[t.pari] || {}, nb = combinaisons(t, partants), c = nb * (t.mise || 0); totM += c;
-      var g = fini ? gains(t, arr, raps, partants) : null, gagne = null;
+      var g = fini ? gains(t, arr, raps, partants, ctx.np) : null, gagne = null;
       if (t.gainManuel !== undefined && t.gainManuel !== null && t.gainManuel !== '') gagne = parseFloat(t.gainManuel) || 0;
       else if (g) { gagne = g.gagne; if (g.attente) attente = true; }
       if (gagne !== null) totG += gagne;

@@ -38,7 +38,13 @@ export function lireRapports(blocs) {
     if (!b || b.rembourse) continue;
     const k = b.typePari;
     if (!(k in LIB) && !/MULTI/.test(k)) continue;
-    if (['TIERCE', 'QUARTE_PLUS', 'QUINTE_PLUS'].includes(k)) { if (b.audience && b.audience !== 'NATIONAL') continue; out.push(...(b.rapports || []).filter((r) => Number(r.dividendePourUnEuro) > 0 && !String(r.combinaison || '').includes('NP')).map((r) => ({ nom: LIB[k] + ' ' + String(r.libelle || '').toLowerCase(), euros: Number(r.dividendePourUnEuro) / 100 }))); continue; }
+    if (['TIERCE', 'QUARTE_PLUS', 'QUINTE_PLUS'].includes(k)) {
+      if (b.audience && b.audience !== 'NATIONAL') continue;
+      out.push(...(b.rapports || []).filter((r) => Number(r.dividendePourUnEuro) > 0 && !String(r.combinaison || '').includes('NP')).map((r) => ({ nom: LIB[k] + ' ' + String(r.libelle || '').toLowerCase(), euros: Number(r.dividendePourUnEuro) / 100 })));
+      // Tiercé avec un non-partant (règlement art. 79) : rapport « Tiercé 1 NP »
+      if (k === 'TIERCE') { const np = (b.rapports || []).find((r) => Number(r.dividendePourUnEuro) > 0 && (String(r.combinaison || '').includes('NP') || /np|non/i.test(String(r.libelle || '')))); if (np) out.push({ nom: 'Tiercé 1 NP', euros: Number(np.dividendePourUnEuro) / 100 }); }
+      continue;
+    }
     const cur = choisis.get(k);
     if (!cur || (cur.audience !== 'NATIONAL' && b.audience === 'NATIONAL')) choisis.set(k, b);
   }

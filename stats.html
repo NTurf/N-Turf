@@ -27,7 +27,7 @@
 </div>
 </main>
 <script src="/site.js?v=20261127c"></script>
-<script src="/tickets.js?v=20261125a"></script>
+<script src="/tickets.js?v=20261127n"></script>
 <script>
 var C = [], F = { disc: 'Toutes', per: 'tout' };
 function $(i){ return document.getElementById(i); }
@@ -100,7 +100,7 @@ function dessinerTickets(){
     (j.tickets.tickets || []).forEach(function(t){
       var cout = NTT.cout(t, j.ctx.partants), g;
       if (t.gainManuel !== undefined && t.gainManuel !== null && t.gainManuel !== '') g = parseFloat(t.gainManuel) || 0;
-      else { var r = NTT.gains(t, j.ctx.arrivee, j.ctx.rapports, j.ctx.partants); g = r ? r.gagne : 0; if (r && r.attente) attente++; }
+      else { var r = NTT.gains(t, j.ctx.arrivee, j.ctx.rapports, j.ctx.partants, j.ctx.np); g = r ? r.gagne : 0; if (r && r.attente) attente++; }
       var P = ['Tiercé', 'Quarté+', 'Quinté+'].indexOf(t.pari) >= 0 ? t.pari : 'Autres paris';
       B[P] = B[P] || { m: 0, g: 0, n: 0, nb: 0, aut: {} };
       var a = B[P].aut[t.auteur] = B[P].aut[t.auteur] || { m: 0, g: 0, n: 0, nb: 0 };
@@ -137,7 +137,7 @@ fetch('/api/membres/stats-tickets', {credentials:'same-origin'}).then(function(r
       if (l && l.trouve) {
         if (!j.ctx.arrivee.length && l.arrivee.length) j.ctx.arrivee = l.arrivee;
         j.ctx.rapports = (l.rapports || []).concat(j.ctx.rapports);
-        if (l.partants && l.partants.length) j.ctx.partants = l.partants.filter(function(p){ return !p.np; }).length;
+        if (l.partants && l.partants.length) { j.ctx.partants = l.partants.filter(function(p){ return !p.np; }).length; j.ctx.np = l.partants.filter(function(p){ return p.np; }).map(function(p){ return p.n; }); }
       }
     }).catch(function(){});
   })).then(function(){ TJ = J; dessinerTickets(); });
