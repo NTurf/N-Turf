@@ -23,8 +23,7 @@ function page(titre, desc, canon, corps, type = 'website') {
 <link rel="manifest" href="/manifest.webmanifest?v=2">
 <link rel="icon" href="/icone-nturf-192.png">
 <link rel="stylesheet" href="/style.css?v=20261124b">
-<style>.billet .txt{line-height:1.6;overflow-wrap:anywhere}.billet .par{color:var(--soft);font-size:14px;margin:-4px 0 10px}.blist h2{margin-bottom:2px}.blist h2 a{text-decoration:none}</style>
-<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4848326247118929" crossorigin="anonymous"></script></head>
+<style>.billet .txt{line-height:1.6;overflow-wrap:anywhere}.billet .par{color:var(--soft);font-size:14px;margin:-4px 0 10px}.blist h2{margin-bottom:2px}.blist h2 a{text-decoration:none}</style></head>
 <body data-page="journal">
 <main>
 ${corps}

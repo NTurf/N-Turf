@@ -137,19 +137,21 @@ export async function calculerJour(db, iso, P) {
     }
     if (faits.length < att.length) return; // il reste des courses à attendre
   }
-  await cloreSiPret(db, iso);
+  await cloreSiPret(db, iso, P);
 }
 
 // La journée se clôt quand tous les jeux posés sont calculés et que chaque joueur actif a joué
 // (ou, pour un jour passé, dès que tout ce qui a été posé est calculé).
-export async function cloreSiPret(db, iso) {
+export async function cloreSiPret(db, iso, P) {
   const etats = (await db.prepare('SELECT e.*, j.actif FROM bal_etat e JOIN bal_joueurs j ON j.id = e.joueur_id WHERE e.date = ?').bind(iso).all()).results || [];
   if (!etats.length) return;
   const jeux = (await db.prepare('SELECT joueur_id, mise, retour FROM bal_jeux WHERE date = ?').bind(iso).all()).results || [];
   if (!jeux.length || jeux.some((x) => x.retour === null)) return;
   const ont = new Set(jeux.map((x) => x.joueur_id));
   const passe = iso < auj();
-  if (!passe && etats.some((e) => e.actif && !ont.has(e.joueur_id))) return;
+  // la dernière course du jour en France est partie : plus personne ne peut jouer, on clôt même si un joueur n'a rien posé
+  const fini = Array.isArray(P) && P.length > 0 && P.every((r) => r.courses.every((c) => c.heure && c.heure < Date.now()));
+  if (!passe && !fini && etats.some((e) => e.actif && !ont.has(e.joueur_id))) return;
   const demain = lendemainIso(iso), maj = [], suite = [];
   for (const e of etats) {
     const J = jeux.filter((x) => x.joueur_id === e.joueur_id);
