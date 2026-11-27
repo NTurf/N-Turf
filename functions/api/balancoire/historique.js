@@ -10,5 +10,7 @@ export async function onRequestGet({ request, env }) {
   const jeux = (await db.prepare(`SELECT joueur_id, type, COUNT(*) AS n, SUM(mise) AS mise, SUM(COALESCE(retour, 0)) AS retour,
     SUM(CASE WHEN retour > mise THEN 1 ELSE 0 END) AS gagnants, MAX(COALESCE(retour, 0)) AS meilleur FROM bal_jeux WHERE retour IS NOT NULL GROUP BY joueur_id, type`).all()).results || [];
   const trace = x.a.admin ? ((await db.prepare('SELECT t.quand, u.pseudo, t.action, t.detail FROM bal_trace t LEFT JOIN users u ON u.id = t.par ORDER BY t.id DESC LIMIT 50').all()).results || []) : [];
-  return json({ joueurs, etats, jours, jeux, trace });
+  // pour l'administrateur : la liste des pseudos du site, pour relier un joueur à son compte (sans e-mail)
+  const pseudos = x.a.admin ? ((await db.prepare("SELECT pseudo FROM users WHERE role != 'robot' AND banni = 0 ORDER BY pseudo_lc").all()).results || []).map((r) => r.pseudo) : [];
+  return json({ joueurs, etats, jours, jeux, trace, pseudos });
 }
