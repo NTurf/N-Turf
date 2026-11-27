@@ -40,7 +40,10 @@ export function lireRapports(blocs) {
     if (!(k in LIB) && !/MULTI/.test(k)) continue;
     if (['TIERCE', 'QUARTE_PLUS', 'QUINTE_PLUS'].includes(k)) {
       if (b.audience && b.audience !== 'NATIONAL') continue;
-      out.push(...(b.rapports || []).filter((r) => Number(r.dividendePourUnEuro) > 0 && !String(r.combinaison || '').includes('NP')).map((r) => ({ nom: LIB[k] + ' ' + String(r.libelle || '').toLowerCase(), euros: Number(r.dividendePourUnEuro) / 100 })));
+      // le PMU écrit déjà le nom du pari dans le libellé (« Tiercé ordre », « Quarté+ désordre ») : on ne le répète pas,
+      // sinon « Tiercé tiercé ordre » ne correspond à rien et le rapport reste « en attente »
+      const libre = (r) => String(r.libelle || '').toLowerCase().replace(/^\s*(tierc[eé]|quart[eé]\s*\+?|quint[eé]\s*\+?)\s*/, '').trim();
+      out.push(...(b.rapports || []).filter((r) => Number(r.dividendePourUnEuro) > 0 && !String(r.combinaison || '').includes('NP')).map((r) => ({ nom: LIB[k] + ' ' + libre(r), euros: Number(r.dividendePourUnEuro) / 100 })));
       // Tiercé avec un non-partant (règlement art. 79) : rapport « Tiercé 1 NP »
       if (k === 'TIERCE') { const np = (b.rapports || []).find((r) => Number(r.dividendePourUnEuro) > 0 && (String(r.combinaison || '').includes('NP') || /np|non/i.test(String(r.libelle || '')))); if (np) out.push({ nom: 'Tiercé 1 NP', euros: Number(np.dividendePourUnEuro) / 100 }); }
       continue;
