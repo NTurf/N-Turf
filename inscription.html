@@ -64,10 +64,11 @@ if(location.hash==='#connexion') show(false);
 function send(url,body,msgId,btn){
   var m=document.getElementById(msgId); m.className='msg'; m.textContent='Un instant…'; btn.disabled=true;
   fetch(url,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)})
-  .then(function(r){return r.json().then(function(d){return {ok:r.ok,d:d}})})
+  .then(function(r){return r.json().then(function(d){return {ok:r.ok,st:r.status,d:d}})})
   .then(function(x){
     if(x.ok){ m.className='msg ok'; m.textContent='Bienvenue '+x.d.pseudo+' !'; setTimeout(function(){location.href='/membres.html'},700); }
-    else { m.className='msg err'; m.textContent=x.d.erreur||'Une erreur est survenue.'; btn.disabled=false; }
+    else { m.className='msg err'; m.textContent=x.d.erreur||'Une erreur est survenue.'; btn.disabled=false;
+      if (msgId==='mConn' && x.st===401) m.innerHTML += '<br><small style="font-weight:normal">Ton téléphone a peut-être gardé ton mot de passe sous l\'ancienne adresse <b>n-turf.pages.dev</b> : regarde dans tes mots de passe enregistrés. <a href="/oubli.html">Comment faire ?</a></small>'; }
   }).catch(function(){ m.className='msg err'; m.textContent='Connexion impossible, réessayez.'; btn.disabled=false; });
 }
 document.getElementById('fInsc').onsubmit=function(e){
