@@ -55,6 +55,8 @@
 .frm2 label.cc input{width:auto;display:inline;margin:0}
 .frm2 textarea{font-family:inherit}
 .recap{font-size:16px;text-align:center;margin:6px 0}
+.tq{margin-top:8px;font-family:Arial,sans-serif;text-align:left}
+.tq .lead{font:800 16px Georgia,serif;text-align:center}
 .charte{background:#FFF6DC;border:1px solid #f0be3c;border-radius:10px;padding:8px 10px}
 </style>
 </head>
@@ -91,7 +93,7 @@
     return fetch('/api/td/jour' + (date ? '?date=' + date : ''), {credentials:'same-origin', cache:'no-store'}).then(function(r){ if (r.status === 401) throw 0; return r.json(); }).then(function(d){
       D = d; ecart = d.maintenant - Date.now(); $('zone').hidden = false;
       $('jour').innerHTML = d.jours.map(function(j){ return '<option value="' + j + '"' + (j === d.date ? ' selected' : '') + '>' + fr(j) + (j === d.aujourdhui ? ' (aujourd\'hui)' : '') + '</option>'; }).join('');
-      dessiner(); formulaire();
+      dessiner(); formulaire(); chargerQ();
     }).catch(function(){ $('refus').hidden = false; });
   }
   var DISC = {ATTELE:'trot attelé',MONTE:'trot monté',PLAT:'plat',HAIE:'haies',STEEPLECHASE:'steeple-chase',CROSS:'cross'};
@@ -104,8 +106,9 @@
     var d = D, P = d.pubs.filter(function(p){ return !p.supprime || d.moi.admin; });
     var jour = new Date(d.date + 'T12:00:00').toLocaleDateString('fr-FR', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
     var h = '<div class="journal"><div class="mast"><img src="/banniere.png" alt="N-TURF"><div class="titre">Le Ticket du Jour</div><div class="devise">Le collectif des passionnés de courses hippiques</div></div>' +
-      '<div class="dateline"><span>Édition du ' + E(jour) + '</span><span>' + P.filter(function(p){ return !p.supprime; }).length + ' publication' + (P.length > 1 ? 's' : '') + '</span></div>';
-    if (!P.length) { $('rendu').innerHTML = h + '<p class="vide2">' + (d.erreurPmu ? 'Le programme du PMU ne répond pas pour le moment.' : 'L\'édition du jour se prépare : les pronostics de nos contributeurs arrivent.') + '</p></div>'; return; }
+      '<div class="dateline"><span>Édition du ' + E(jour) + '</span><span>' + (function(){ var n = P.filter(function(p){ return !p.supprime; }).length + (d.anciens && d.anciens.tickets ? d.anciens.tickets.length : 0); return n + ' publication' + (n > 1 ? 's' : ''); })() + '</span></div>';
+    var TQ = d.anciens && d.anciens.tickets && d.anciens.tickets.length ? d.anciens : null;
+    if (!P.length && !TQ) { $('rendu').innerHTML = h + '<p class="vide2">' + (d.erreurPmu ? 'Le programme du PMU ne répond pas pour le moment.' : 'L\'édition du jour se prépare : les pronostics de nos contributeurs arrivent.') + '</p></div>'; return; }
     // À la une : les coups de cœur
     var C = P.filter(function(p){ return p.type === 'coeur'; });
     if (C.length) {
@@ -118,11 +121,13 @@
     }
     // Spécial Quinté+
     var Q = P.filter(function(p){ return p.type !== 'coeur' && infoCourse(p).c.quinte; });
-    if (Q.length || (d.anciens && d.anciens.tickets && d.anciens.tickets.length)) {
-      var iq = Q.length ? infoCourse(Q[0]) : null;
+    if (Q.length || TQ) {
+      // la course du Quinté+ du jour (même sans publication du Ticket du jour)
+      var cq = null, rq = null; (d.reunions || []).forEach(function(R){ (R.courses || []).forEach(function(c){ if (c.quinte) { cq = c; rq = R; } }); });
+      var iq = Q.length ? infoCourse(Q[0]) : (cq ? { c: cq, txt: 'R' + rq.r + 'C' + cq.c + (cq.heure ? ' · ' + hm(cq.heure) : '') + ' · ' + E(rq.h) + (cq.libelle ? ' — ' + E(cq.libelle) : '') } : null);
       h += '<div class="rub">Spécial Quinté+</div><div class="encadre quinte"><div class="lab">🏆 Le Quinté+ du jour</div>' + (iq ? '<div class="ccrs" style="text-align:center">' + iq.txt + '</div>' + arrLigne(iq.c) : '') +
         Q.map(function(p){ return '<div class="item">' + '<b>' + E(p.signature) + '</b> ' + corps(p, infoCourse(p).c) + '</div>'; }).join('') +
-        (d.anciens && d.anciens.tickets && d.anciens.tickets.length ? '<p class="arrline" style="text-align:center;margin-top:6px">🎟️ <a href="/tickets.html">Les tickets N-TURF du Quinté+ (' + d.anciens.tickets.length + ')</a></p>' : '') + '</div>';
+        (TQ ? '<div class="tq">' + NTT.rendu(TQ, ctxQ(cq)) + '</div>' : '') + '</div>';
     }
     // Nos pronostiqueurs : une colonne par contributeur, ses courses dans l'ordre de départ
     var autres = P.filter(function(p){ return p.type !== 'coeur' && !infoCourse(p).c.quinte; });
@@ -140,6 +145,17 @@
       if (motif === null) return;
       post('/api/td/supprimer', { id: +b.getAttribute('data-id'), motif: motif }).then(function(x){ if (x.ok) { msg('✓ Publication retirée.', true); charger(D.date); } else msg(x.erreur || 'Erreur.'); });
     }; });
+  }
+  // arrivée, rapports et partants du Quinté+ du jour, pour calculer les tickets N-TURF du fichier
+  var LIVEQ = null;
+  function ctxQ(cq){
+    var L = LIVEQ && LIVEQ.date === D.date && LIVEQ.d && LIVEQ.d.trouve ? LIVEQ.d : null;
+    return { arrivee: (L && L.arrivee && L.arrivee.length ? L.arrivee : (cq && cq.arrivee) || []), rapports: (L && L.rapports) || [], partants: L && L.partants && L.partants.length ? L.partants.filter(function(p){ return !p.np; }).length : (cq && cq.partants) || 0 };
+  }
+  function chargerQ(){
+    if (!D || !D.anciens) return;
+    var dt = D.date;
+    fetch('/api/pmu/quinte?date=' + encodeURIComponent(fr(dt))).then(function(r){ return r.json(); }).then(function(l){ if (D.date === dt) { LIVEQ = { date: dt, d: l }; dessiner(); } }).catch(function(){});
   }
   function actions(p, c){
     var peut = !p.supprime && (D.moi.admin || (p.moi && c && c.heure > now()));
@@ -268,6 +284,7 @@
         h += '<div class="card" style="margin:8px 0"><h3>' + E(x.signature) + '</h3>';
         var k2 = x.coeurs; if (k2 && k2.n) { var nk = k2.gains - k2.mises; h += '<p><b>❤ Coups de cœur : ' + k2.n + '</b><br>Gagnants : ' + k2.gagnants + ' · placés : ' + k2.places + ' · 1 € gagnant + 1 € placé : mises ' + EUR(k2.mises) + ' · rapports ' + EUR(k2.gains) + ' · net <b class="' + (nk >= 0 ? 'pos' : 'neg') + '">' + (nk >= 0 ? '+' : '−') + EUR(Math.abs(nk)) + '</b></p>'; }
         if (n) h += '<p><b>Pronostics : ' + n + '</b><br>1er cité gagnant : ' + x.gagnant + ' sur ' + n + ' · 1er cité placé : ' + x.place + ' sur ' + n + '<br>Gagnant présent dans la sélection : ' + x.gagnantCite + ' sur ' + n + '<br>Les 3 premiers dans la sélection : ' + x.trio + ' fois · les 4 premiers : ' + x.multi + ' fois · les 5 premiers : ' + x.quinte + ' fois</p>';
+        var tq = x.ticketsQuinte; if (tq && tq.n) { var nq = tq.gains - tq.mises; h += '<p><b>🎟️ Tickets du Quinté+ (fichier N-TURF) : ' + tq.n + ' sur ' + tq.jours + ' Quinté+</b><br>Gagnants : ' + tq.gagnants + ' sur ' + tq.n + ' · Mises : ' + EUR(tq.mises) + ' · Rapports : ' + EUR(tq.gains) + ' · Net : <b class="' + (nq >= 0 ? 'pos' : 'neg') + '">' + (nq >= 0 ? '+' : '−') + EUR(Math.abs(nq)) + '</b></p>'; }
         [['reel', 'Tickets joués réellement'], ['theorique', 'Tickets non joués (simulation, pas des gains encaissés)']].forEach(function(k){
           var t = x.tickets[k[0]]; if (!t.n) return; var net = t.gains - t.mises;
           h += '<p><b>' + k[1] + ' : ' + t.n + '</b><br>Gagnants : ' + t.gagnants + ' sur ' + t.n + ' · Mises : ' + EUR(t.mises) + ' · Rapports : ' + EUR(t.gains) + ' · Net : <b class="' + (net >= 0 ? 'pos' : 'neg') + '">' + (net >= 0 ? '+' : '−') + EUR(Math.abs(net)) + '</b></p>';

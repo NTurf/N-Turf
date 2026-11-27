@@ -5,6 +5,7 @@
 import { BASE, cache, get, preparer, lotCache, lireRapports } from './_pmu.js';
 import NTT from './_ntt.js';
 import { evaluer } from './_pm.js';
+import { lireContenu, ecrireContenu } from './_auth.js';
 
 export const PARIS = Object.keys(NTT.PARIS); // Tiercé, Quarté+, Quinté+, Multi, 2 sur 4, Trio, Super 4
 // Codes PMU de chaque pari, pour ne proposer que ce qui existe sur la course
@@ -123,6 +124,46 @@ export async function resoudre(db, iso, P) {
   }
 }
 
+// Les tickets du Quinté+ publiés par le fichier N-Turf (Choix Bruno…), gardés jour par jour (« tickets-AAAA-MM-JJ ») :
+// calculés une fois pour toutes avec l'arrivée et les rapports définitifs du PMU, pour les statistiques du Ticket du jour.
+export async function ticketsQuinte(db) {
+  const L = (await db.prepare("SELECT cle FROM contenu WHERE cle LIKE 'tickets-____-__-__' ORDER BY cle").all()).results || [];
+  const out = [];
+  let appelsPmu = 0;
+  for (const { cle } of L) {
+    const iso = cle.slice(8);
+    let r = await lireContenu(db, 'tdq-' + iso);
+    if (!r || !r.final) {
+      if (iso > auj() || appelsPmu >= 4) continue; // pas encore couru, ou assez d'appels pour cette fois
+      const T = await lireContenu(db, cle);
+      if (!T || !Array.isArray(T.tickets) || !T.tickets.length) continue;
+      appelsPmu++;
+      try {
+        const P = await programme(db, iso), now = Date.now();
+        let R = null, C = null;
+        for (const re of P) for (const c of re.courses) if (c.quinte) { R = re; C = c; }
+        if (!C || C.heure > now || C.arrivee.length < 5) continue;
+        const d = pmuDate(iso);
+        const blocs = await cache(db, `tdqrap-${d}`, 600, () => get(`${BASE}/${d}/R${R.r}/C${C.c}/rapports-definitifs`));
+        if (!Array.isArray(blocs) || !blocs.some((b) => b.typePari === 'SIMPLE_PLACE')) continue;
+        const parts = await cache(db, `tdqpart-${d}`, 3600, () => get(`${BASE}/${d}/R${R.r}/C${C.c}/participants`));
+        const partants = ((parts && parts.participants) || []).filter((x) => x.statut !== 'NON_PARTANT').length || C.partants;
+        const raps = lireRapports(blocs), arr = C.arrivee;
+        let attente = false;
+        const tk = T.tickets.map((t) => {
+          const g = NTT.gains(t, arr, raps, partants); if (g && g.attente) attente = true;
+          const manuel = t.gainManuel !== undefined && t.gainManuel !== null && t.gainManuel !== '';
+          return { auteur: t.auteur || 'N-TURF', pari: t.pari, mise: r2(NTT.cout(t, partants)), gagne: r2(manuel ? parseFloat(t.gainManuel) || 0 : (g ? g.gagne : 0)), detail: g ? g.detail : [] };
+        });
+        r = { final: !attente, date: iso, arrivee: arr.slice(0, 5), tickets: tk };
+        if (r.final) await ecrireContenu(db, 'tdq-' + iso, r);
+      } catch (e) { continue; }
+    }
+    out.push(r);
+  }
+  return out;
+}
+
 // Statistiques de chaque contributeur : seulement les publications non supprimées, faites avant la course, et calculées
 export async function statsContributeurs(db) {
   const rows = (await db.prepare(`SELECT signature, auteur_id, type, joue, resultat FROM td_pubs WHERE supprime = 0 AND resultat IS NOT NULL`).all()).results || [];
@@ -144,7 +185,21 @@ export async function statsContributeurs(db) {
     }
     S.set(k, x);
   }
-  return [...S.values()].sort((a, b) => (b.pronos + b.coeurs.n + b.tickets.reel.n + b.tickets.theorique.n) - (a.pronos + a.coeurs.n + a.tickets.reel.n + a.tickets.theorique.n));
+  // + les tickets du Quinté+ du fichier N-Turf : ceux signés « Choix Bruno » comptent pour Choix de Bruno (l'administrateur)
+  const adm = await db.prepare("SELECT c.user_id, c.signature FROM td_contributeurs c JOIN users u ON u.id = c.user_id WHERE u.role = 'admin' LIMIT 1").first();
+  const vide = (sig) => ({ signature: sig, pronos: 0, gagnant: 0, place: 0, gagnantCite: 0, trio: 0, multi: 0, quinte: 0,
+    coeurs: { n: 0, gagnants: 0, places: 0, mises: 0, gains: 0 }, tickets: { reel: { n: 0, gagnants: 0, mises: 0, gains: 0 }, theorique: { n: 0, gagnants: 0, mises: 0, gains: 0 } } });
+  let TQ = []; try { TQ = await ticketsQuinte(db); } catch (e) { TQ = []; }
+  for (const jour of TQ) for (const t of jour.tickets) {
+    const k = /bruno/i.test(t.auteur) && adm ? adm.user_id : 'f-' + t.auteur;
+    const x = S.get(k) || vide(/bruno/i.test(t.auteur) && adm ? adm.signature : t.auteur);
+    const q = x.ticketsQuinte || (x.ticketsQuinte = { n: 0, gagnants: 0, mises: 0, gains: 0, jours: new Set() });
+    q.n++; q.mises = r2(q.mises + t.mise); q.gains = r2(q.gains + t.gagne); if (t.gagne > 0) q.gagnants++; q.jours.add(jour.date);
+    S.set(k, x);
+  }
+  for (const x of S.values()) if (x.ticketsQuinte) x.ticketsQuinte.jours = x.ticketsQuinte.jours.size;
+  const nb = (a) => a.pronos + a.coeurs.n + a.tickets.reel.n + a.tickets.theorique.n + (a.ticketsQuinte ? a.ticketsQuinte.n : 0);
+  return [...S.values()].sort((a, b) => nb(b) - nb(a));
 }
 
 export { NTT };
