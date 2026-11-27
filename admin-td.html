@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ticket du jour, contributeurs – N-TURF</title>
+<meta name="theme-color" content="#0D1E3D">
+<meta name="robots" content="noindex">
+<link rel="manifest" href="/manifest.webmanifest?v=2">
+<link rel="icon" href="/icone-nturf-192.png">
+<link rel="stylesheet" href="/style.css?v=20261127a">
+</head>
+<body data-page="admin">
+<main>
+<h1>Ticket du jour : contributeurs</h1>
+<p><a href="/admin.html">← Retour à l'Administration</a> · <a href="/ticket-du-jour.html">Voir le Ticket du jour</a></p>
+<div id="refus" class="note" hidden>🔒 Réservé à l'administrateur.</div>
+<div id="zone" hidden>
+<p class="note">Les contributeurs publient librement dans le Ticket du jour, sous leur nom de signature. Tu peux supprimer après coup toute publication (bouton « Supprimer » sur la page). Les droits ne sont pas figés : coche ou décoche à tout moment ce que chacun peut publier.</p>
+<div id="liste"></div>
+<section class="card"><h2>Ajouter un contributeur</h2>
+<p><select id="nU" style="font-size:16px;padding:8px;border-radius:8px;width:100%"></select></p>
+<p><input id="nS" placeholder="Signature, ex. Choix Hippodrome" style="font-size:16px;padding:8px;border-radius:8px;width:100%;box-sizing:border-box"></p>
+<p class="note2">Il reçoit d'abord les droits de base du cahier : pronostics et tickets. Tu ajustes ensuite ci-dessus.</p>
+<button type="button" class="btn" id="bAdd">Ajouter</button></section>
+<section class="card"><h2>Publications supprimées</h2><div id="sup"></div></section>
+<p class="msg" id="msg"></p>
+</div>
+</main>
+<script src="/site.js?v=20261127b"></script>
+<script>
+(function(){
+  var $ = function(i){ return document.getElementById(i); };
+  var E = function(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); };
+  var D = null;
+  function msg(t, ok){ var m = $('msg'); m.className = 'msg ' + (ok ? 'ok' : 'err'); m.textContent = t || ''; }
+  function enreg(b){ return fetch('/api/td/contributeurs', {method:'POST', credentials:'same-origin', headers:{'content-type':'application/json'}, body: JSON.stringify(b)}).then(function(r){ return r.json(); }).then(function(x){ if (x.ok) { msg('✓ Enregistré.', true); charger(); } else msg(x.erreur || 'Erreur.'); }); }
+  function charger(){
+    fetch('/api/td/contributeurs', {credentials:'same-origin', cache:'no-store'}).then(function(r){ if (!r.ok) throw 0; return r.json(); }).then(function(d){
+      D = d; $('zone').hidden = false;
+      $('liste').innerHTML = d.contributeurs.map(function(c){
+        return '<section class="card" data-u="' + c.user_id + '"' + (c.actif ? '' : ' style="opacity:.55"') + '><h3 style="margin-top:0">' + E(c.pseudo) + (c.accepte ? ' <small>· règle acceptée</small>' : ' <small>· règle pas encore acceptée</small>') + '</h3>' +
+          '<p><label>Signature<br><input class="sg" value="' + E(c.signature) + '" style="font-size:16px;padding:7px;border-radius:8px;width:100%;box-sizing:border-box"></label></p>' +
+          '<p><label><input type="checkbox" class="pr"' + (c.droits.pronos ? ' checked' : '') + '> Pronostics (1 à 8 chevaux, dont Quinté+ en 8 et Super Pick 5)</label></p>' +
+          '<p><b>Tickets permis :</b><br>' + d.paris.map(function(p){ return '<label style="margin-right:10px;white-space:nowrap"><input type="checkbox" class="pa" value="' + E(p) + '"' + ((c.droits.paris || []).indexOf(p) >= 0 ? ' checked' : '') + '> ' + E(p) + '</label>'; }).join('') + '</p>' +
+          '<p><label><input type="checkbox" class="ac"' + (c.actif ? ' checked' : '') + '> Peut publier</label></p><button type="button" class="btn ok">Enregistrer</button></section>';
+      }).join('') || '<p class="empty">Aucun contributeur pour l\'instant.</p>';
+      $('liste').querySelectorAll('.ok').forEach(function(b){ b.onclick = function(){ var s = b.closest('section');
+        enreg({ user: +s.getAttribute('data-u'), signature: s.querySelector('.sg').value, pronos: s.querySelector('.pr').checked, paris: [].map.call(s.querySelectorAll('.pa:checked'), function(x){ return x.value; }), actif: s.querySelector('.ac').checked }); }; });
+      var deja = d.contributeurs.map(function(c){ return c.user_id; });
+      $('nU').innerHTML = '<option value="">— choisir un membre —</option>' + d.pseudos.filter(function(p){ return deja.indexOf(p.id) < 0; }).map(function(p){ return '<option value="' + p.id + '">' + E(p.pseudo) + '</option>'; }).join('');
+      $('sup').innerHTML = d.supprimees.length ? '<table class="st">' + d.supprimees.map(function(s){ return '<tr><td>' + s.date.split('-').reverse().join('/') + ' R' + s.r + 'C' + s.c + ' ' + E(s.hippodrome || '') + '</td><td><b>' + E(s.signature) + '</b> · ' + (s.type === 'prono' ? 'pronostic' : 'ticket') + '<br><small>retiré par ' + E(s.par || '?') + (s.motif ? ' : ' + E(s.motif) : '') + '</small></td></tr>'; }).join('') + '</table>' : '<p class="empty">Aucune.</p>';
+    }).catch(function(){ $('refus').hidden = false; });
+  }
+  $('nU').onchange = function(){ var o = this.options[this.selectedIndex]; if (!$('nS').value && this.value) $('nS').value = /hippodrome/i.test(o.text) ? 'Choix Hippodrome' : 'Choix ' + o.text; };
+  $('bAdd').onclick = function(){ if (!$('nU').value) return msg('Choisis un membre.'); enreg({ user: +$('nU').value, signature: $('nS').value, pronos: true, paris: D.paris, actif: true }).then(function(){ $('nS').value = ''; }); };
+  charger();
+})();
+</script>
+</body>
+</html>

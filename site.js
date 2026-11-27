@@ -7,7 +7,7 @@
     ['/journal', 'Le Journal N-TURF'],
     null,
     ['/pronostics.html#quinte', 'Pronos Quinté+'],
-    ['/tickets.html', 'Tickets'],
+    ['/ticket-du-jour.html', 'Ticket du jour'],
     ['/etudes.html', 'Études'],
     ['/concours.html', 'Concours Quinté+'],
     null,

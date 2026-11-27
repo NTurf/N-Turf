@@ -1,0 +1,48 @@
+import { json, initDb, currentUser, noDb } from '../../_auth.js';
+import { initTd, contributeur, programme, trouver, auj, NTT } from '../../_td.js';
+
+// Publier un pronostic ou un ticket sur une course du jour. Publication libre et immédiate pour les contributeurs autorisés,
+// jusqu'au départ de la course (un pronostic publié après le départ ne compterait pas dans les statistiques).
+export async function onRequestPost({ request, env }) {
+  if (!env.DB) return noDb();
+  const db = env.DB;
+  await initDb(db); await initTd(db);
+  const u = await currentUser(db, request);
+  const c = await contributeur(db, u);
+  if (!c) return json({ erreur: 'Publication réservée aux contributeurs autorisés.' }, 403);
+  let b; try { b = await request.json(); } catch (e) { return json({ erreur: 'Demande illisible.' }, 400); }
+  if (b.accepter) { await db.prepare("UPDATE td_contributeurs SET accepte = datetime('now') WHERE user_id = ?").bind(u.id).run(); return json({ ok: true }); }
+  if (!c.accepte) return json({ erreur: 'Lis et accepte d\'abord la règle de la rubrique.', charte: true }, 400);
+  const iso = auj();
+  let P; try { P = await programme(db, iso); } catch (e) { return json({ erreur: 'Le programme du PMU ne répond pas, réessaie dans un instant.' }, 502); }
+  const r = parseInt(b.r, 10), cn = parseInt(b.c, 10), course = trouver(P, r, cn);
+  if (!course) return json({ erreur: 'Course introuvable au programme du jour.' }, 400);
+  if (course.heure && course.heure <= Date.now()) return json({ erreur: 'Cette course est déjà partie.' }, 400);
+  const reu = P.find((x) => x.r === r);
+  const max = course.partants || 30, num = (x) => { const n = parseInt(x, 10); return n >= 1 && n <= max ? n : null; };
+  const commentaire = String(b.commentaire || '').trim().slice(0, 300) || null;
+  let chevaux = null, ticket = null, cout = null, type;
+  if (b.type === 'prono') {
+    if (!c.droits.pronos) return json({ erreur: 'Tu n\'as pas le droit de publier des pronostics.' }, 403);
+    chevaux = (b.chevaux || []).map(num);
+    if (!chevaux.length || chevaux.length > 8 || chevaux.some((x) => !x) || new Set(chevaux).size !== chevaux.length) return json({ erreur: `Un pronostic = de 1 à 8 chevaux différents, numéros de 1 à ${max}.` }, 400);
+    type = 'prono';
+  } else if (b.type === 'ticket') {
+    const t = b.ticket || {};
+    if (!NTT.PARIS[t.pari]) return json({ erreur: 'Pari inconnu.' }, 400);
+    if (!(c.droits.paris || []).includes(t.pari)) return json({ erreur: `Tu n'as pas (encore) le droit de publier des tickets ${t.pari}.` }, 403);
+    if (!course.paris.includes(t.pari)) return json({ erreur: `Le ${t.pari} n'est pas proposé sur cette course.` }, 400);
+    if (!NTT.FORMULES[t.formule]) return json({ erreur: 'Formule inconnue.' }, 400);
+    const L = (a) => (Array.isArray(a) ? a : []).map(num).filter(Boolean);
+    ticket = { pari: t.pari, formule: t.formule, chevaux: L(t.chevaux), bases: L(t.bases), associes: L(t.associes), mise: Math.round(Number(t.mise) * 100) / 100, auteur: c.signature };
+    if (Array.isArray(t.spec)) ticket.spec = t.spec.map((x) => (x === 'X' ? 'X' : num(x))).filter(Boolean);
+    if (!(ticket.mise > 0)) return json({ erreur: 'Indique la mise par combinaison.' }, 400);
+    const nb = NTT.combinaisons(ticket, course.partants);
+    if (!nb) return json({ erreur: 'Ce ticket ne fait aucune combinaison : vérifie les chevaux et la formule.' }, 400);
+    cout = Math.round(NTT.cout(ticket, course.partants) * 100) / 100;
+    type = 'ticket';
+  } else return json({ erreur: 'Type inconnu.' }, 400);
+  await db.prepare(`INSERT INTO td_pubs (date, r, c, hippodrome, course, auteur_id, signature, type, chevaux, ticket, cout, joue, commentaire) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+    .bind(iso, r, cn, reu.h, course.libelle, u.id, c.signature, type, chevaux ? JSON.stringify(chevaux) : null, ticket ? JSON.stringify(ticket) : null, cout, b.joue ? 1 : 0, commentaire).run();
+  return json({ ok: true, cout });
+}
