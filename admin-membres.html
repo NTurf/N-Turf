@@ -15,15 +15,37 @@
 <div id="refus" class="note" hidden>Cette page est réservée à l'administrateur.</div>
 <div id="zone" hidden>
 <p class="note2"><b>Modérateur</b> : peut gérer le tchat (supprimer un message, suspendre quelqu'un). <b>Administration</b> : peut publier les fichiers, les tickets et les pages Hippodrome. <b>Suspendu</b> : ne peut plus se connecter. Toi seul peux changer ces droits.</p>
+<div id="demandes"></div>
 <input id="cherche" placeholder="Chercher un pseudo" style="width:100%;padding:9px;border-radius:8px;border:1px solid var(--line);background:var(--navy2);color:var(--txt);font-size:16px;margin:6px 0">
 <p class="note2" id="nb"></p>
 <div id="liste"></div>
 <p class="msg" id="msg"></p>
 </div>
 </main>
-<script src="/site.js?v=20261127b"></script>
+<script src="/site.js?v=20261127c"></script>
 <script>
-var M = [], AUT = [];
+var M = [], AUT = [], D = [];
+function demandes(){
+  var z = $('demandes');
+  if (!D.length) { z.innerHTML = ''; return; }
+  z.innerHTML = '<section class="card" style="border:2px solid #c62832"><h2>🔑 Mots de passe oubliés (' + D.length + ')</h2>' + D.map(function(x){
+    return '<div class="mbr"><div><b>' + esc(x.login) + '</b>' + (x.pseudo ? ' → compte <b>' + esc(x.pseudo) + '</b>' : ' <small style="color:#c62832">(aucun compte à ce nom)</small>') + '<br><small>Le joindre : ' + (x.contact ? '<b>' + esc(x.contact) + '</b>' : (x.email ? esc(x.email) + ' (adresse du compte)' : 'non indiqué')) + ' · ' + dt(x.quand) + '</small></div><div class="sws">'
+      + (x.user_id ? '<button type="button" class="btn dmdp" data-id="' + x.user_id + '" data-p="' + esc(x.pseudo) + '">🔑 Donner un mot de passe</button>' : '')
+      + '<button type="button" class="btn ghost dok" data-d="' + x.id + '">Classer</button></div></div>';
+  }).join('') + '<p class="note2">« Donner un mot de passe » affiche un mot de passe provisoire : envoie-le au membre (e-mail, SMS…), il se connecte avec puis le change dans Mon compte. La demande se classe toute seule.</p></section>';
+  z.querySelectorAll('.dmdp').forEach(function(bt){ bt.onclick = function(){ donnerMdp(+bt.getAttribute('data-id'), bt.getAttribute('data-p')); }; });
+  z.querySelectorAll('.dok').forEach(function(bt){ bt.onclick = function(){ var id = +bt.getAttribute('data-d'); fetch('/api/admin/membres', { method: 'POST', headers: {'content-type':'application/json'}, body: JSON.stringify({ demandeTraitee: id }) }).then(function(){ D = D.filter(function(x){ return x.id !== id; }); demandes(); }); }; });
+  if (location.hash === '#demandes') z.scrollIntoView();
+}
+function donnerMdp(id, p){
+  if (!confirm('Donner un nouveau mot de passe provisoire à ' + p + ' ? Son ancien mot de passe ne marchera plus.')) return;
+  fetch('/api/admin/membres', { method: 'POST', headers: {'content-type':'application/json'}, body: JSON.stringify({ id: id, nouveauMdp: true }) })
+    .then(function(r){ return r.json().then(function(d){ return {ok:r.ok, d:d}; }); })
+    .then(function(x){
+      if (x.ok) { D = D.filter(function(y){ return y.user_id !== id; }); demandes(); $('msg').className = 'msg ok'; $('msg').innerHTML = '🔑 Nouveau mot de passe de <b>' + esc(x.d.pseudo) + '</b> : <b style="font-size:1.3em;letter-spacing:1px;user-select:all">' + esc(x.d.mdp) + '</b><br><small>Transmets-le-lui : il se connecte avec, puis le change dans Mon compte. Ce mot de passe ne sera plus affiché ensuite.</small>'; $('msg').scrollIntoView({block:'center'}); }
+      else { $('msg').className = 'msg err'; $('msg').textContent = x.d.erreur || 'Erreur.'; }
+    });
+}
 function $(i){ return document.getElementById(i); }
 function esc(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
 function dt(s){ if (!s) return 'jamais'; var d = new Date(s.replace(' ', 'T') + 'Z'); return d.toLocaleDateString('fr-FR') + ' ' + d.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'}); }
@@ -34,7 +56,7 @@ function dessiner(){
   $('liste').innerHTML = L.map(function(m){
     function sw(k, lib){ return '<label class="sw"><input type="checkbox" data-id="'+m.id+'" data-k="'+k+'"'+(m[k]?' checked':'')+'> '+lib+'</label>'; }
     if (m.role === 'admin') return '<div class="mbr"><div><b>'+esc(m.pseudo)+'</b> <span class="tag adm">Administrateur</span><br><small>'+esc(m.email)+'</small></div><div class="sws">'+sw('balancoire','🔒 La Balançoire')+'</div></div>';
-    return '<div class="mbr'+(m.banni?' ban':'')+'"><div><b>'+esc(m.pseudo)+'</b><br><small>'+esc(m.email)+' · inscrit le '+dt(m.created_at).split(' ')[0]+' · dernière connexion : '+dt(m.last_login)+'</small></div><div class="sws">'+sw('moderateur','Modérateur')+sw('publier','Administration')+sw('hippo','Hippodrome')+sw('redacteur','Rédacteur (Journal)')+sw('equipe','Tchat équipe')+sw('balancoire','🔒 La Balançoire')+sw('banni','Suspendu')+'<label class="sw">Analyste : <select data-an="'+m.id+'"><option value="">non</option><option value="__pseudo__"'+(m.analyste && m.analyste===m.pseudo?' selected':'')+'>oui (rubrique « '+esc(m.pseudo)+' »)</option>'+AUT.map(function(a){ return '<option'+(m.analyste===a && a!==m.pseudo?' selected':'')+'>'+esc(a)+'</option>'; }).join('')+'</select></label></div></div>';
+    return '<div class="mbr'+(m.banni?' ban':'')+'"><div><b>'+esc(m.pseudo)+'</b><br><small>'+esc(m.email)+' · inscrit le '+dt(m.created_at).split(' ')[0]+' · dernière connexion : '+dt(m.last_login)+'</small></div><div class="sws">'+sw('moderateur','Modérateur')+sw('publier','Administration')+sw('hippo','Hippodrome')+sw('redacteur','Rédacteur (Journal)')+sw('equipe','Tchat équipe')+sw('balancoire','🔒 La Balançoire')+sw('banni','Suspendu')+'<button type="button" class="btn ghost nmdp" data-id="'+m.id+'" data-p="'+esc(m.pseudo)+'" style="padding:4px 10px">🔑 Nouveau mot de passe</button>'+'<label class="sw">Analyste : <select data-an="'+m.id+'"><option value="">non</option><option value="__pseudo__"'+(m.analyste && m.analyste===m.pseudo?' selected':'')+'>oui (rubrique « '+esc(m.pseudo)+' »)</option>'+AUT.map(function(a){ return '<option'+(m.analyste===a && a!==m.pseudo?' selected':'')+'>'+esc(a)+'</option>'; }).join('')+'</select></label></div></div>';
   }).join('') || '<p class="empty">Aucun membre trouvé.</p>';
   $('liste').querySelectorAll('select[data-an]').forEach(function(sel){
     sel.onchange = function(){
@@ -47,6 +69,7 @@ function dessiner(){
         });
     };
   });
+  $('liste').querySelectorAll('.nmdp').forEach(function(bt){ bt.onclick = function(){ donnerMdp(+bt.getAttribute('data-id'), bt.getAttribute('data-p')); }; });
   $('liste').querySelectorAll('input[type=checkbox]').forEach(function(c){
     c.onchange = function(){
       var id = +c.getAttribute('data-id'), k = c.getAttribute('data-k'), v = c.checked, corps = { id: id }; corps[k] = v;
@@ -65,7 +88,7 @@ function dessiner(){
 NTURF_MOI.then(function(m){
   if (!(m.connecte && m.role === 'admin')) { $('refus').hidden = false; return; }
   $('zone').hidden = false;
-  fetch('/api/admin/membres').then(function(r){ return r.json(); }).then(function(d){ M = d.membres || []; AUT = d.auteurs || []; dessiner(); });
+  fetch('/api/admin/membres').then(function(r){ return r.json(); }).then(function(d){ M = d.membres || []; AUT = d.auteurs || []; D = d.demandes || []; demandes(); dessiner(); });
   $('cherche').oninput = dessiner;
 });
 </script>

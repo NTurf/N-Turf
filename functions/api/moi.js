@@ -1,4 +1,5 @@
 import { json, initDb, currentUser, noDb } from '../_auth.js';
+import { nbOuvertes } from '../_mdp.js';
 
 export async function onRequestGet({ request, env }) {
   if (!env.DB) return noDb();
@@ -8,5 +9,7 @@ export async function onRequestGet({ request, env }) {
   // La Balançoire : le lien n'apparaît que pour ses joueurs et l'administrateur
   let balancoire = u.role === 'admin';
   if (!balancoire) { try { balancoire = !!(await env.DB.prepare('SELECT 1 AS o FROM bal_joueurs WHERE user_id = ? AND actif = 1').bind(u.id).first()); } catch (e) {} }
-  return json({ connecte: true, ...u, balancoire });
+  // Administrateur : nombre de demandes « mot de passe oublié » en attente
+  const demandesMdp = u.role === 'admin' ? await nbOuvertes(env.DB) : 0;
+  return json({ connecte: true, ...u, balancoire, demandesMdp });
 }

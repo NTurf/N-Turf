@@ -85,7 +85,7 @@
 </section>
 </div>
 </main>
-<script src="/site.js?v=20261127b"></script>
+<script src="/site.js?v=20261127c"></script>
 <script>
 (function(){
   var sel = document.getElementById('alDelai');
@@ -118,7 +118,7 @@
     $('zone').hidden = false;
     $('pPseudo').textContent = d.pseudo; $('pEmail').textContent = d.email;
     $('vEtat').innerHTML = d.emailVerifie ? '✓ Ton adresse <b>' + E(d.email) + '</b> est confirmée.' : 'Ton adresse <b>' + E(d.email) + '</b> n\'est pas encore confirmée.';
-    $('bVerif').hidden = d.emailVerifie || !d.mailPret; $('iInfo').checked = d.infoOk;
+    $('bVerif').hidden = d.emailVerifie || !d.mailPret; $('cMail').hidden = !d.mailPret; $('iInfo').checked = d.infoOk;
     $('pDate').textContent = new Date(String(d.inscrit).replace(' ', 'T') + 'Z').toLocaleDateString('fr-FR');
     var h = '';
     if (d.mois) {
