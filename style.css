@@ -561,3 +561,24 @@ main > h1:not(.nlogo), main h1#titre{display:inline-block;font-family:'Barlow Co
 .med small{font-size:.85em;font-weight:700}
 .med.q{background:#e3ecfb;color:#0e2a5a;border:1px solid #8fa9d8}
 .med.p{background:#e6f5ea;color:#145a2c;border:1px solid #93c9a3}
+/* Tchat : répondre à un message précis */
+.cq{display:block;border-left:3px solid #1E5BB5;background:rgba(30,91,181,.08);border-radius:6px;padding:3px 7px;margin:3px 0 4px;font-size:13px;color:var(--mute);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer}
+.cq b{color:var(--navy)}
+.crep{border:0;background:none;color:#1E5BB5;font:700 12px Barlow,Arial,sans-serif;cursor:pointer;padding:0 0 0 8px;float:right}
+.repbar{display:flex;align-items:center;gap:8px;border-left:3px solid #1E5BB5;background:#EAF1FC;border-radius:8px;padding:5px 8px;margin-top:6px;font-size:13px;color:var(--navy)}
+.repbar span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.repbar button{border:0;background:none;font-size:18px;cursor:pointer;color:var(--navy)}
+.repbar[hidden]{display:none}
+.cm.flash{outline:2px solid #f0be3c}
+.cf-titre{flex:1;color:#fff;font:800 16px Barlow,Arial,sans-serif;padding-left:4px}
+.equipe-note{font-size:13px;color:#8a1c24;background:#fdecee;border-radius:8px;padding:5px 9px;margin:0 0 8px}
+.equipe-note[hidden]{display:none}
+/* Alertes de départ : petite fenêtre flottante */
+.al-pile{position:fixed;left:12px;top:12px;z-index:70;display:flex;flex-direction:column;gap:8px;width:min(330px,calc(100vw - 24px));pointer-events:none}
+.al{pointer-events:auto;background:#fff;border:1.5px solid var(--dark);border-left:6px solid #e0202e;border-radius:12px;box-shadow:0 8px 26px rgba(13,30,61,.3);padding:9px 34px 9px 12px;position:relative;cursor:pointer;animation:alIn .25s ease-out}
+.al .t{font:800 13px Barlow,Arial,sans-serif;color:#e0202e;letter-spacing:.3px}
+.al .c{font:700 15px Barlow,Arial,sans-serif;color:var(--navy);margin-top:2px}
+.al .h{font-size:13px;color:var(--mute)}
+.al .d{font:800 15px Barlow,Arial,sans-serif;color:var(--navy);margin-top:2px}
+.al .x{position:absolute;top:4px;right:6px;border:0;background:none;font-size:20px;color:var(--mute);cursor:pointer}
+@keyframes alIn{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:none}}

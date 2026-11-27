@@ -1,4 +1,4 @@
-// Tables du chat
+// Tables du tchat
 let pret = false;
 export async function initChat(db) {
   if (pret) return;
@@ -23,6 +23,13 @@ export async function initChat(db) {
       UNIQUE (message_id, user_id)
     )`),
   ]);
+  // « Répondre » : le message auquel on répond
+  try { await db.prepare('ALTER TABLE chat_messages ADD COLUMN reponse_a INTEGER').run(); } catch (e) { /* déjà là */ }
+  // Un seul tchat pour les membres : les anciens salons Quinté+ et Course par course rejoignent la discussion (rien n'est effacé)
+  await db.prepare("UPDATE chat_messages SET salon = 'general' WHERE salon IN ('quinte', 'cpc')").run();
   pret = true;
 }
-export const SALONS = { general: 'Discussion', quinte: 'Quinté+', cpc: 'Course par course' };
+// Le tchat des membres, et le tchat de l'équipe (invisible des membres ordinaires)
+export const SALONS = { general: 'Tchat', equipe: 'Équipe' };
+// Salons auxquels ce membre a accès
+export function salonsDe(u) { return u && u.equipe ? SALONS : { general: SALONS.general }; }

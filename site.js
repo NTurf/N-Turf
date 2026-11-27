@@ -96,7 +96,9 @@
     .then(function(m){
       if (m.connecte) {
         // Chat flottant sur toutes les pages, sauf la page Chat elle-même
-        if (!/\/chat(\.html)?$/.test(location.pathname)) { var cs = document.createElement('script'); cs.src = '/chatflot.js'; document.body.appendChild(cs); }
+        if (!/\/chat(\.html)?$/.test(location.pathname)) { var cs = document.createElement('script'); cs.src = '/chatflot.js?v=20261127a'; document.body.appendChild(cs); }
+        // Alertes de départ des courses, sur toutes les pages
+        var al = document.createElement('script'); al.src = '/alertes.js?v=20261127a'; document.body.appendChild(al);
         var b = h.querySelector('.compte');
         var w = document.createElement('span');
         w.className = 'who';

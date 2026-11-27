@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#0D1E3D">
 <link rel="manifest" href="/manifest.webmanifest?v=2">
 <link rel="icon" href="/icone-nturf-192.png">
-<link rel="stylesheet" href="/style.css?v=20261125b">
+<link rel="stylesheet" href="/style.css?v=20261127a">
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4848326247118929" crossorigin="anonymous"></script>
 </head>
 <body data-page="membres">
@@ -36,6 +36,15 @@
   <h2>Mon concours Quinté+</h2>
   <div id="bilan"></div>
   <p><a class="btn" href="/concours.html">Aller au concours</a></p>
+</section>
+<section class="card">
+  <h2>Alertes de départ</h2>
+  <p class="sub">Une petite fenêtre te prévient avant le départ de chaque course des réunions N-TURF et du Quinté+, sur n'importe quelle page du site. Une seule alerte par course.</p>
+  <label class="lab">Me prévenir
+    <select id="alDelai" style="font-size:16px;padding:8px;border-radius:8px;margin-left:6px">
+      <option value="5">5 minutes avant</option><option value="6">6 minutes avant</option><option value="7">7 minutes avant</option><option value="8">8 minutes avant</option><option value="9">9 minutes avant</option><option value="10">10 minutes avant</option><option value="off">Ne pas me prévenir</option>
+    </select></label>
+  <p class="msg ok" id="alMsg"></p>
 </section>
 <section class="card">
   <h2>Changer mon mot de passe</h2>
@@ -68,8 +77,20 @@
 </section>
 </div>
 </main>
-<script src="/site.js?v=20261125a"></script>
+<script src="/site.js?v=20261127a"></script>
 <script>
+(function(){
+  var sel = document.getElementById('alDelai');
+  try { sel.value = localStorage.getItem('nt_al_off') === '1' ? 'off' : (localStorage.getItem('nt_al_delai') || '5'); } catch (e) {}
+  sel.onchange = function(){
+    try {
+      if (sel.value === 'off') localStorage.setItem('nt_al_off', '1');
+      else { localStorage.setItem('nt_al_off', '0'); localStorage.setItem('nt_al_delai', sel.value); }
+    } catch (e) {}
+    document.getElementById('alMsg').textContent = 'C\'est noté' + (sel.value === 'off' ? ' : plus d\'alerte sur cet appareil.' : ' : alerte ' + sel.value + ' minutes avant le départ.');
+  };
+})();
+
 (function(){
   var $ = function(id){ return document.getElementById(id); };
   var F = function(x){ var v = Math.round(x * 100) / 100; return (v % 1 ? v.toFixed(2).replace('.', ',') : String(v)).replace(/\B(?=(\d{3})+(?!\d))/g, ' '); };

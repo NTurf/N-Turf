@@ -8,7 +8,7 @@ export async function onRequestGet({ request, env }) {
   const u = await currentUser(env.DB, request);
   if (!u || u.role !== 'admin') return json({ erreur: 'Réservé à l\'administrateur.' }, 403);
   await prepAnalyses(env.DB);
-  const r = await env.DB.prepare(`SELECT u.id, u.pseudo, u.email, u.role, u.moderateur, u.publier, u.banni, u.hippo, u.redacteur, u.created_at, u.last_login, a.auteur AS analyste FROM users u LEFT JOIN analystes a ON a.user_id = u.id WHERE u.role != 'robot' ORDER BY u.created_at DESC`).all();
+  const r = await env.DB.prepare(`SELECT u.id, u.pseudo, u.email, u.role, u.moderateur, u.publier, u.banni, u.hippo, u.redacteur, u.equipe, u.created_at, u.last_login, a.auteur AS analyste FROM users u LEFT JOIN analystes a ON a.user_id = u.id WHERE u.role != 'robot' ORDER BY u.created_at DESC`).all();
   return json({ membres: r.results || [], auteurs: AUTEURS });
 }
 
@@ -22,7 +22,7 @@ export async function onRequestPost({ request, env }) {
   const cible = await env.DB.prepare('SELECT id, role, pseudo FROM users WHERE id = ?').bind(parseInt(b.id, 10)).first();
   if (!cible) return json({ erreur: 'Membre introuvable.' }, 404);
   if (cible.role === 'admin') return json({ erreur: 'On ne modifie pas le compte administrateur.' }, 400);
-  const champs = ['moderateur', 'publier', 'banni', 'hippo', 'redacteur'].filter((k) => k in b);
+  const champs = ['moderateur', 'publier', 'banni', 'hippo', 'redacteur', 'equipe'].filter((k) => k in b);
   for (const k of champs) {
     await env.DB.prepare(`UPDATE users SET ${k} = ? WHERE id = ?`).bind(b[k] ? 1 : 0, cible.id).run();
   }

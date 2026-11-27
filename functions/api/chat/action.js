@@ -1,5 +1,5 @@
 import { json, initDb, currentUser, noDb } from '../../_auth.js';
-import { initChat } from './_chat.js';
+import { initChat, salonsDe } from './_chat.js';
 
 // Actions sur un message : signaler (tout membre), supprimer (son propre message ou modérateur),
 // bannir l'auteur (modérateur), classer un signalement (modérateur)
@@ -11,8 +11,9 @@ export async function onRequestPost({ request, env }) {
   if (!u) return json({ erreur: 'Connectez-vous.' }, 401);
   let b;
   try { b = await request.json(); } catch { return json({ erreur: 'Demande invalide.' }, 400); }
-  const m = await db.prepare('SELECT id, user_id, pseudo FROM chat_messages WHERE id = ?').bind(parseInt(b.id, 10)).first();
-  if (!m) return json({ erreur: 'Message introuvable.' }, 404);
+  const m = await db.prepare('SELECT id, user_id, pseudo, salon FROM chat_messages WHERE id = ?').bind(parseInt(b.id, 10)).first();
+  // un message du tchat de l'équipe n'existe pas pour un membre ordinaire
+  if (!m || !salonsDe(u)[m.salon]) return json({ erreur: 'Message introuvable.' }, 404);
 
   if (b.action === 'signaler') {
     if (m.user_id === u.id) return json({ erreur: 'Tu ne peux pas signaler ton propre message.' }, 400);

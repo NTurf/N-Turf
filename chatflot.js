@@ -2,7 +2,7 @@
 (function () {
   if (window.NTURF_CHATFLOT) return; window.NTURF_CHATFLOT = 1;
   var LS = { get: function (k, d) { try { var v = localStorage.getItem(k); return v === null ? d : v; } catch (e) { return d; } }, set: function (k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
-  var S = { salon: LS.get('nt_salon', 'general'), ouvert: LS.get('nt_flot', '0') === '1', dernier: 0, msgs: {}, ordre: [], moi: null, salons: null, enCours: false };
+  var S = { salon: LS.get('nt_salon', 'general'), ouvert: LS.get('nt_flot', '0') === '1', dernier: 0, msgs: {}, ordre: [], moi: null, salons: null, enCours: false, rep: null };
   var esc = function (s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
   var heure = function (t) { var d = new Date(t); return d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }); };
 
@@ -11,11 +11,11 @@
   bulle.innerHTML = '💬<span class="cf-nb" hidden></span>';
   var fen = document.createElement('div');
   fen.className = 'cf-fen'; fen.hidden = true;
-  fen.innerHTML = '<div class="cf-tete"><select class="cf-sal" aria-label="Salon"></select><a href="/chat.html" class="cf-grand" title="Ouvrir la page Tchat">⤢</a><button type="button" class="cf-red" aria-label="Réduire">–</button></div>' +
+  fen.innerHTML = '<div class="cf-tete"><span class="cf-titre">Tchat</span><select class="cf-sal" aria-label="Salon" hidden></select><a href="/chat.html" class="cf-grand" title="Ouvrir la page Tchat">⤢</a><button type="button" class="cf-red" aria-label="Réduire">–</button></div>' +
     '<div class="cf-fil"><p class="empty">Chargement…</p></div>' +
-    '<form class="cf-env"><textarea rows="1" maxlength="500" placeholder="Ton message…"></textarea><button type="submit" class="btn">Envoyer</button></form><p class="cf-msg"></p>';
+    '<div class="repbar" hidden style="margin:0 8px"><span></span><button type="button" aria-label="Annuler la réponse">✕</button></div><form class="cf-env"><textarea rows="1" maxlength="500" placeholder="Ton message…"></textarea><button type="submit" class="btn">Envoyer</button></form><p class="cf-msg"></p>';
   document.body.appendChild(fen); document.body.appendChild(bulle);
-  var fil = fen.querySelector('.cf-fil'), txt = fen.querySelector('textarea'), sel = fen.querySelector('.cf-sal'), info = fen.querySelector('.cf-msg');
+  var rb = fen.querySelector('.repbar'), titre = fen.querySelector('.cf-titre'), fil = fen.querySelector('.cf-fil'), txt = fen.querySelector('textarea'), sel = fen.querySelector('.cf-sal'), info = fen.querySelector('.cf-msg');
 
   function enBas() { return fil.scrollHeight - fil.scrollTop - fil.clientHeight < 60; }
   function nonLus() {
@@ -29,7 +29,8 @@
     var vis = S.ordre.filter(function (id) { return !S.msgs[id].supprime; });
     fil.innerHTML = vis.length ? vis.map(function (id) {
       var m = S.msgs[id];
-      return '<div class="cm' + (S.moi && m.uid === S.moi.id ? ' moi' : '') + '" data-id="' + id + '"><div class="ct"><a class="pslink" href="/fiche.html?p=' + encodeURIComponent(m.pseudo) + '" onclick="event.stopPropagation()"><b class="' + (m.modo ? 'modo' : '') + '">' + esc(m.pseudo) + '</b></a> <small>' + heure(m.cree) + '</small></div><div>' + esc(m.texte) + '</div></div>';
+      var cit = m.rep ? '<span class="cq" data-vers="' + m.rep.id + '">↩ ' + (m.rep.sup ? '<i>message retiré</i>' : '<b>' + esc(m.rep.pseudo) + '</b> ' + esc(m.rep.texte)) + '</span>' : '';
+      return '<div class="cm' + (S.moi && m.uid === S.moi.id ? ' moi' : '') + '" id="cf' + id + '" data-id="' + id + '"><div class="ct"><a class="pslink" href="/fiche.html?p=' + encodeURIComponent(m.pseudo) + '" onclick="event.stopPropagation()"><b class="' + (m.modo ? 'modo' : '') + '">' + esc(m.pseudo) + '</b></a> <small>' + heure(m.cree) + '</small><button type="button" class="crep" data-r="' + id + '">↩ Répondre</button></div>' + cit + '<div>' + esc(m.texte) + '</div></div>';
     }).join('') : '<p class="empty">Pas encore de message dans ce salon.</p>';
     if (garder) fil.scrollTop = fil.scrollHeight;
   }
@@ -40,7 +41,7 @@
       .then(function (d) {
         if (!d) return;
         S.moi = d.moi;
-        if (!S.salons) { S.salons = d.salons; sel.innerHTML = Object.keys(d.salons).map(function (k) { return '<option value="' + k + '"' + (k === S.salon ? ' selected' : '') + '>' + esc(d.salons[k]) + '</option>'; }).join(''); }
+        if (!S.salons) { S.salons = d.salons; if (!d.salons[S.salon]) S.salon = 'general'; var plus = Object.keys(d.salons).length > 1; sel.hidden = !plus; titre.hidden = plus; sel.innerHTML = Object.keys(d.salons).map(function (k) { return '<option value="' + k + '"' + (k === S.salon ? ' selected' : '') + '>' + esc(d.salons[k]) + '</option>'; }).join(''); }
         var neuf = false;
         d.messages.forEach(function (m) { if (!S.msgs[m.id]) { S.ordre.push(m.id); neuf = true; } S.msgs[m.id] = m; if (m.id > S.dernier) S.dernier = m.id; });
         (d.supprimes || []).forEach(function (id) { if (S.msgs[id] && !S.msgs[id].supprime) { S.msgs[id].supprime = 1; neuf = true; } });
@@ -56,20 +57,25 @@
   }
   bulle.onclick = function () { ouvrir(true); };
   fen.querySelector('.cf-red').onclick = function () { ouvrir(false); };
-  sel.onchange = function () { S.salon = sel.value; LS.set('nt_salon', S.salon); S.dernier = 0; S.msgs = {}; S.ordre = []; fil.innerHTML = '<p class="empty">Chargement…</p>'; charger(true); };
+  sel.onchange = function () { finRep(); S.salon = sel.value; LS.set('nt_salon', S.salon); S.dernier = 0; S.msgs = {}; S.ordre = []; fil.innerHTML = '<p class="empty">Chargement…</p>'; charger(true); };
   txt.addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.shiftKey && window.matchMedia('(min-width:700px)').matches) { e.preventDefault(); fen.querySelector('form').requestSubmit(); } });
+  function repondre(id) { var m = S.msgs[id]; if (!m || m.supprime) return; S.rep = id; rb.querySelector('span').innerHTML = '↩ Réponse à <b>' + esc(m.pseudo) + '</b> : ' + esc(m.texte.slice(0, 60)); rb.hidden = false; txt.focus(); }
+  function finRep() { S.rep = null; rb.hidden = true; }
+  rb.querySelector('button').onclick = finRep;
   fen.querySelector('form').onsubmit = function (e) {
     e.preventDefault();
     var t = txt.value.trim(); if (!t) return;
     var bt = fen.querySelector('form button'); bt.disabled = true;
-    fetch('/api/chat/messages', { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ salon: S.salon, texte: t }) })
+    fetch('/api/chat/messages', { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ salon: S.salon, texte: t, reponse: S.rep }) })
       .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
-      .then(function (x) { if (x.ok) { txt.value = ''; info.textContent = ''; charger(); setTimeout(function () { fil.scrollTop = fil.scrollHeight; }, 400); } else info.textContent = x.d.erreur || 'Erreur.'; })
+      .then(function (x) { if (x.ok) { finRep(); txt.value = ''; info.textContent = ''; charger(); setTimeout(function () { fil.scrollTop = fil.scrollHeight; }, 400); } else info.textContent = x.d.erreur || 'Erreur.'; })
       .catch(function () { info.textContent = 'Connexion impossible, réessaie.'; })
       .then(function () { bt.disabled = false; });
   };
   // Appui sur un message : signaler, ou supprimer / bannir pour les modérateurs
   fil.addEventListener('click', function (e) {
+    var rp = e.target.closest('.crep'); if (rp) { e.stopPropagation(); return repondre(+rp.getAttribute('data-r')); }
+    var cq = e.target.closest('.cq'); if (cq) { var x = document.getElementById('cf' + cq.getAttribute('data-vers')); if (x) { x.scrollIntoView({ block: 'center' }); x.classList.add('flash'); setTimeout(function () { x.classList.remove('flash'); }, 1500); } return; }
     var el = e.target.closest('.cm'); if (!el) return;
     var id = +el.getAttribute('data-id'), m = S.msgs[id]; if (!m || !S.moi) return;
     var vieux = fen.querySelector('.cf-menu'); if (vieux) { vieux.remove(); return; }

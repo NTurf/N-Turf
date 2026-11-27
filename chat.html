@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#0D1E3D">
 <link rel="manifest" href="/manifest.webmanifest?v=2">
 <link rel="icon" href="/icone-nturf-192.png">
-<link rel="stylesheet" href="/style.css?v=20261125b">
+<link rel="stylesheet" href="/style.css?v=20261127a">
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4848326247118929" crossorigin="anonymous"></script>
 </head>
 <body data-page="membres">
@@ -18,10 +18,12 @@
 <details class="charte"><summary>Règles du tchat</summary>
 <p>Respect de tous : pas d'insulte, pas de moquerie, pas de publicité ni de lien vers d'autres sites de jeux. On parle turf, pronostics et jeux. Les pseudos en <b style="color:#d8232f">rouge</b> sont les modérateurs : ils peuvent retirer un message ou bannir un membre. Si un message te gêne, touche-le puis « Signaler ». Jeu responsable · Interdit aux mineurs.</p>
 </details>
-<nav class="tabs" id="salons" style="padding:6px 0 8px"></nav>
+<nav class="tabs" id="salons" style="padding:6px 0 8px" hidden></nav>
+<p class="equipe-note" id="eqNote" hidden>🔒 Tchat de l'équipe : invisible pour les membres.</p>
 <button type="button" class="btn ghost" id="bSig" hidden style="margin-bottom:8px">Signalements (<span id="nSig">0</span>)</button>
 <div id="pSig" class="card" hidden></div>
 <div id="fil" class="fil"><p class="empty">Chargement…</p></div>
+<div class="repbar" id="repBar" hidden><span id="repTxt"></span><button type="button" id="repX" aria-label="Annuler la réponse">✕</button></div>
 <form id="fEnv" class="envoi">
 <textarea id="txt" rows="1" maxlength="500" placeholder="Ton message…"></textarea>
 <button class="btn" type="submit">Envoyer</button>
@@ -29,9 +31,9 @@
 <p class="msg" id="msg"></p>
 </div>
 </main>
-<script src="/site.js?v=20261125a"></script>
+<script src="/site.js?v=20261127a"></script>
 <script>
-var S = { salon: 'general', dernier: 0, moi: null, msgs: {}, ordre: [] };
+var S = { salon: 'general', dernier: 0, moi: null, msgs: {}, ordre: [], rep: null };
 try { S.salon = localStorage.getItem('nt_salon') || 'general'; } catch(e) {}
 function $(i){ return document.getElementById(i); }
 function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
@@ -42,14 +44,24 @@ function dessiner(garderBas){
   var vis = S.ordre.filter(function(id){ return !S.msgs[id].supprime; });
   f.innerHTML = vis.length ? vis.map(function(id){
     var m = S.msgs[id], moi = S.moi && m.uid === S.moi.id;
-    return '<div class="cm'+(moi?' moi':'')+'" data-id="'+id+'"><div class="ct"><a class="pslink" href="/fiche.html?p='+encodeURIComponent(m.pseudo)+'" onclick="event.stopPropagation()"><b class="'+(m.modo?'modo':'')+'">'+esc(m.pseudo)+'</b></a><small>'+heure(m.cree)+'</small></div><div class="cx">'+esc(m.texte).replace(/\n/g,'<br>')+'</div></div>';
+    var cit = m.rep ? '<span class="cq" data-vers="'+m.rep.id+'">↩ '+(m.rep.sup ? '<i>message retiré</i>' : '<b>'+esc(m.rep.pseudo)+'</b> '+esc(m.rep.texte))+'</span>' : '';
+    return '<div class="cm'+(moi?' moi':'')+'" id="m'+id+'" data-id="'+id+'"><div class="ct"><a class="pslink" href="/fiche.html?p='+encodeURIComponent(m.pseudo)+'" onclick="event.stopPropagation()"><b class="'+(m.modo?'modo':'')+'">'+esc(m.pseudo)+'</b></a><small>'+heure(m.cree)+'</small><button type="button" class="crep" data-r="'+id+'">↩ Répondre</button></div>'+cit+'<div class="cx">'+esc(m.texte).replace(/\n/g,'<br>')+'</div></div>';
   }).join('') : '<p class="empty">Aucun message pour l\'instant. Lance la discussion !</p>';
   f.querySelectorAll('.cm').forEach(function(el){ el.onclick = function(){ menu(+el.getAttribute('data-id'), el); }; });
+  f.querySelectorAll('.crep').forEach(function(b){ b.onclick = function(e){ e.stopPropagation(); repondre(+b.getAttribute('data-r')); }; });
+  f.querySelectorAll('.cq').forEach(function(c){ c.onclick = function(e){ e.stopPropagation(); var x = $('m' + c.getAttribute('data-vers')); if (!x) return; x.scrollIntoView({ block: 'center', behavior: 'smooth' }); x.classList.add('flash'); setTimeout(function(){ x.classList.remove('flash'); }, 1500); }; });
   if (bas) f.scrollTop = f.scrollHeight;
 }
+function repondre(id){
+  var m = S.msgs[id]; if (!m || m.supprime) return;
+  S.rep = id; $('repTxt').innerHTML = '↩ Réponse à <b>'+esc(m.pseudo)+'</b> : '+esc(m.texte.slice(0, 80));
+  $('repBar').hidden = false; $('txt').focus();
+}
+function finRep(){ S.rep = null; $('repBar').hidden = true; }
+$('repX').onclick = finRep;
 function menu(id, el){
   var ex = document.querySelector('.cmenu'); if (ex) { var meme = ex.getAttribute('data-id') == id; ex.remove(); if (meme) return; }
-  var m = S.msgs[id], moi = m.uid === S.moi.id, modo = S.moi.modo, b = [];
+  var m = S.msgs[id], moi = m.uid === S.moi.id, modo = S.moi.modo, b = [['repondre','↩ Répondre']];
   if (!moi) b.push(['signaler','Signaler']);
   if (moi || modo) b.push(['supprimer','Supprimer']);
   if (modo && !moi && !m.modo) b.push(['bannir','Bannir '+m.pseudo]);
@@ -57,7 +69,7 @@ function menu(id, el){
   var d = document.createElement('div'); d.className = 'cmenu'; d.setAttribute('data-id', id);
   d.innerHTML = b.map(function(x){ return '<button type="button" data-a="'+x[0]+'">'+esc(x[1])+'</button>'; }).join('');
   el.after(d);
-  d.querySelectorAll('button').forEach(function(x){ x.onclick = function(e){ e.stopPropagation(); action(x.getAttribute('data-a'), id); d.remove(); }; });
+  d.querySelectorAll('button').forEach(function(x){ x.onclick = function(e){ e.stopPropagation(); if (x.getAttribute('data-a') === 'repondre') { d.remove(); return repondre(id); } action(x.getAttribute('data-a'), id); d.remove(); }; });
 }
 function action(a, id, apres){
   var m = S.msgs[id] || {};
@@ -73,8 +85,10 @@ function action(a, id, apres){
     });
 }
 function salons(L){
+  if (!L[S.salon]) S.salon = 'general';
+  $('salons').hidden = Object.keys(L).length < 2; $('eqNote').hidden = S.salon !== 'equipe';
   $('salons').innerHTML = Object.keys(L).map(function(k){ return '<a href="#" data-s="'+k+'" class="'+(k===S.salon?'on':'')+'">'+esc(L[k])+'</a>'; }).join('');
-  $('salons').querySelectorAll('a').forEach(function(a){ a.onclick = function(e){ e.preventDefault(); S.salon = a.getAttribute('data-s'); try { localStorage.setItem('nt_salon', S.salon); } catch(x) {} S.dernier = 0; S.msgs = {}; S.ordre = []; $('fil').innerHTML = '<p class="empty">Chargement…</p>'; charger(true); }; });
+  $('salons').querySelectorAll('a').forEach(function(a){ a.onclick = function(e){ e.preventDefault(); S.salon = a.getAttribute('data-s'); try { localStorage.setItem('nt_salon', S.salon); } catch(x) {} finRep(); S.dernier = 0; S.msgs = {}; S.ordre = []; $('fil').innerHTML = '<p class="empty">Chargement…</p>'; charger(true); }; });
 }
 var enCours = false;
 function charger(premier){
@@ -110,10 +124,10 @@ $('fEnv').onsubmit = function(e){
   e.preventDefault();
   var t = $('txt').value.trim(); if (!t) return;
   var bt = this.querySelector('button'); bt.disabled = true;
-  fetch('/api/chat/messages', { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({ salon: S.salon, texte: t }) })
+  fetch('/api/chat/messages', { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({ salon: S.salon, texte: t, reponse: S.rep }) })
     .then(function(r){ return r.json().then(function(d){ return {ok:r.ok, d:d}; }); })
     .then(function(x){
-      if (x.ok) { $('txt').value = ''; $('txt').style.height = 'auto'; $('msg').textContent = ''; charger(); setTimeout(function(){ $('fil').scrollTop = $('fil').scrollHeight; }, 400); }
+      if (x.ok) { finRep(); $('txt').value = ''; $('txt').style.height = 'auto'; $('msg').textContent = ''; charger(); setTimeout(function(){ $('fil').scrollTop = $('fil').scrollHeight; }, 400); }
       else { $('msg').className = 'msg err'; $('msg').textContent = x.d.erreur || 'Erreur.'; }
     }).catch(function(){ $('msg').className = 'msg err'; $('msg').textContent = 'Connexion impossible, réessaie.'; })
     .then(function(){ bt.disabled = false; });
