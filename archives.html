@@ -17,11 +17,13 @@
 <div id="zone" hidden>
 <p class="lead">Tout ce qui a été donné, jour par jour, avec les arrivées et les rapports. Rien n'est effacé.</p>
 <div class="jourbar"><button type="button" class="btn ghost" id="prec">◀</button><select id="jour"></select><button type="button" class="btn ghost" id="suiv">▶</button></div>
+<p class="sub" id="dateJ" style="text-transform:capitalize"></p>
+<nav class="tabs" id="ongA" style="padding:0 0 10px;flex-wrap:wrap"></nav>
 <div id="rendu"></div>
 </div>
 </main>
 <script src="/site.js?v=20261125a"></script>
-<script src="/quinte.js?v=20261125a"></script>
+<script src="/quinte.js?v=20261127a"></script>
 <script src="/tickets.js?v=20261125a"></script>
 <script>
 var JOURS = [];
@@ -32,9 +34,9 @@ function fr(j){ var d = new Date(j + 'T12:00:00'); return d.toLocaleDateString('
 function coursesArchive(L){
   if (!L.length) return '';
   var par = {}; L.forEach(function(c){ (par[c.h] = par[c.h] || []).push(c); });
-  var h = '';
-  Object.keys(par).forEach(function(hp){
-    h += '<h3>'+esc(hp)+'</h3>';
+  var hs = Object.keys(par), h = hs.length > 1 ? '<nav class="tabs inner hpA">'+hs.map(function(hp, i){ return '<a href="#" data-i="'+i+'"'+(i?'':' class="on"')+'>'+esc(hp)+'</a>'; }).join('')+'</nav>' : '';
+  hs.forEach(function(hp, i){
+    h += '<div class="hpB" data-i="'+i+'"'+(i?' hidden':'')+'><h3>'+esc(hp)+'</h3>';
     par[hp].sort(function(a, b){ return parseInt(a.c.replace(/\D/g,''),10) - parseInt(b.c.replace(/\D/g,''),10); }).forEach(function(c){
       var a = c.a;
       h += '<div class="crs"><b>'+esc(c.c)+'</b> <small class="note2">'+esc(c.di)+'</small><div class="sel">'+c.s.map(function(n, k){ return '<span class="ch'+(k<3?' piv':'')+(a.indexOf(n)>=0?' hit':'')+'">'+n+'</span>'; }).join('')+'</div>'+
@@ -43,8 +45,25 @@ function coursesArchive(L){
       if (r.length) h += '<table class="rap">'+r.map(function(x){ return '<tr><td>'+esc(x[0])+'</td><td>'+eur(x[1])+'</td></tr>'; }).join('')+'</table>';
       h += '</div>';
     });
+    h += '</div>';
   });
   return h;
+}
+function brancherHp(root){
+  root.querySelectorAll('.hpA a').forEach(function(a){
+    a.onclick = function(e){ e.preventDefault(); var i = a.getAttribute('data-i');
+      root.querySelectorAll('.hpA a').forEach(function(x){ x.className = x === a ? 'on' : ''; });
+      root.querySelectorAll('.hpB').forEach(function(x){ x.hidden = x.getAttribute('data-i') !== i; }); };
+  });
+}
+// Les rubriques de l'archive, chacune dans son onglet (l'onglet choisi reste le même d'un jour à l'autre)
+var RUBRIQUES = [['quinte', 'Quinté+'], ['saisie', 'Tableau de saisie'], ['tickets', 'Tickets'], ['cpc', 'Course par course']];
+var ONG = 'quinte';
+try { ONG = localStorage.getItem('nturfArchOng') || 'quinte'; } catch (e) {}
+function montrerOnglet(k){
+  ONG = k; try { localStorage.setItem('nturfArchOng', k); } catch (e) {}
+  document.querySelectorAll('#ongA a').forEach(function(a){ a.classList.toggle('on', a.getAttribute('data-k') === k); });
+  RUBRIQUES.forEach(function(r){ var el = $('rub-' + r[0]); if (el) el.hidden = r[0] !== k; });
 }
 function charger(j){
   $('jour').value = j; $('rendu').innerHTML = '<p class="empty">Chargement…</p>';
@@ -52,32 +71,36 @@ function charger(j){
   fetch('/api/membres/archives?jour=' + j, {credentials:'same-origin'}).then(function(r){ return r.json(); }).then(function(d){
     var dfr = j.split('-').reverse().join('/');
     function dessiner(live){
-      var q = d.quinte, h = '<p class="sub" style="text-transform:capitalize">'+fr(j)+'</p>';
-      // Quinté+
+      var q = d.quinte, R = {};
+      $('dateJ').textContent = fr(j);
+      // Quinté+ (arrivée, approches, cotes, rapports) et Tableau de saisie, séparés
       if (q || (live && live.trouve)) {
-        var qq = q && q.lignes ? q : null;
-        h += '<section class="card"><h2>Quinté+</h2>';
-        if (qq) h += NT.afficher(qq, live);
+        if (q && q.lignes) { R.quinte = NT.afficher(q, live, 'quinte'); R.saisie = NT.afficher(q, live, 'saisie'); }
         else {
-          var arr = (q && q.arrivee && q.arrivee.length ? q.arrivee : (live && live.arrivee) || []);
-          h += arr.length ? '<div class="arrivee"><b>Arrivée</b> '+arr.slice(0,5).map(function(n){ var cite = q && [q.synthese, q.pondere, q.perso].some(function(t){ return (t || []).indexOf(n) >= 0; }); return '<span class="ch'+(cite?' hit':'')+'">'+n+'</span>'; }).join('')+'</div>' : '';
+          var arr = (q && q.arrivee && q.arrivee.length ? q.arrivee : (live && live.arrivee) || []), t = '';
+          t += arr.length ? '<div class="arrivee"><b>Arrivée</b> '+arr.slice(0,5).map(function(n){ var cite = q && [q.synthese, q.pondere, q.perso].some(function(t){ return (t || []).indexOf(n) >= 0; }); return '<span class="ch'+(cite?' hit':'')+'">'+n+'</span>'; }).join('')+'</div>' : '';
           var rk = q && q.rapports ? Object.keys(q.rapports) : [];
-          if (rk.length) h += '<table class="rap">'+rk.map(function(k){ return '<tr><td>'+esc(k)+'</td><td>'+eur(q.rapports[k])+'</td></tr>'; }).join('')+'</table>';
+          if (rk.length) t += '<table class="rap">'+rk.map(function(k){ return '<tr><td>'+esc(k)+'</td><td>'+eur(q.rapports[k])+'</td></tr>'; }).join('')+'</table>';
+          if (t) R.quinte = t;
         }
-        h += '</section>';
       }
       // Tickets
       if (d.tickets && d.tickets.tickets && d.tickets.tickets.length) {
         var raps = Object.keys((q && q.rapports) || {}).map(function(k){ return { nom: k, euros: q.rapports[k] }; });
         var arr2 = (q && q.arrivee) || [], part = q && q.partants || 0;
         if (live && live.trouve) { if (!arr2.length) arr2 = live.arrivee; raps = (live.rapports || []).concat(raps); if (live.partants.length) part = live.partants.filter(function(p){ return !p.np; }).length; }
-        h += '<section class="card"><h2>Tickets</h2>'+NTT.rendu(d.tickets, { arrivee: arr2, rapports: raps, partants: part })+'</section>';
+        R.tickets = NTT.rendu(d.tickets, { arrivee: arr2, rapports: raps, partants: part });
       }
-      // Course par course
-      if (d.cpc && d.cpc.reunions) { h += '<section class="card" id="cC"><h2>Course par course</h2><div id="cpcA"></div></section>'; }
-      else if (d.courses && d.courses.length) h += '<section class="card"><h2>Course par course</h2>'+coursesArchive(d.courses)+'</section>';
-      if (h.indexOf('<section') < 0) h += '<p class="empty">Rien d\'archivé pour ce jour.</p>';
-      $('rendu').innerHTML = h;
+      // Course par course (un onglet par hippodrome à l'intérieur)
+      if (d.cpc && d.cpc.reunions) R.cpc = '<div id="cpcA"></div>';
+      else if (d.courses && d.courses.length) R.cpc = coursesArchive(d.courses);
+      var dispo = RUBRIQUES.filter(function(r){ return R[r[0]]; });
+      if (!dispo.length) { $('ongA').innerHTML = ''; $('rendu').innerHTML = '<p class="empty">Rien d\'archivé pour ce jour.</p>'; return; }
+      $('ongA').innerHTML = RUBRIQUES.map(function(r){ return '<a href="#" data-k="'+r[0]+'"'+(R[r[0]]?'':' style="opacity:.45"')+'>'+r[1]+'</a>'; }).join('');
+      $('rendu').innerHTML = RUBRIQUES.map(function(r){ return '<section class="card" id="rub-'+r[0]+'" hidden><h2>'+r[1]+'</h2>'+(R[r[0]] || '<p class="empty">Rien d\'archivé ce jour dans cette rubrique.</p>')+'</section>'; }).join('');
+      document.querySelectorAll('#ongA a').forEach(function(a){ a.onclick = function(e){ e.preventDefault(); montrerOnglet(a.getAttribute('data-k')); }; });
+      montrerOnglet(R[ONG] ? ONG : dispo[0][0]);
+      brancherHp($('rendu'));
       if (d.cpc && d.cpc.reunions) { var el = $('cpcA'); el.innerHTML = NT.afficherCpc(d.cpc); NT.brancherOnglets(el); NT.chargerLive(d.cpc, function(l){ el.innerHTML = NT.afficherCpc(d.cpc, 0, l); NT.brancherOnglets(el); }); }
     }
     dessiner(null);

@@ -1,5 +1,5 @@
 import { json, initDb } from '../../_auth.js';
-import { BASE, norm, cache, get, preparer, dateParam, detailCourse } from '../../_pmu.js';
+import { BASE, norm, cache, get, preparer, dateParam, detailReunion } from '../../_pmu.js';
 
 // Données publiques du PMU pour une réunion : partants, musique, arrivée, rapports.
 // Appel : /api/pmu/reunion?date=23/11/2026&hippo=vincennes
@@ -18,8 +18,7 @@ export async function onRequestGet({ request, env }) {
       return (a && (a.includes(hippo) || hippo.includes(a))) || (b && (b.includes(hippo) || hippo.includes(b)));
     });
     if (!reu) return json({ trouve: false });
-    const courses = [];
-    for (const c of reu.courses || []) courses.push(await detailCourse(db, d, reu.numOfficiel, c));
+    const courses = await detailReunion(db, d, reu);
     return json({ trouve: true, reunion: reu.numOfficiel, hippodrome: reu.hippodrome && reu.hippodrome.libelleCourt, courses });
   } catch (e) {
     return json({ erreur: 'Données PMU indisponibles pour le moment.' }, 502);

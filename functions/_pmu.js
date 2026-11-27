@@ -70,10 +70,9 @@ export function dateParam(u) {
   return m ? m[1] + m[2] + m[3] : null;
 }
 
-// Détail d'une course : partants, arrivée, rapports
-export async function detailCourse(db, d, R, c) {
+// Mise en forme d'une course à partir des données brutes du PMU (participants, blocs de rapports)
+function construire(c, parts, rapports) {
   const C = c.numOrdre;
-  const parts = await cache(db, `part-${d}-R${R}C${C}`, 1800, () => get(`${BASE}/${d}/R${R}/C${C}/participants`));
   const FER = { DEFERRE_ANTERIEURS_POSTERIEURS: 'D4', DEFERRE_ANTERIEURS: 'DA', DEFERRE_POSTERIEURS: 'DP', PROTEGE_ANTERIEURS_POSTERIEURS: 'P4', PROTEGE_ANTERIEURS: 'PA', PROTEGE_POSTERIEURS: 'PP', PROTEGE_ANTERIEURS_DEFERRE_POSTERIEURS: 'PA DP', DEFERRE_ANTERIEURS_PROTEGE_POSTERIEURS: 'DA PP' };
   const OEIL = { OEILLERES_CLASSIQUE: 'Œillères', OEILLERES_AUSTRALIENNES: 'Œill. australiennes' };
   const dist = c.distance || 0;
@@ -87,17 +86,74 @@ export async function detailCourse(db, d, R, c) {
     corde: p.placeCorde || null, oeil: OEIL[p.oeilleres] || '',
     cote: p.dernierRapportDirect && p.dernierRapportDirect.rapport ? p.dernierRapportDirect.rapport : (p.dernierRapportReference && p.dernierRapportReference.rapport ? p.dernierRapportReference.rapport : null),
   })).sort((a, b) => a.n - b.n);
-  const arrivee = Array.isArray(c.ordreArrivee) ? c.ordreArrivee.map((x) => Array.isArray(x) ? x[0] : x) : [];
+  const arrivee = arriveeDe(c);
+  return { num: C, libelle: c.libelle || '', heure: c.heureDepart || null, discipline: c.discipline || '', distance: dist || null, specialite: c.specialite || '', allocation: c.montantPrix || null, conditions: c.conditions || '', corde: c.corde || '', categorie: c.categorieParticularite || '', partants, arrivee, definitive: rapports.length > 0, rapports };
+}
+
+const arriveeDe = (c) => Array.isArray(c.ordreArrivee) ? c.ordreArrivee.map((x) => Array.isArray(x) ? x[0] : x) : [];
+const estQuinte = (c) => (c.paris || []).some((p) => p.codePari === 'QUINTE_PLUS');
+// Rapports complets ? (pour une course Quinté+, le PMU publie le Quinté+ après les simples)
+const complets = (c, rapports) => rapports.length > 0 && (!estQuinte(c) || rapports.some((x) => /quint/i.test(String(x.nom || ''))));
+
+// Détail d'une course : partants, arrivée, rapports
+export async function detailCourse(db, d, R, c) {
+  const C = c.numOrdre;
+  const parts = await cache(db, `part-${d}-R${R}C${C}`, 1800, () => get(`${BASE}/${d}/R${R}/C${C}/participants`));
   let rapports = [];
-  if (arrivee.length) {
+  if (arriveeDe(c).length) {
     const cle = `rap2-${d}-R${R}C${C}`; // (nouvelle clé : l'ancienne a pu garder des rapports incomplets)
     try {
       const rap = await cache(db, cle, 60, () => get(`${BASE}/${d}/R${R}/C${C}/rapports-definitifs`));
       rapports = lireRapports(rap);
     } catch (e) { rapports = []; } // rapports pas encore publiés : on garde l'arrivée
-    // On ne garde les rapports 24 h que s'ils sont complets : pour une course Quinté+, le PMU publie le Quinté+ après les simples
-    const quinte = (c.paris || []).some((p) => p.codePari === 'QUINTE_PLUS');
-    if (rapports.length && (!quinte || rapports.some((x) => /quint/i.test(String(x.nom || ''))))) await db.prepare('UPDATE pmu_cache SET expire = ? WHERE cle = ?').bind(Date.now() + 86400000, cle).run();
+    if (complets(c, rapports)) await db.prepare('UPDATE pmu_cache SET expire = ? WHERE cle = ?').bind(Date.now() + 86400000, cle).run();
   }
-  return { num: C, libelle: c.libelle || '', heure: c.heureDepart || null, discipline: c.discipline || '', distance: dist || null, specialite: c.specialite || '', allocation: c.montantPrix || null, conditions: c.conditions || '', corde: c.corde || '', categorie: c.categorieParticularite || '', partants, arrivee, definitive: rapports.length > 0, rapports };
+  return construire(c, parts, rapports);
+}
+
+// Toutes les courses d'une réunion en une fois.
+// Le site gratuit de Cloudflare n'accepte que 50 requêtes à la base par appel : avec 8 ou 9 courses,
+// l'ancienne méthode (course par course, 3 à 5 requêtes chacune) dépassait la limite dès que plusieurs
+// courses étaient courues, et toute la réunion tombait en erreur (arrivées non affichées).
+// Ici : 1 lecture groupée, les appels au PMU en parallèle, 1 écriture groupée.
+export async function detailReunion(db, d, reu) {
+  const R = reu.numOfficiel, L = reu.courses || [], now = Date.now();
+  const cles = [];
+  for (const c of L) { cles.push(`part-${d}-R${R}C${c.numOrdre}`); if (arriveeDe(c).length) cles.push(`rap2-${d}-R${R}C${c.numOrdre}`); }
+  const vus = new Map();
+  for (let i = 0; i < cles.length; i += 90) {
+    const lot = cles.slice(i, i + 90);
+    const r = await db.prepare(`SELECT cle, data, expire FROM pmu_cache WHERE cle IN (${lot.map(() => '?').join(',')})`).bind(...lot).all();
+    for (const x of r.results || []) vus.set(x.cle, x);
+  }
+  const ecrire = [];
+  // Donnée en cache si encore valable, sinon appel au PMU ; en cas d'échec du PMU, on garde l'ancienne donnée
+  const lire = async (cle, url) => {
+    const x = vus.get(cle);
+    if (x && x.expire > now) return JSON.parse(x.data);
+    try {
+      const data = await get(url);
+      if (data !== undefined && data !== null) ecrire.push({ cle, data });
+      return data;
+    } catch (e) { return x ? JSON.parse(x.data) : null; }
+  };
+  const courses = await Promise.all(L.map(async (c) => {
+    const C = c.numOrdre;
+    const parts = await lire(`part-${d}-R${R}C${C}`, `${BASE}/${d}/R${R}/C${C}/participants`);
+    let rapports = [];
+    if (arriveeDe(c).length) rapports = lireRapports(await lire(`rap2-${d}-R${R}C${C}`, `${BASE}/${d}/R${R}/C${C}/rapports-definitifs`));
+    const det = construire(c, parts, rapports);
+    for (const w of ecrire) if (w.cle === `part-${d}-R${R}C${C}`) w.expire = now + 1800000;
+    for (const w of ecrire) if (w.cle === `rap2-${d}-R${R}C${C}`) w.expire = now + (complets(c, rapports) ? 86400000 : 60000);
+    return det;
+  }));
+  // Une seule écriture pour tout ce qui a été rafraîchi (par lots de 30 : 3 valeurs par ligne, 100 au maximum)
+  try {
+    for (let i = 0; i < ecrire.length; i += 30) {
+      const lot = ecrire.slice(i, i + 30);
+      await db.prepare(`INSERT INTO pmu_cache (cle, data, expire) VALUES ${lot.map(() => '(?, ?, ?)').join(', ')} ON CONFLICT(cle) DO UPDATE SET data = excluded.data, expire = excluded.expire`)
+        .bind(...lot.flatMap((w) => [w.cle, JSON.stringify(w.data), w.expire || now + 60000])).run();
+    }
+  } catch (e) { /* le cache n'est qu'une économie : l'affichage passe quand même */ }
+  return courses;
 }

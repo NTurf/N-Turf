@@ -107,7 +107,8 @@ var NT = (function(){
   }
   function ligneNums(titre, a){ return '<tr><th>'+titre+'</th><td>'+(a && a.length ? a.map(function(n){ return '<span class="nb">'+esc(n)+'</span>'; }).join('') : '<span class="empty">aucun</span>')+'</td></tr>'; }
 
-  function afficher(q, live){
+  // partie : rien = tout (page Pronos) ; 'saisie' = tableau de saisie seul ; 'quinte' = le reste (approches, cotes, rapports)
+  function afficher(q, live, partie){
     if (!q) return '<p class="empty">Le Quinté du jour arrive.</p>';
     live = live && live.trouve ? live : null;
     var arr = q.arrivee || [], etat = '', raps = Object.keys(q.rapports || {}).map(function(k){ return { nom: k, euros: q.rapports[k] }; });
@@ -123,6 +124,7 @@ var NT = (function(){
       }).join('')+'</div>';
     }
     var mc = meilleuresCases(q);
+    if (partie !== 'quinte') {
     h += '<h3>Lignes et classements</h3><table class="saisie">';
     ['A','B','C','D'].forEach(function(L){
       var a = q.lignes[L] || []; if (!a.length) return;
@@ -141,6 +143,8 @@ var NT = (function(){
         ['1er','2e','3e','4e','5e'].map(function(t, p){ return TEINTES[p].map(function(c){ return '<i style="background:'+c+'"></i>'; }).join('')+' le '+t; }).join(' &nbsp; ')+'</p>';
       h += '<p class="note2">Les chevaux par place, du meilleur au moins bon (3 au moins) :</p><table class="parplace">'+mc.parPlace.map(function(a, p){ return '<tr><th>'+['1er','2e','3e','4e','5e'][p]+'</th><td>'+a.map(function(n){ return '<b'+(arr.indexOf(n)>=0?' class="hit"':'')+'>'+esc(n)+'</b>'; }).join(' ')+'</td></tr>'; }).join('')+'</table>';
     }
+    }
+    if (partie === 'saisie') return h;
     Object.keys(q.approches || {}).forEach(function(k){
       var a = q.approches[k];
       h += '<h3>'+k+'</h3><div class="sel">'+a.selection.map(function(n,i){ return chip(n, arr, i===0?'piv':''); }).join('')+'</div>';
@@ -314,13 +318,16 @@ var NT = (function(){
     return h;
   }
   // Va chercher les données PMU de chaque réunion puis rappelle fin(live)
+  // Si un appel échoue (PMU lent, réseau), on garde ce qui était déjà affiché au lieu de l'effacer
+  var DERNIER = {};
   function chargerLive(d, fin){
     if (!d || !d.reunions) return fin({});
     var live = {}, reste = d.reunions.length;
     d.reunions.forEach(function(re, i){
+      var cle = d.date + '|' + (re.brut || re.hippodrome);
       fetch('/api/pmu/reunion?date='+encodeURIComponent(d.date)+'&hippo='+encodeURIComponent(re.brut || re.hippodrome))
-        .then(function(r){ return r.json(); }).then(function(x){ live[i] = x; })
-        .catch(function(){}).then(function(){ if (--reste === 0) fin(live); });
+        .then(function(r){ return r.json(); }).then(function(x){ if (x && x.trouve) DERNIER[cle] = x; live[i] = (x && x.trouve) ? x : (DERNIER[cle] || x); })
+        .catch(function(){ if (DERNIER[cle]) live[i] = DERNIER[cle]; }).then(function(){ if (--reste === 0) fin(live); });
     });
   }
   function brancherOnglets(root){
