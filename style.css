@@ -626,6 +626,7 @@ main > h1:not(.nlogo), main h1#titre{display:inline-block;font-family:'Barlow Co
   .forum .fplus{width:30px;height:30px;border-radius:50%;border:0;background:#1E5BB5;color:#fff;font:900 18px Arial;cursor:pointer;line-height:30px;padding:0}
   .forum .fps{justify-self:start;background:#fff;border-radius:6px;padding:3px 10px;font-weight:800;color:#1E5BB5;text-decoration:none;max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .forum .fps.modo{color:#d8232f}
+  .forum .frep .fps,.forum .frep .fdt{background:#e3ecfa}
   .forum .fdt{justify-self:end;background:#fff;border-radius:16px;padding:4px 12px;font-weight:700;font-size:13px;color:#0e2a5c;white-space:nowrap}
   .forum .fr.flash{outline:2px solid #f0be3c}
 }
