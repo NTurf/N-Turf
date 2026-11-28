@@ -59,6 +59,9 @@
 .tq .lead{font:800 16px Georgia,serif;text-align:center}
 .edito{font-size:16px;line-height:1.55;text-align:justify}
 .edito p:first-child::first-letter{float:left;font:900 44px/0.9 Georgia,serif;margin:4px 6px 0 0;color:#8a6100}
+.pubq{background:#fff;border:2px solid #1E5BB5;border-radius:12px;padding:10px 12px;margin:10px 0;text-align:left}
+.pubq .tkh b{font:900 19px Georgia,serif}
+.noms{font-size:14px;margin:4px 0;line-height:1.5}.noms b{color:#1E5BB5}
 .charte{background:#FFF6DC;border:1px solid #f0be3c;border-radius:10px;padding:8px 10px}
 </style>
 </head>
@@ -153,7 +156,8 @@
       var cq = null, rq = null; (d.reunions || []).forEach(function(R){ (R.courses || []).forEach(function(c){ if (c.quinte) { cq = c; rq = R; } }); });
       var iq = Q.length ? infoCourse(Q[0]) : (cq ? { c: cq, txt: 'R' + rq.r + 'C' + cq.c + (cq.heure ? ' · ' + hm(cq.heure) : '') + ' · ' + E(rq.h) + (cq.libelle ? ' — ' + E(cq.libelle) : '') } : null);
       h += '<div class="rub">Spécial Quinté+</div><div class="encadre quinte"><div class="lab">🏆 Le Quinté+ du jour</div>' + (iq ? '<div class="ccrs" style="text-align:center">' + iq.txt + '</div>' + arrLigne(iq.c) : '') +
-        Q.map(function(p){ return '<div class="item">' + '<b>' + E(p.signature) + '</b> ' + corps(p, infoCourse(p).c) + '</div>'; }).join('') +
+        // chaque publication des contributeurs dans son propre cadre, séparée des tickets N-TURF
+        Q.map(function(p){ var i = infoCourse(p); return '<div class="tkt pubq"><div class="tkh"><b>' + E(p.signature) + '</b></div><div class="ou">' + i.txt + '</div>' + corps(p, i.c) + arrLigne(i.c) + '</div>'; }).join('') +
         (TQ ? '<div class="tq">' + NTT.rendu(TQ, ctxQ(cq)) + '</div>' : '') + '</div>';
     }
     // Nos pronostiqueurs : une colonne par contributeur, ses courses dans l'ordre de départ
@@ -188,19 +192,24 @@
     var peut = !p.supprime && (D.moi.admin || (p.moi && c && c.heure > now()));
     return (peut ? '<button type="button" class="act" data-id="' + p.id + '">' + (D.moi.admin && !p.moi ? 'Supprimer' : 'Retirer') + '</button>' : '') + (p.supprime ? ' <small>supprimée' + (p.motif ? ' : ' + E(p.motif) : '') + '</small>' : '');
   }
+  // le nom des chevaux joués, sous les numéros (« 9 JOLI CŒUR · 12 … »)
+  function nomsLigne(p, L){
+    var o = p.noms || {}, N = (L || []).filter(function(n){ return n !== 'X' && o[n]; });
+    return N.length ? '<div class="noms">' + N.map(function(n){ return '<b>' + n + '</b> ' + E(o[n]); }).join(' · ') + '</div>' : '';
+  }
   function corps(p, c){
     var arr = (p.resultat && p.resultat.arrivee) || (c.arrivee || []).slice(0, 5), h = actions(p, c);
-    if (p.type === 'prono') h += '<div class="sel">' + p.chevaux.map(function(n, i){ return '<span class="ch' + (i < 3 ? ' piv' : '') + (arr.indexOf(n) >= 0 ? ' hit' : '') + '">' + n + '</span>'; }).join('') + '</div>';
+    if (p.type === 'prono') h += '<div class="sel">' + p.chevaux.map(function(n, i){ return '<span class="ch' + (i < 3 ? ' piv' : '') + (arr.indexOf(n) >= 0 ? ' hit' : '') + '">' + n + '</span>'; }).join('') + '</div>' + nomsLigne(p, p.chevaux);
     else if (p.type === 'jeu') {
       var j = p.ticket || {}, NOM = { SG: 'Gagnant', SP: 'Placé', CG: 'Couplé gagnant', CP: 'Couplé placé', CO: 'Couplé ordre' }, grp = {};
       (j.paris || []).forEach(function(x){ (grp[x.t] = grp[x.t] || []).push(x.c.join('-')); });
-      h += '<div class="ou">' + ((j.paris || []).some(function(x){ return x.t === 'SG' || x.t === 'SP'; }) ? 'Jeu simple' : 'Couplé') + '</div><div class="sel">' + (p.chevaux || []).map(function(n){ return '<span class="ch piv' + (arr.indexOf(n) >= 0 ? ' hit' : '') + '">' + n + '</span>'; }).join('') + '</div>';
+      h += '<div class="ou">' + ((j.paris || []).some(function(x){ return x.t === 'SG' || x.t === 'SP'; }) ? 'Jeu simple' : 'Couplé') + '</div><div class="sel">' + (p.chevaux || []).map(function(n){ return '<span class="ch piv' + (arr.indexOf(n) >= 0 ? ' hit' : '') + '">' + n + '</span>'; }).join('') + '</div>' + nomsLigne(p, p.chevaux || []);
       h += '<div class="res">' + Object.keys(grp).map(function(k){ return NOM[k] + (k === 'SG' || k === 'SP' ? '' : ' ' + grp[k].join(', ')); }).join(' · ') + '<br>Mise : <b>' + EUR(p.cout) + '</b> (' + EUR(j.mise) + ' par pari)' + (p.joue ? ' · <b>joué réellement</b>' : ' · <span class="fictif">non joué : gains en simulation</span>') + '</div>';
     }
     else {
       var t = p.ticket;
       h += '<div class="ou">Ticket ' + E(t.pari) + ' · ' + E(NTT.FORMULES[t.formule] || '') + '</div><div class="sel">' + NTT.vue(t).map(function(n){ return '<span class="ch' + (n === 'X' ? ' xx' : '') + (arr.indexOf(n) >= 0 ? ' hit' : '') + '">' + E(n) + '</span>'; }).join('') + '</div>';
-      h += NTT.basesNoms(t);
+      h += nomsLigne(p, NTT.vue(t).concat(t.formule === 'reduit' || t.formule === 'positions' ? (t.associes || []) : []).filter(function(n, i, a){ return a.indexOf(n) === i; }));
       if (t.associes && t.associes.length && t.formule !== 'champ') h += '<p class="assoc">X = associés : ' + t.associes.join(' - ') + '</p>';
       h += '<div class="res">Mise : <b>' + EUR(p.cout) + '</b> (' + EUR(t.mise) + ' la combinaison)' + (p.joue ? ' · <b>joué réellement</b>' : ' · <span class="fictif">non joué : gains en simulation</span>') + '</div>';
     }
