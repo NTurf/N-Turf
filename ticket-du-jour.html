@@ -62,6 +62,31 @@
 .pubq{background:#fff;border:2px solid #1E5BB5;border-radius:12px;padding:10px 12px;margin:10px 0;text-align:left}
 .pubq .tkh b{font:900 19px Georgia,serif}
 .noms{font-size:14px;margin:4px 0;line-height:1.5}.noms b{color:#1E5BB5}
+/* Mise en page journal : blocs côte à côte (2 colonnes, même sur téléphone), filets noirs, papier */
+.journal .g2{display:grid;grid-template-columns:repeat(auto-fill,minmax(138px,1fr));gap:8px;align-items:start}
+.journal .g2>.lead,.journal .g2>.bilan,.journal .g2>p,.journal .g2>.empty{grid-column:1/-1}
+.journal .une.g2 .encadre{margin:0}
+.journal .une.g2 .cnum{width:46px;height:46px;line-height:46px;font-size:24px}
+.journal .une.g2 .cnom{font-size:18px}
+.journal .tkt,.journal .pubq{background:#fff;border:1px solid #111;border-radius:0;box-shadow:none;margin:0;padding:8px 9px;color:#1b1b1b;font-family:Georgia,'Times New Roman',serif}
+.journal .tkt.gagnant{border:2px solid #157a3a;background:#f2fbf4}
+.journal .tkh{display:flex;flex-direction:column;gap:2px;border-bottom:1px solid #111;padding-bottom:3px;margin-bottom:5px}
+.journal .tkh b{font:900 16px Georgia,serif;color:#111}
+.journal .tkh span{font-size:12px;font-variant:small-caps;color:#555}
+.journal .tkb{display:flex;justify-content:space-between;align-items:baseline;gap:4px;font:12px Arial,sans-serif;padding:2px 0;border-top:1px dotted #bbb}
+.journal .tkb b{white-space:nowrap}
+.journal .ch{min-width:24px;height:24px;font-size:13px;margin:1px;border-radius:4px}
+.journal .assoc,.journal .noms,.journal .ou,.journal .res{font-size:12.5px}
+.journal .tq .lead{font:900 17px Georgia,serif;border-bottom:2px solid #111;margin:6px 0 2px;text-align:left}
+.journal .tq .bilan{background:#fff;border:2px solid #111;border-radius:0}
+.journal .encadre.quinte{padding:6px 5px}
+.journal .cols.g2>.art:only-child{grid-column:1/-1}
+.journal .itemsg{display:grid;grid-template-columns:repeat(auto-fill,minmax(138px,1fr));gap:0 12px}
+.journal .itemsg .item{border-bottom:1px dotted #bbb}
+.journal .cols.g2{columns:auto}
+.journal .art{margin:0;border-top:3px solid #111;padding-top:4px}
+.journal .art h3{font-size:17px;border-bottom:1px solid #111}
+.journal .edito{column-width:260px;column-gap:22px;column-rule:1px solid #cfc4a8}
 .charte{background:#FFF6DC;border:1px solid #f0be3c;border-radius:10px;padding:8px 10px}
 </style>
 </head>
@@ -118,7 +143,7 @@
     // À la une : les coups de cœur
     var C = P.filter(function(p){ return p.type === 'coeur'; }), K = X && X.cheval;
     if (C.length || K) {
-      h += '<div class="rub">À la une</div>';
+      h += '<div class="rub">À la une</div><div class="une' + ((K ? 1 : 0) + C.length > 1 ? ' g2' : '') + '">';
       if (K) {
         var rk = K.resultat;
         h += '<div class="encadre"><div class="lab">❤ Le cheval du jour</div><div class="cnum">' + K.n + '</div><div class="cnom">' + E(K.nom || 'N° ' + K.n) + '</div><div class="ccrs">R' + K.r + 'C' + K.c + (K.heure ? ' · ' + hm(K.heure) : '') + (K.hippodrome ? ' · ' + E(K.hippodrome) : '') + (K.libelle ? ' — ' + E(K.libelle) : '') + '</div><div class="csig">par Choix de Bruno</div>' +
@@ -131,12 +156,13 @@
         h += '<div class="encadre' + (p.supprime ? ' item sup' : '') + '"><div class="lab">❤ Coup de cœur du jour</div><div class="cnum">' + n + '</div><div class="cnom">' + E((p.ticket && p.ticket.nom) || 'N° ' + n) + '</div><div class="ccrs">' + i.txt + '</div><div class="csig">par ' + E(p.signature) + '</div>' + (p.commentaire ? '<p class="com" style="font-style:italic;margin:6px 0 0">« ' + E(p.commentaire) + ' »</p>' : '') +
           (r ? '<div class="res" style="margin-top:6px;font-family:Arial,sans-serif">' + (r.rang === 1 ? '<span class="pos">GAGNANT !</span>' : r.place ? '<span class="pos">Placé ' + r.rang + 'e</span>' : (r.rang ? r.rang + 'e' : 'Non placé')) + ' · 1 € gagnant + 1 € placé : rapporte <b>' + EUR(r.gagne + r.place) + '</b> pour 2,00 €</div>' : arrLigne(i.c)) + actions(p, i.c) + '</div>';
       });
+      h += '</div>';
     }
     // Le mot du jour (texte de Bruno)
     if (X && X.texte && X.texte.trim()) h += '<div class="rub">' + E(X.titre || 'Le mot du jour') + '</div><div class="edito">' + NTT.paragraphes(X.texte) + '<p class="csig" style="text-align:right;font-style:italic">Choix de Bruno</p></div>';
     // Les reports
     if (X && X.reports && X.reports.length) {
-      h += '<div class="rub">Le report du jour</div>' + X.reports.map(function(p){
+      h += '<div class="rub">Le report du jour</div><div class="' + (X.reports.length > 1 ? 'g2' : '') + '">' + X.reports.map(function(p){
         var r = p.resultat, J = p.pari === 'P' ? 'placé' : 'gagnant', ok = function(rg){ return rg && (p.pari === 'P' ? rg <= 3 : rg === 1); };
         return '<div class="encadre" style="text-align:left;border-color:#1E5BB5;background:#eef4fd"><div class="lab" style="color:#1E5BB5;text-align:center">🔁 Report ' + J + ' · R' + p.r + (p.hippodrome ? ' ' + E(p.hippodrome) : '') + '</div>' +
           '<div class="sel" style="text-align:center;margin:6px 0">C' + p.c1 + (p.heure1 ? ' (' + hm(p.heure1) + ')' : '') + ' <span class="ch piv' + (ok(p.rang1) ? ' hit' : '') + '">' + p.n1 + '</span> ' + E(p.nom1 || '') + ' <b>→</b> C' + p.c2 + (p.heure2 ? ' (' + hm(p.heure2) + ')' : '') + ' <span class="ch piv' + (ok(p.rang2) ? ' hit' : '') + '">' + p.n2 + '</span> ' + E(p.nom2 || '') + '</div>' +
@@ -145,10 +171,10 @@
           (r ? '<div class="res" style="font-family:Arial,sans-serif;text-align:center;margin-top:4px">' + (r.np ? 'Un cheval du report est non partant : se reporter au règlement du PMU.'
             : r.attente ? 'Le ' + p.n1 + ' rapporte <b class="pos">' + EUR(r.reporte) + '</b>, reportés sur le ' + p.n2 + ' : résultat après la course ' + p.c2 + '.'
             : (r.reporte ? 'Le ' + p.n1 + ' rapporte ' + EUR(r.reporte) + ', reportés sur le ' + p.n2 + ' · ' : 'Le ' + p.n1 + ' n\'est pas ' + J + ' : report perdu · ') + 'rapporté <b>' + EUR(r.gagne) + '</b> pour ' + EUR(r.mise) + ' · net ' + netH(r.gagne - r.mise)) + '</div>' : '') + '</div>';
-      }).join('');
+      }).join('') + '</div>';
     }
     // Les tickets de Bruno sur d'autres courses (couplé, trio…)
-    if (X && X.autres && X.autres.length) h += '<div class="rub">Nos tickets du jour</div><div class="tq">' + NTT.renduAutres(X) + '</div>';
+    if (X && X.autres && X.autres.length) h += '<div class="rub">Nos tickets du jour</div><div class="tq g2">' + NTT.renduAutres(X) + '</div>';
     // Spécial Quinté+
     var Q = P.filter(function(p){ return p.type !== 'coeur' && infoCourse(p).c.quinte; });
     if (Q.length || TQ) {
@@ -157,8 +183,8 @@
       var iq = Q.length ? infoCourse(Q[0]) : (cq ? { c: cq, txt: 'R' + rq.r + 'C' + cq.c + (cq.heure ? ' · ' + hm(cq.heure) : '') + ' · ' + E(rq.h) + (cq.libelle ? ' — ' + E(cq.libelle) : '') } : null);
       h += '<div class="rub">Spécial Quinté+</div><div class="encadre quinte"><div class="lab">🏆 Le Quinté+ du jour</div>' + (iq ? '<div class="ccrs" style="text-align:center">' + iq.txt + '</div>' + arrLigne(iq.c) : '') +
         // chaque publication des contributeurs dans son propre cadre, séparée des tickets N-TURF
-        Q.map(function(p){ var i = infoCourse(p); return '<div class="tkt pubq"><div class="tkh"><b>' + E(p.signature) + '</b></div><div class="ou">' + i.txt + '</div>' + corps(p, i.c) + arrLigne(i.c) + '</div>'; }).join('') +
-        (TQ ? '<div class="tq">' + NTT.rendu(TQ, ctxQ(cq)) + '</div>' : '') + '</div>';
+        (Q.length ? '<div class="g2">' : '') + Q.map(function(p){ var i = infoCourse(p); return '<div class="tkt pubq"><div class="tkh"><b>' + E(p.signature) + '</b></div><div class="ou">' + i.txt + '</div>' + corps(p, i.c) + arrLigne(i.c) + '</div>'; }).join('') + (Q.length ? '</div>' : '') +
+        (TQ ? '<div class="tq g2">' + NTT.rendu(TQ, ctxQ(cq)) + '</div>' : '') + '</div>';
     }
     // Nos pronostiqueurs : une colonne par contributeur, ses courses dans l'ordre de départ
     var autres = P.filter(function(p){ return p.type !== 'coeur' && !infoCourse(p).c.quinte; });
@@ -166,8 +192,8 @@
       var par = {}, ordre = [];
       autres.sort(function(a, b){ return (infoCourse(a).c.heure || 0) - (infoCourse(b).c.heure || 0); }).forEach(function(p){ if (!par[p.signature]) { par[p.signature] = []; ordre.push(p.signature); } par[p.signature].push(p); });
       ordre.sort(function(a, b){ return (/bruno/i.test(b) ? 1 : 0) - (/bruno/i.test(a) ? 1 : 0); });
-      h += '<div class="rub">Nos pronostiqueurs</div><div class="cols">' + ordre.map(function(sig){
-        return '<div class="art"><h3' + (/bruno/i.test(sig) ? ' class="bruno"' : '') + '>' + E(sig) + '</h3>' + par[sig].map(function(p){ var i = infoCourse(p); return '<div class="item' + (p.supprime ? ' sup' : '') + '"><div class="ou">' + i.txt + (i.c.pick5 ? ' · Super Pick 5' : '') + '</div>' + corps(p, i.c) + arrLigne(i.c) + '</div>'; }).join('') + '</div>';
+      h += '<div class="rub">Nos pronostiqueurs</div><div class="cols g2">' + ordre.map(function(sig){
+        return '<div class="art"><h3' + (/bruno/i.test(sig) ? ' class="bruno"' : '') + '>' + E(sig) + '</h3><div class="itemsg">' + par[sig].map(function(p){ var i = infoCourse(p); return '<div class="item' + (p.supprime ? ' sup' : '') + '"><div class="ou">' + i.txt + (i.c.pick5 ? ' · Super Pick 5' : '') + '</div>' + corps(p, i.c) + arrLigne(i.c) + '</div>'; }).join('') + '</div></div>';
       }).join('') + '</div>';
     }
     $('rendu').innerHTML = h + '</div>';
