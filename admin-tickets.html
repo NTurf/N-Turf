@@ -37,6 +37,36 @@
 </details>
 </section>
 
+<section class="card" id="xZone">
+<h2>En plus du Quinté+</h2>
+<p class="note2">Ton cheval du jour, tes reports et ton texte partent avec tes tickets quand tu appuies sur « Publier aux membres » (même sans ticket Quinté+). Ils s'affichent dans le Ticket du jour et sur la page Tickets, avec leur résultat après l'arrivée.</p>
+<h3>❤ Cheval du jour</h3>
+<div class="frm">
+<label>Réunion<select id="kR"></select></label>
+<label>Course<select id="kC"></select></label>
+<label>Cheval<select id="kN"></select></label>
+<label>Commentaire (facultatif)<input id="kCom" maxlength="200" placeholder="ex. sa course"></label>
+</div>
+<p class="note2">Joué 1 € gagnant + 1 € placé pour le bilan. <button type="button" class="btn ghost" id="kDel">Enlever le cheval du jour</button></p>
+<h3>🔁 Report</h3>
+<div class="frm">
+<label>Réunion<select id="rR"></select></label>
+<label>Jeu<select id="rP"><option value="G">Simple gagnant</option><option value="P">Simple placé</option></select></label>
+<label>1re course<select id="rC1"></select></label>
+<label>1er cheval<select id="rN1"></select></label>
+<label>2e course (plus tard)<select id="rC2"></select></label>
+<label>2e cheval<select id="rN2"></select></label>
+<label>Mise (€)<input id="rMi" inputmode="decimal" value="1"></label>
+<label>Commentaire (facultatif)<input id="rCom" maxlength="200"></label>
+</div>
+<p><button type="button" class="btn ghost" id="rAdd">Ajouter ce report</button></p>
+<div id="rListe"></div>
+<h3>📝 Texte</h3>
+<div class="frm" style="grid-template-columns:1fr"><label>Titre (facultatif)<input id="xTit" maxlength="80" placeholder="Le mot du jour"></label></div>
+<p><textarea id="xTxt" rows="8" maxlength="5000" placeholder="Ton texte : ton avis sur la journée, une info, un conseil… (une ligne vide = nouveau paragraphe)" style="width:100%;box-sizing:border-box;background:var(--navy2);color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:8px;font-size:15px;font-family:inherit"></textarea></p>
+<p class="msg" id="xMsg"></p>
+</section>
+
 <section class="card">
 <h2>Brouillon</h2>
 <div id="liste"></div>
@@ -52,7 +82,7 @@
 </main>
 <script src="/site.js?v=20261127r"></script>
 <script src="/attente.js?v=20261125a"></script>
-<script src="/tickets.js?v=20261127p"></script>
+<script src="/tickets.js?v=20261128a"></script>
 <script>
 var B = { date: '', tickets: [] }, Q = null, LIVE = null;
 function $(i){ return document.getElementById(i); }
@@ -107,14 +137,92 @@ function dessiner(){
   $('liste').querySelectorAll('.gm').forEach(function(x){
     x.onchange = function(){ var v = this.value.trim().replace(',', '.'); B.tickets[parseInt(this.getAttribute('data-i'),10)].gainManuel = v === '' ? null : (parseFloat(v) || 0); dessiner(); };
   });
-  $('apercu').innerHTML = NTT.rendu(B, ctx());
+  $('apercu').innerHTML = (B.tickets.length || !aExtras() ? NTT.rendu(B, ctx()) : '') + NTT.renduExtras(extrasApercu());
 }
 function envoyer(cle, msg){
-  B.date = Q && Q.date || B.date;
+  B.date = Q && Q.date || B.date || NTA.date;
   return fetch('/api/admin/contenu' + NTA.q1, { method: 'POST', headers: {'content-type':'application/json'}, body: JSON.stringify({ cle: cle, data: B }) })
     .then(function(r){ return r.json().then(function(d){ return {ok:r.ok, d:d}; }); })
     .then(function(x){ $('bMsg').className = 'msg ' + (x.ok ? 'ok' : 'err'); $('bMsg').textContent = x.ok ? msg : (x.d.erreur || 'Erreur.'); return x.ok; })
     .catch(function(){ $('bMsg').className = 'msg err'; $('bMsg').textContent = 'Connexion impossible, réessaie.'; });
+}
+
+// ---------- En plus du Quinté+ : cheval du jour, reports, texte (B.extras) ----------
+var PROG = [], DET = {};
+function X(){ if (!B.extras) B.extras = { cheval: null, reports: [], titre: '', texte: '' }; if (!B.extras.reports) B.extras.reports = []; return B.extras; }
+function aExtras(){ var x = B.extras; return !!(x && (x.cheval || (x.reports && x.reports.length) || (x.texte && x.texte.trim()))); }
+function jourTravail(){ return (Q && Q.date) || B.date || NTA.date; }
+function hmx(t){ return t ? new Date(t).toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit', timeZone:'Europe/Paris'}).replace(':', ' h ') : ''; }
+function reu(r){ return PROG.find(function(x){ return x.r === +r; }); }
+// les partants d'une réunion (nom des chevaux), chargés une fois
+function detail(r){
+  var R = reu(r); if (!R) return Promise.resolve(null);
+  if (DET[r]) return Promise.resolve(DET[r]);
+  return fetch('/api/pmu/reunion?date=' + encodeURIComponent(jourTravail()) + '&hippo=' + encodeURIComponent(R.h)).then(function(x){ return x.json(); }).then(function(d){ if (d && d.trouve) DET[r] = d; return DET[r] || null; }).catch(function(){ return null; });
+}
+function course(r, c){ var d = DET[r]; return d && (d.courses || []).find(function(x){ return x.num === +c; }); }
+function optsReu(sel, val){ sel.innerHTML = PROG.map(function(r){ return '<option value="' + r.r + '">R' + r.r + ' ' + NTT.esc(r.h) + '</option>'; }).join(''); if (val) sel.value = val; }
+function optsCourse(sel, r, val, apres){
+  var R = reu(r); if (!R) { sel.innerHTML = ''; return; }
+  sel.innerHTML = R.courses.filter(function(c){ return !apres || c > apres; }).map(function(c){ var k = course(r, c); return '<option value="' + c + '">C' + c + (k && k.heure ? ' · ' + hmx(k.heure) : '') + (k && k.libelle ? ' · ' + NTT.esc(k.libelle) : '') + '</option>'; }).join('');
+  if (val) sel.value = val;
+}
+function optsCheval(sel, r, c, val){
+  var k = course(r, c), P = (k && k.partants) || [];
+  sel.innerHTML = '<option value="">— choisir —</option>' + (P.length ? P.map(function(p){ return '<option value="' + p.n + '"' + (p.np ? ' disabled' : '') + '>' + p.n + ' · ' + NTT.esc(p.nom) + (p.np ? ' (non partant)' : '') + '</option>'; }).join('')
+    : Array.apply(null, Array(20)).map(function(_, i){ return '<option value="' + (i + 1) + '">' + (i + 1) + '</option>'; }).join(''));
+  if (val) sel.value = String(val);
+}
+function nomDe(r, c, n){ var k = course(r, c), p = k && (k.partants || []).find(function(x){ return x.n === +n; }); return p ? p.nom : ''; }
+// l'aperçu : les noms des chevaux et l'hippodrome, comme les verront les membres
+function extrasApercu(){
+  if (!aExtras()) return null;
+  var x = JSON.parse(JSON.stringify(B.extras));
+  if (x.cheval) { var R = reu(x.cheval.r), k = course(x.cheval.r, x.cheval.c); x.cheval.nom = nomDe(x.cheval.r, x.cheval.c, x.cheval.n); x.cheval.hippodrome = R ? R.h : ''; x.cheval.heure = k && k.heure; }
+  x.reports.forEach(function(p){ var R = reu(p.r), a = course(p.r, p.c1), b = course(p.r, p.c2); p.hippodrome = R ? R.h : ''; p.nom1 = nomDe(p.r, p.c1, p.n1); p.nom2 = nomDe(p.r, p.c2, p.n2); p.heure1 = a && a.heure; p.heure2 = b && b.heure; });
+  return x;
+}
+function majCheval(){
+  var n = parseInt($('kN').value, 10), x = X();
+  x.cheval = n ? { r: +$('kR').value, c: +$('kC').value, n: n, commentaire: $('kCom').value.trim() } : null;
+  dessiner();
+}
+function dessinerReports(){
+  var L = X().reports;
+  $('rListe').innerHTML = L.length ? L.map(function(p, i){ var R = reu(p.r);
+    return '<div class="trow"><div><b>Report ' + (p.pari === 'P' ? 'placé' : 'gagnant') + '</b> · R' + p.r + (R ? ' ' + NTT.esc(R.h) : '') + '<br><span class="mono">C' + p.c1 + ' n° ' + p.n1 + ' ' + NTT.esc(nomDe(p.r, p.c1, p.n1)) + ' → C' + p.c2 + ' n° ' + p.n2 + ' ' + NTT.esc(nomDe(p.r, p.c2, p.n2)) + '</span> — ' + NTT.eur(p.mise) + '</div><div class="tact"><button data-i="' + i + '">✕</button></div></div>'; }).join('') : '';
+  $('rListe').querySelectorAll('button').forEach(function(b){ b.onclick = function(){ X().reports.splice(+b.getAttribute('data-i'), 1); dessinerReports(); dessiner(); }; });
+}
+function initExtras(){
+  var x = X();
+  $('xTit').value = x.titre || ''; $('xTxt').value = x.texte || '';
+  $('xTit').oninput = function(){ X().titre = this.value; dessiner(); };
+  $('xTxt').oninput = function(){ X().texte = this.value; dessiner(); };
+  fetch('/api/pmu/programme?date=' + encodeURIComponent(jourTravail())).then(function(r){ return r.json(); }).then(function(d){
+    PROG = (d && d.reunions) || [];
+    if (!PROG.length) { $('xMsg').className = 'msg err'; $('xMsg').textContent = 'Le programme du ' + jourTravail() + ' n\'est pas encore disponible au PMU : le cheval du jour et les reports se choisissent dès qu\'il l\'est. Le texte, lui, marche déjà.'; return; }
+    var k = x.cheval;
+    optsReu($('kR'), k && k.r); optsReu($('rR'));
+    function chargerK(garder){ return detail($('kR').value).then(function(){ optsCourse($('kC'), $('kR').value, garder && k && k.c); optsCheval($('kN'), $('kR').value, $('kC').value, garder && k && k.n); }); }
+    function chargerR(){ return detail($('rR').value).then(function(){ optsCourse($('rC1'), $('rR').value); optsCourse($('rC2'), $('rR').value, null, +$('rC1').value); optsCheval($('rN1'), $('rR').value, $('rC1').value); optsCheval($('rN2'), $('rR').value, $('rC2').value); }); }
+    chargerK(true).then(function(){ if (k && k.commentaire) $('kCom').value = k.commentaire; dessiner(); });
+    chargerR().then(function(){ dessinerReports(); dessiner(); });
+    $('kR').onchange = function(){ chargerK(false).then(majCheval); };
+    $('kC').onchange = function(){ optsCheval($('kN'), $('kR').value, $('kC').value); majCheval(); };
+    $('kN').onchange = majCheval; $('kCom').oninput = majCheval;
+    $('kDel').onclick = function(){ $('kN').value = ''; $('kCom').value = ''; majCheval(); };
+    $('rR').onchange = chargerR;
+    $('rC1').onchange = function(){ optsCheval($('rN1'), $('rR').value, $('rC1').value); optsCourse($('rC2'), $('rR').value, null, +$('rC1').value); optsCheval($('rN2'), $('rR').value, $('rC2').value); };
+    $('rC2').onchange = function(){ optsCheval($('rN2'), $('rR').value, $('rC2').value); };
+    $('rAdd').onclick = function(){
+      var n1 = parseInt($('rN1').value, 10), n2 = parseInt($('rN2').value, 10), m = parseFloat(String($('rMi').value).replace(',', '.')) || 0;
+      if (!n1 || !n2 || !$('rC2').value) { $('xMsg').className = 'msg err'; $('xMsg').textContent = 'Report : choisis les deux courses et les deux chevaux.'; return; }
+      if (!(m > 0)) { $('xMsg').className = 'msg err'; $('xMsg').textContent = 'Report : indique la mise.'; return; }
+      X().reports.push({ r: +$('rR').value, c1: +$('rC1').value, n1: n1, c2: +$('rC2').value, n2: n2, pari: $('rP').value, mise: Math.round(m * 100) / 100, commentaire: $('rCom').value.trim() });
+      $('rN1').value = ''; $('rN2').value = ''; $('rCom').value = ''; $('xMsg').className = 'msg ok'; $('xMsg').textContent = 'Report ajouté au brouillon.';
+      dessinerReports(); dessiner();
+    };
+  }).catch(function(){ $('xMsg').className = 'msg err'; $('xMsg').textContent = 'Programme du PMU indisponible pour le moment, recharge la page dans un instant.'; });
 }
 NTURF_MOI.then(function(m){
   if (!(m.connecte && m.publier)) { $('refus').hidden = false; return; }
@@ -128,7 +236,7 @@ NTURF_MOI.then(function(m){
     var br = x[0].data;
     if (br && br.tickets && (!Q || br.date === Q.date)) B = br;
     $('etat').textContent = Q ? 'Quinté+ du ' + Q.date + (Q.partants ? ' · ' + Q.partants + ' partants' : '') : (NTA.demain ? 'Mets d\'abord en attente ton fichier N-Turf de demain (Administration → Mettre à jour le site).' : 'Publie d\'abord ton fichier N-Turf du jour.');
-    majCout(); dessiner();
+    majCout(); initExtras(); dessiner();
     if (Q && Q.date) fetch('/api/pmu/quinte?date=' + encodeURIComponent(Q.date)).then(function(r){ return r.json(); }).then(function(l){ if (l && l.trouve) { LIVE = l; majCout(); dessiner(); } }).catch(function(){});
   });
   ['fPari','fForm','fCh','fMise'].forEach(function(id){ $(id).addEventListener('input', majCout); $(id).addEventListener('change', majCout); });
@@ -148,7 +256,7 @@ NTURF_MOI.then(function(m){
   };
   $('bSave').onclick = function(){ envoyer('tickets_brouillon', 'Brouillon enregistré. Rien n\'est encore visible des membres.'); };
   $('bPub').onclick = function(){
-    if (!B.tickets.length) return;
+    if (!B.tickets.length && !aExtras()) { $('bMsg').className = 'msg err'; $('bMsg').textContent = 'Rien à publier : ajoute un ticket, un cheval du jour, un report ou un texte.'; return; }
     envoyer('tickets_brouillon', '').then(function(ok){ if (ok) envoyer('tickets', NTA.demain ? 'Mis en attente pour demain : ils passeront en ligne quand tu basculeras.' : 'Publié ! Les membres voient maintenant ces tickets.'); });
   };
   $('bVide').onclick = function(){ if (B.tickets.length) { B.tickets = []; dessiner(); $('bMsg').className = 'msg'; $('bMsg').textContent = 'Brouillon vidé (pense à l\'enregistrer).'; } };

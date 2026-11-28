@@ -1,5 +1,6 @@
 import { json, initDb, currentUser, lireContenu, noDb } from '../../_auth.js';
 import { cpcAvecCoeurs } from '../../_coeurs.js';
+import { extrasResultats } from '../../_td.js';
 
 // Archives : la liste des jours, ou tout ce qui a été donné un jour précis (?jour=2026-11-22)
 export async function onRequestGet({ request, env }) {
@@ -18,10 +19,13 @@ export async function onRequestGet({ request, env }) {
     return json({ jours: [...s].filter((x) => /^\d{4}-\d{2}-\d{2}$/.test(x)).sort().reverse() });
   }
   if (!/^\d{4}-\d{2}-\d{2}$/.test(jour)) return json({ erreur: 'Date invalide.' }, 400);
+  const tickets = await lireContenu(env.DB, 'tickets-' + jour);
+  let extras = null; try { extras = tickets ? await extrasResultats(env.DB, jour, tickets.extras) : null; } catch (e) { extras = null; }
   return json({
     jour,
     quinte: await lireContenu(env.DB, 'quinte-' + jour),
-    tickets: await lireContenu(env.DB, 'tickets-' + jour),
+    tickets,
+    extras,
     cpc: await cpcAvecCoeurs(env.DB, 'cpc-' + jour, 'coeurs-' + jour),
     courses: courses.filter((c) => iso(c.d) === jour),
   });

@@ -211,5 +211,43 @@ var NTT = (function(){
     return { tickets: out, erreurs: erreurs };
   }
 
-  return { PARIS: PARIS, FORMULES: FORMULES, parPlace: parPlace, specChamp: specChamp, lireSpec: lireSpec, vue: vue, combinaisons: combinaisons, cout: cout, gains: gains, rendu: rendu, lireTexte: lireTexte, nums: nums, eur: eur, esc: esc };
+  // ---- cheval du jour, reports et texte, publiés avec les tickets (Administration > Tickets du jour) ----
+  // X vient du site, déjà complété du nom des chevaux et du résultat (aux rapports définitifs du PMU)
+  function hm(t){ return t ? new Date(t).toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit', timeZone:'Europe/Paris'}).replace(':', ' h ') : ''; }
+  function net(g, m){ var n = g - m; return '<b class="'+(n>=0?'pos':'neg')+'">'+(n>=0?'+':'−')+eur(Math.abs(n))+'</b>'; }
+  function paragraphes(t){ return String(t || '').trim().split(/\n\s*\n/).map(function(p){ return '<p>'+esc(p).replace(/\n/g, '<br>')+'</p>'; }).join(''); }
+  function renduExtras(X){
+    if (!X) return '';
+    var h = '';
+    var k = X.cheval;
+    if (k && k.n) {
+      var r = k.resultat;
+      h += '<div class="tkt'+(r && r.rang === 1 ? ' gagnant' : '')+'" style="text-align:center"><div class="tkh"><b>❤ Cheval du jour</b><span>R'+k.r+'C'+k.c+(k.heure ? ' · '+hm(k.heure) : '')+(k.hippodrome ? ' · '+esc(k.hippodrome) : '')+'</span></div>' +
+        '<div class="sel"><span class="ch piv'+(r && r.rang && r.rang <= 3 ? ' hit' : '')+'" style="font-size:20px;min-width:40px;height:40px">'+k.n+'</span> <b style="font-size:18px">'+esc(k.nom || '')+'</b></div>' +
+        (k.commentaire ? '<p class="assoc" style="font-style:italic">« '+esc(k.commentaire)+' »</p>' : '');
+      if (r && r.np) h += '<div class="tkb"><span>Non partant</span><b>remboursé</b></div>';
+      else if (r) h += '<div class="tkb"><span>'+(r.rang === 1 ? 'Gagnant' : r.place ? 'Placé '+r.rang+'e' : (r.rang ? r.rang+'e' : 'Non placé'))+' · 1 € gagnant + 1 € placé</span><b class="'+(r.gagne + r.place > 0 ? 'pos' : '')+'">'+eur(r.gagne + r.place)+'</b></div><div class="tkb"><span>Net pour '+eur(r.mise)+' misés</span>'+net(r.gagne + r.place, r.mise)+'</div>';
+      else h += '<p class="note2">Mise : 1 € gagnant + 1 € placé (2,00 €). Le résultat s\'affichera après l\'arrivée.</p>';
+      h += '</div>';
+    }
+    (X.reports || []).forEach(function(p){
+      var r = p.resultat, P = p.pari === 'P' ? 'placé' : 'gagnant';
+      h += '<div class="tkt'+(r && r.gagne > 0 ? ' gagnant' : '')+'"><div class="tkh"><b>🔁 Report '+P+'</b><span>R'+p.r+(p.hippodrome ? ' · '+esc(p.hippodrome) : '')+'</span></div>' +
+        '<div class="sel"><small>C'+p.c1+(p.heure1 ? ' '+hm(p.heure1) : '')+'</small> <span class="ch piv'+(p.rang1 && (p.pari === 'P' ? p.rang1 <= 3 : p.rang1 === 1) ? ' hit' : '')+'">'+p.n1+'</span> '+esc(p.nom1 || '')+
+        ' <b>→</b> <small>C'+p.c2+(p.heure2 ? ' '+hm(p.heure2) : '')+'</small> <span class="ch piv'+(p.rang2 && (p.pari === 'P' ? p.rang2 <= 3 : p.rang2 === 1) ? ' hit' : '')+'">'+p.n2+'</span> '+esc(p.nom2 || '')+'</div>' +
+        '<p class="assoc">'+eur(p.mise)+' sur le '+p.n1+' en simple '+P+' ; tout ce qu\'il rapporte est rejoué sur le '+p.n2+'.</p>' +
+        (p.commentaire ? '<p class="assoc" style="font-style:italic">« '+esc(p.commentaire)+' »</p>' : '') +
+        '<div class="tkb"><span>Mise</span><b>'+eur(p.mise)+'</b></div>';
+      if (r && r.np) h += '<p class="assoc" style="color:#b06000;font-weight:700">Un cheval du report est non partant : se reporter au règlement du PMU.</p>';
+      else if (r && r.attente) h += '<div class="tkb"><span>Le '+p.n1+' rapporte, reporté sur le '+p.n2+'</span><b class="pos">'+eur(r.reporte)+'</b></div><p class="note2">Résultat final après la course '+p.c2+'.</p>';
+      else if (r) h += (r.reporte ? '<div class="tkb"><span>Le '+p.n1+' rapporte, reporté sur le '+p.n2+'</span><b>'+eur(r.reporte)+'</b></div>' : '<div class="tkb"><span>Le '+p.n1+' n\'est pas '+(p.pari === 'P' ? 'placé' : 'gagnant')+'</span><b>report perdu</b></div>') +
+        '<div class="tkb"><span>Gagné</span><b class="'+(r.gagne > 0 ? 'pos' : '')+'">'+eur(r.gagne)+'</b></div><div class="tkb"><span>Net pour '+eur(r.mise)+' misés</span>'+net(r.gagne, r.mise)+'</div>';
+      else h += '<p class="note2">Le résultat s\'affichera après les courses.</p>';
+      h += '</div>';
+    });
+    if (X.texte && String(X.texte).trim()) h += '<div class="tkt"><div class="tkh"><b>📝 '+esc(X.titre || 'Le mot du jour')+'</b></div><div style="text-align:left;line-height:1.5">'+paragraphes(X.texte)+'</div></div>';
+    return h;
+  }
+
+  return { renduExtras: renduExtras, paragraphes: paragraphes, PARIS: PARIS, FORMULES: FORMULES, parPlace: parPlace, specChamp: specChamp, lireSpec: lireSpec, vue: vue, combinaisons: combinaisons, cout: cout, gains: gains, rendu: rendu, lireTexte: lireTexte, nums: nums, eur: eur, esc: esc };
 })();

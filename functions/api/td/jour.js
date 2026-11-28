@@ -1,5 +1,5 @@
 import { json, initDb, currentUser, lireContenu, noDb } from '../../_auth.js';
-import { initTd, contributeur, programme, resoudre, auj, CHARTE, PARIS } from '../../_td.js';
+import { initTd, contributeur, programme, resoudre, auj, CHARTE, PARIS, extrasResultats } from '../../_td.js';
 
 // Le Ticket du jour d'une date : programme (réunions, courses), publications de chaque contributeur, résultats
 export async function onRequestGet({ request, env }) {
@@ -20,6 +20,8 @@ export async function onRequestGet({ request, env }) {
   const jours = ((await db.prepare('SELECT DISTINCT date FROM td_pubs WHERE supprime = 0 ORDER BY date DESC LIMIT 120').all()).results || []).map((x) => x.date);
   if (!jours.includes(today)) jours.unshift(today);
   const anciens = (await lireContenu(db, 'tickets-' + iso)) || null; // tickets N-TURF du Quinté+ (fichier)
+  // cheval du jour, reports et texte publiés avec les tickets (Administration > Tickets du jour)
+  let extras = null; try { extras = anciens ? await extrasResultats(db, iso, anciens.extras) : null; } catch (e) { extras = null; }
   const c = await contributeur(db, u);
   return json({
     date: iso, aujourdhui: today, maintenant: Date.now(), erreurPmu, jours, charte: CHARTE, parisTous: PARIS,
@@ -27,5 +29,6 @@ export async function onRequestGet({ request, env }) {
     reunions: P.filter((r) => r.france || avecPubs.has(r.r)),
     pubs: pubs.map((p) => ({ ...p, chevaux: p.chevaux ? JSON.parse(p.chevaux) : null, ticket: p.ticket ? JSON.parse(p.ticket) : null, resultat: p.resultat ? JSON.parse(p.resultat) : null, moi: p.auteur_id === u.id })),
     anciens: anciens && anciens.tickets && anciens.tickets.length ? anciens : null,
+    extras,
   });
 }

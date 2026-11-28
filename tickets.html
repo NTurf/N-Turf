@@ -17,7 +17,7 @@
 <p class="note2">Chaque jour, on vous donne nos tickets avec la mise, et après l'arrivée ce qu'ils ont rapporté, qu'on gagne ou qu'on perde. Jeu responsable · Interdit aux mineurs.</p></section>
 </main>
 <script src="/site.js?v=20261127r"></script>
-<script src="/tickets.js?v=20261127p"></script>
+<script src="/tickets.js?v=20261128a"></script>
 <script>
 fetch('/api/membres/tickets', {credentials:'same-origin'})
   .then(function(r){ return r.ok ? r.json() : Promise.reject(); })
@@ -34,8 +34,15 @@ fetch('/api/membres/tickets', {credentials:'same-origin'})
       }
       return { arrivee: arr, rapports: raps, partants: part, np: LIVE && LIVE.trouve ? (LIVE.partants || []).filter(function(p){ return p.np; }).map(function(p){ return p.n; }) : [] };
     }
-    function dessiner(){ el.innerHTML = (d.veille ? '<p class="note">Les tickets du Quinté+ du ' + d.quinteDuJour + ' ne sont pas encore publiés. Voici les derniers tickets, ceux du Quinté+ du ' + T.date + ', avec leur résultat.</p>' : '') + NTT.rendu(T && (!Q || !T.date || !Q.date || T.date === Q.date) ? T : null, ctx()); }
+    function dessiner(){
+      var montrer = T && (!Q || !T.date || !Q.date || T.date === Q.date), seulExtras = montrer && d.extras && !(T.tickets || []).length;
+      el.innerHTML = (d.veille ? '<p class="note">Les tickets du Quinté+ du ' + d.quinteDuJour + ' ne sont pas encore publiés. Voici les derniers tickets, ceux du Quinté+ du ' + T.date + ', avec leur résultat.</p>' : '') +
+        (seulExtras ? '' : NTT.rendu(montrer ? T : null, ctx())) + (montrer ? NTT.renduExtras(d.extras) : '');
+    }
     dessiner();
+    // cheval du jour et reports : leur résultat arrive avec les arrivées
+    function majExtras(){ if (!d.extras) return; fetch('/api/membres/tickets', {credentials:'same-origin'}).then(function(r){ return r.json(); }).then(function(n){ if (n && n.extras) { d.extras = n.extras; dessiner(); } }).catch(function(){}); }
+    setInterval(majExtras, 120000);
     function maj(){ if (!Q || !Q.date) return; fetch('/api/pmu/quinte?date=' + encodeURIComponent(Q.date)).then(function(r){ return r.json(); }).then(function(l){ LIVE = l; dessiner(); }).catch(function(){}); }
     maj(); setInterval(maj, 60000);
   }).catch(function(){ document.getElementById('refus').hidden = false; });

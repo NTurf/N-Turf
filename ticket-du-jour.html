@@ -57,6 +57,8 @@
 .recap{font-size:16px;text-align:center;margin:6px 0}
 .tq{margin-top:8px;font-family:Arial,sans-serif;text-align:left}
 .tq .lead{font:800 16px Georgia,serif;text-align:center}
+.edito{font-size:16px;line-height:1.55;text-align:justify}
+.edito p:first-child::first-letter{float:left;font:900 44px/0.9 Georgia,serif;margin:4px 6px 0 0;color:#8a6100}
 .charte{background:#FFF6DC;border:1px solid #f0be3c;border-radius:10px;padding:8px 10px}
 </style>
 </head>
@@ -76,7 +78,7 @@
 </div>
 </main>
 <script src="/site.js?v=20261127r"></script>
-<script src="/tickets.js?v=20261127p"></script>
+<script src="/tickets.js?v=20261128a"></script>
 <script>
 (function(){
   var $ = function(i){ return document.getElementById(i); };
@@ -84,6 +86,7 @@
   var EUR = function(v){ return (Math.round((v || 0) * 100) / 100).toFixed(2).replace('.', ',') + ' €'; };
   var hm = function(t){ return t ? new Date(t).toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit', timeZone:'Europe/Paris'}).replace(':', ' h ') : ''; };
   var fr = function(iso){ return iso.split('-').reverse().join('/'); };
+  var netH = function(n){ return '<b class="' + (n >= 0 ? 'pos' : 'neg') + '">' + (n >= 0 ? '+' : '−') + EUR(Math.abs(n)) + '</b>'; };
   var D = null, ecart = 0, REU = null;
   function msg(t, ok){ var m = $('msg'); m.className = 'msg ' + (ok ? 'ok' : 'err'); m.textContent = t || ''; if (t) m.scrollIntoView({block:'nearest'}); }
   function post(url, b){ return fetch(url, {method:'POST', credentials:'same-origin', headers:{'content-type':'application/json'}, body: JSON.stringify(b)}).then(function(r){ return r.json(); }); }
@@ -106,18 +109,40 @@
     var d = D, P = d.pubs.filter(function(p){ return !p.supprime || d.moi.admin; });
     var jour = new Date(d.date + 'T12:00:00').toLocaleDateString('fr-FR', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
     var h = '<div class="journal"><div class="mast"><img src="/banniere.png" alt="N-TURF"><div class="titre">Le Ticket du Jour</div><div class="devise">Le collectif des passionnés de courses hippiques</div></div>' +
-      '<div class="dateline"><span>Édition du ' + E(jour) + '</span><span>' + (function(){ var n = P.filter(function(p){ return !p.supprime; }).length + (d.anciens && d.anciens.tickets ? d.anciens.tickets.length : 0); return n + ' publication' + (n > 1 ? 's' : ''); })() + '</span></div>';
-    var TQ = d.anciens && d.anciens.tickets && d.anciens.tickets.length ? d.anciens : null;
-    if (!P.length && !TQ) { $('rendu').innerHTML = h + '<p class="vide2">' + (d.erreurPmu ? 'Le programme du PMU ne répond pas pour le moment.' : 'L\'édition du jour se prépare : les pronostics de nos contributeurs arrivent.') + '</p></div>'; return; }
+      '<div class="dateline"><span>Édition du ' + E(jour) + '</span><span>' + (function(){ var n = P.filter(function(p){ return !p.supprime; }).length + (d.anciens && d.anciens.tickets ? d.anciens.tickets.length : 0) + (d.extras ? (d.extras.cheval ? 1 : 0) + (d.extras.reports || []).length + (d.extras.texte && d.extras.texte.trim() ? 1 : 0) : 0); return n + ' publication' + (n > 1 ? 's' : ''); })() + '</span></div>';
+    var TQ = d.anciens && d.anciens.tickets && d.anciens.tickets.length ? d.anciens : null, X = d.extras || null;
+    if (!P.length && !TQ && !X) { $('rendu').innerHTML = h + '<p class="vide2">' + (d.erreurPmu ? 'Le programme du PMU ne répond pas pour le moment.' : 'L\'édition du jour se prépare : les pronostics de nos contributeurs arrivent.') + '</p></div>'; return; }
     // À la une : les coups de cœur
-    var C = P.filter(function(p){ return p.type === 'coeur'; });
-    if (C.length) {
+    var C = P.filter(function(p){ return p.type === 'coeur'; }), K = X && X.cheval;
+    if (C.length || K) {
       h += '<div class="rub">À la une</div>';
+      if (K) {
+        var rk = K.resultat;
+        h += '<div class="encadre"><div class="lab">❤ Le cheval du jour</div><div class="cnum">' + K.n + '</div><div class="cnom">' + E(K.nom || 'N° ' + K.n) + '</div><div class="ccrs">R' + K.r + 'C' + K.c + (K.heure ? ' · ' + hm(K.heure) : '') + (K.hippodrome ? ' · ' + E(K.hippodrome) : '') + (K.libelle ? ' — ' + E(K.libelle) : '') + '</div><div class="csig">par Choix de Bruno</div>' +
+          (K.commentaire ? '<p class="com" style="font-style:italic;margin:6px 0 0">« ' + E(K.commentaire) + ' »</p>' : '') +
+          (rk ? '<div class="res" style="margin-top:6px;font-family:Arial,sans-serif">' + (rk.np ? 'Non partant : remboursé' : (rk.rang === 1 ? '<span class="pos">GAGNANT !</span>' : rk.place ? '<span class="pos">Placé ' + rk.rang + 'e</span>' : (rk.rang ? rk.rang + 'e' : 'Non placé')) + ' · 1 € gagnant + 1 € placé : rapporte <b>' + EUR(rk.gagne + rk.place) + '</b> pour 2,00 € · net ' + netH(rk.gagne + rk.place - 2)) + '</div>'
+            : (K.arrivee && K.arrivee.length ? '<div class="arrline">Arrivée : <b>' + K.arrivee.slice(0, 4).join(' - ') + '</b></div>' : '')) + '</div>';
+      }
       C.forEach(function(p){
         var i = infoCourse(p), n = p.chevaux[0], r = p.resultat;
         h += '<div class="encadre' + (p.supprime ? ' item sup' : '') + '"><div class="lab">❤ Coup de cœur du jour</div><div class="cnum">' + n + '</div><div class="cnom">' + E((p.ticket && p.ticket.nom) || 'N° ' + n) + '</div><div class="ccrs">' + i.txt + '</div><div class="csig">par ' + E(p.signature) + '</div>' + (p.commentaire ? '<p class="com" style="font-style:italic;margin:6px 0 0">« ' + E(p.commentaire) + ' »</p>' : '') +
           (r ? '<div class="res" style="margin-top:6px;font-family:Arial,sans-serif">' + (r.rang === 1 ? '<span class="pos">GAGNANT !</span>' : r.place ? '<span class="pos">Placé ' + r.rang + 'e</span>' : (r.rang ? r.rang + 'e' : 'Non placé')) + ' · 1 € gagnant + 1 € placé : rapporte <b>' + EUR(r.gagne + r.place) + '</b> pour 2,00 €</div>' : arrLigne(i.c)) + actions(p, i.c) + '</div>';
       });
+    }
+    // Le mot du jour (texte de Bruno)
+    if (X && X.texte && X.texte.trim()) h += '<div class="rub">' + E(X.titre || 'Le mot du jour') + '</div><div class="edito">' + NTT.paragraphes(X.texte) + '<p class="csig" style="text-align:right;font-style:italic">Choix de Bruno</p></div>';
+    // Les reports
+    if (X && X.reports && X.reports.length) {
+      h += '<div class="rub">Le report du jour</div>' + X.reports.map(function(p){
+        var r = p.resultat, J = p.pari === 'P' ? 'placé' : 'gagnant', ok = function(rg){ return rg && (p.pari === 'P' ? rg <= 3 : rg === 1); };
+        return '<div class="encadre" style="text-align:left;border-color:#1E5BB5;background:#eef4fd"><div class="lab" style="color:#1E5BB5;text-align:center">🔁 Report ' + J + ' · R' + p.r + (p.hippodrome ? ' ' + E(p.hippodrome) : '') + '</div>' +
+          '<div class="sel" style="text-align:center;margin:6px 0">C' + p.c1 + (p.heure1 ? ' (' + hm(p.heure1) + ')' : '') + ' <span class="ch piv' + (ok(p.rang1) ? ' hit' : '') + '">' + p.n1 + '</span> ' + E(p.nom1 || '') + ' <b>→</b> C' + p.c2 + (p.heure2 ? ' (' + hm(p.heure2) + ')' : '') + ' <span class="ch piv' + (ok(p.rang2) ? ' hit' : '') + '">' + p.n2 + '</span> ' + E(p.nom2 || '') + '</div>' +
+          '<div class="res" style="font-family:Arial,sans-serif;text-align:center">' + EUR(p.mise) + ' sur le ' + p.n1 + ' en simple ' + J + ', tout ce qu\'il rapporte est rejoué sur le ' + p.n2 + '</div>' +
+          (p.commentaire ? '<p class="com" style="font-style:italic;text-align:center">« ' + E(p.commentaire) + ' »</p>' : '') +
+          (r ? '<div class="res" style="font-family:Arial,sans-serif;text-align:center;margin-top:4px">' + (r.np ? 'Un cheval du report est non partant : se reporter au règlement du PMU.'
+            : r.attente ? 'Le ' + p.n1 + ' rapporte <b class="pos">' + EUR(r.reporte) + '</b>, reportés sur le ' + p.n2 + ' : résultat après la course ' + p.c2 + '.'
+            : (r.reporte ? 'Le ' + p.n1 + ' rapporte ' + EUR(r.reporte) + ', reportés sur le ' + p.n2 + ' · ' : 'Le ' + p.n1 + ' n\'est pas ' + J + ' : report perdu · ') + 'rapporté <b>' + EUR(r.gagne) + '</b> pour ' + EUR(r.mise) + ' · net ' + netH(r.gagne - r.mise)) + '</div>' : '') + '</div>';
+      }).join('');
     }
     // Spécial Quinté+
     var Q = P.filter(function(p){ return p.type !== 'coeur' && infoCourse(p).c.quinte; });

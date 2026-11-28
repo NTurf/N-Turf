@@ -23,7 +23,7 @@
 </main>
 <script src="/site.js?v=20261127r"></script>
 <script src="/quinte.js?v=20261127d"></script>
-<script src="/tickets.js?v=20261127p"></script>
+<script src="/tickets.js?v=20261128a"></script>
 <script>
 var JOURS = [];
 function $(i){ return document.getElementById(i); }
@@ -95,6 +95,8 @@ function charger(j){
         if (live && live.trouve) { if (!arr2.length) arr2 = live.arrivee; raps = (live.rapports || []).concat(raps); if (live.partants.length) part = live.partants.filter(function(p){ return !p.np; }).length; }
         R.tickets = NTT.rendu(d.tickets, { arrivee: arr2, rapports: raps, partants: part, np: live && live.trouve ? (live.partants || []).filter(function(p){ return p.np; }).map(function(p){ return p.n; }) : [] });
       }
+      // cheval du jour, reports et texte publiés avec les tickets
+      if (d.extras) R.tickets = (R.tickets || '') + NTT.renduExtras(d.extras);
       // Course par course (un onglet par hippodrome à l'intérieur)
       if (d.cpc && d.cpc.reunions) R.cpc = '<div id="cpcA"></div>';
       else if (d.courses && d.courses.length) R.cpc = coursesArchive(d.courses);

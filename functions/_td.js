@@ -209,3 +209,58 @@ export async function statsContributeurs(db) {
 }
 
 export { NTT };
+
+// ---------- Les « à côté » du Ticket du jour, publiés avec les tickets du Quinté+ (page Administration > Tickets du jour) ----------
+// X = { cheval: { r, c, n, commentaire }, reports: [{ r, c1, n1, c2, n2, pari: 'G'|'P', mise }], titre, texte }
+// On complète avec le nom des chevaux, l'heure, l'arrivée, et le résultat calculé aux rapports définitifs du PMU.
+// Cheval du jour : 1 € gagnant + 1 € placé. Report : la mise sur le 1er cheval, tout ce qu'il rapporte est rejoué sur le 2e.
+export function aDesExtras(X) {
+  return !!(X && (X.cheval || (X.reports && X.reports.length) || (X.texte && String(X.texte).trim())));
+}
+export async function extrasResultats(db, iso, X) {
+  if (!aDesExtras(X)) return null;
+  const N = (v) => { const n = parseInt(v, 10); return n > 0 && n < 100 ? n : 0; };
+  const out = { cheval: X.cheval && N(X.cheval.n) ? { r: N(X.cheval.r), c: N(X.cheval.c), n: N(X.cheval.n), commentaire: String(X.cheval.commentaire || '').slice(0, 200) } : null,
+    reports: (X.reports || []).filter((p) => N(p.n1) && N(p.n2)).map((p) => ({ r: N(p.r), c1: N(p.c1), n1: N(p.n1), c2: N(p.c2), n2: N(p.n2), pari: p.pari === 'P' ? 'P' : 'G', mise: Math.round((Number(p.mise) || 1) * 100) / 100, commentaire: String(p.commentaire || '').slice(0, 200) })),
+    titre: String(X.titre || '').slice(0, 80), texte: String(X.texte || '').slice(0, 5000) };
+  const besoins = new Set();
+  if (out.cheval) besoins.add(`${out.cheval.r}-${out.cheval.c}`);
+  for (const p of out.reports) { besoins.add(`${p.r}-${p.c1}`); besoins.add(`${p.r}-${p.c2}`); }
+  if (!besoins.size || !/^\d{4}-\d{2}-\d{2}$/.test(iso || '')) return out;
+  let P = []; try { P = await programme(db, iso); } catch (e) { return out; }
+  const d = pmuDate(iso), now = Date.now(), items = [];
+  for (const k of besoins) {
+    const [r, c] = k.split('-'), co = trouver(P, +r, +c);
+    items.push({ cle: `tdpart-${d}-R${r}C${c}`, url: `${BASE}/${d}/R${r}/C${c}/participants`, ttl: () => 3600 });
+    if (co && co.heure < now && co.arrivee.length >= 3) items.push({ cle: `tdrap-${d}-R${r}C${c}`, url: `${BASE}/${d}/R${r}/C${c}/rapports-definitifs`, ttl: (x) => (Array.isArray(x) && x.some((b) => b.typePari === 'SIMPLE_PLACE') ? 86400 : 0) });
+  }
+  let L = new Map(); try { L = await lotCache(db, items); } catch (e) {}
+  // ce qu'on sait d'un cheval : nom, non-partant, course (heure, hippodrome), arrivée, rapports gagnant/placé pour 1 €
+  const info = (r, c, n) => {
+    const R = P.find((x) => x.r === +r), co = trouver(P, +r, +c) || {};
+    const parts = L.get(`tdpart-${d}-R${r}C${c}`), h = ((parts && parts.participants) || []).find((x) => x.numPmu === +n);
+    const blocs = L.get(`tdrap-${d}-R${r}C${c}`), fini = Array.isArray(blocs) && blocs.some((b) => b.typePari === 'SIMPLE_PLACE');
+    const arr = co.arrivee || [], rang = arr.indexOf(+n) + 1;
+    let g = 0, pl = 0;
+    if (fini) for (const x of lireRapports(blocs)) { if (x.nom === 'Gagnant' && rang === 1) g = x.euros; const m = String(x.nom).match(/^Placé\s+(\d+)$/); if (m && +m[1] === +n) pl = x.euros; }
+    return { nom: h ? h.nom : '', np: !!(h && h.statut === 'NON_PARTANT'), heure: co.heure || 0, hippodrome: R ? R.h : '', libelle: co.libelle || '',
+      arrivee: arr.slice(0, 5), fini, rang: rang || null, g: r2(g), p: r2(pl) };
+  };
+  if (out.cheval) {
+    const k = out.cheval, i = info(k.r, k.c, k.n);
+    Object.assign(k, { nom: i.nom, np: i.np, heure: i.heure, hippodrome: i.hippodrome, libelle: i.libelle, arrivee: i.arrivee });
+    if (i.np) k.resultat = { np: true, mise: 2, gagne: 2 };
+    else if (i.fini) k.resultat = { rang: i.rang, gagne: i.g, place: i.p, mise: 2 };
+  }
+  for (const p of out.reports) {
+    const a = info(p.r, p.c1, p.n1), b = info(p.r, p.c2, p.n2), mise = Number(p.mise) || 1, cle = p.pari === 'P' ? 'p' : 'g';
+    Object.assign(p, { nom1: a.nom, nom2: b.nom, np1: a.np, np2: b.np, heure1: a.heure, heure2: b.heure, hippodrome: a.hippodrome || b.hippodrome, arrivee1: a.arrivee, arrivee2: b.arrivee, rang1: a.rang, rang2: b.rang });
+    if (a.np || b.np) { p.resultat = { np: true, mise, attente: !(a.fini || a.np) || !(b.fini || b.np) }; continue; } // non-partant : on n'invente pas de calcul
+    if (!a.fini) continue;
+    const g1 = r2(mise * a[cle]);
+    if (!g1) { p.resultat = { mise, reporte: 0, gagne: 0 }; continue; }
+    if (!b.fini) { p.resultat = { mise, reporte: g1, attente: true }; continue; }
+    p.resultat = { mise, reporte: g1, gagne: r2(g1 * b[cle]) };
+  }
+  return out;
+}
