@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#0D1E3D">
 <link rel="manifest" href="/manifest.webmanifest?v=2">
 <link rel="icon" href="/icone-nturf-192.png">
-<link rel="stylesheet" href="/style.css?v=20261128g">
+<link rel="stylesheet" href="/style.css?v=20261128h">
 </head>
 <body data-page="membres" class="chatpage">
 <main>
@@ -27,6 +27,7 @@
 <textarea id="txt" rows="1" maxlength="500" placeholder="Ton message…"></textarea>
 <button class="btn" type="submit">Envoyer</button>
 </form>
+<div id="smiMain"></div>
 <p class="msg" id="msg"></p>
 </div>
 <!-- emplacement réservé aux futures bannières publicitaires (colonne de droite sur ordinateur) -->
@@ -44,6 +45,10 @@ function enBas(){ var f = $('fil'); return f.scrollHeight - f.scrollTop - f.clie
 // les réponses rangées sous leur message, pseudo et heure à droite, « + » pour répondre
 var FORUM = window.matchMedia('(min-width:900px)').matches;
 if (FORUM) document.body.classList.add('forum');
+var SMI = ['😀','😂','🤣','😉','😊','😍','😎','🤔','😮','😱','😢','😭','😡','🤬','😴','🙄','🤞','👍','👎','👏','🙏','💪','🔥','💰','🍀','❤️','⭐','🏆','🐎','🏇','🎯','🍾'];
+function barreSmi(){ return '<div class="smibar">' + SMI.map(function(e){ return '<button type="button" class="smi" tabindex="-1">'+e+'</button>'; }).join('') + '</div>'; }
+function brancherSmi(zone, ta){ zone.querySelectorAll('.smi').forEach(function(b){ b.onmousedown = function(e){ e.preventDefault(); }; b.onclick = function(e){ e.preventDefault(); e.stopPropagation();
+  var a = ta.selectionStart || ta.value.length, z = ta.selectionEnd || a; ta.value = ta.value.slice(0, a) + b.textContent + ta.value.slice(z); ta.focus(); ta.selectionStart = ta.selectionEnd = a + b.textContent.length; ta.dispatchEvent(new Event('input')); }; }); }
 function dh(t){ var d = new Date(t); return d.toLocaleDateString('fr-FR', {day:'2-digit', month:'2-digit'}) + ' ' + d.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'}).replace(':', 'h'); }
 function dessinerForum(){
   var f = $('fil'), vis = S.ordre.filter(function(id){ return !S.msgs[id].supprime; });
@@ -73,11 +78,11 @@ function boite(id, el){
   if (modo && !moi && !m.modo) act.push(['bannir','Bannir '+m.pseudo]);
   var d = document.createElement('div'); d.className = 'frbox'; d.setAttribute('data-id', id);
   d.innerHTML = '<div class="frh"><span>↩ Répondre à <b>'+esc(m.pseudo)+'</b></span><button type="button" class="frx" aria-label="Fermer">✕</button></div>' +
-    '<textarea maxlength="500" placeholder="Ta réponse…"></textarea>' +
+    '<textarea maxlength="500" placeholder="Ta réponse…"></textarea>' + barreSmi() +
     '<div class="frb"><button type="button" class="btn frok">Envoyer</button><button type="button" class="btn ghost frno">Annuler</button>' +
     act.map(function(a){ return '<button type="button" class="fract" data-a="'+a[0]+'">'+esc(a[1])+'</button>'; }).join('') + '</div><p class="msg frmsg"></p>';
   el.after(d);
-  var ta = d.querySelector('textarea'); ta.focus();
+  var ta = d.querySelector('textarea'); brancherSmi(d, ta); ta.focus();
   d.onclick = function(e){ e.stopPropagation(); };
   d.querySelector('.frx').onclick = d.querySelector('.frno').onclick = fermerBoite;
   d.querySelectorAll('.fract').forEach(function(b){ b.onclick = function(){ fermerBoite(); action(b.getAttribute('data-a'), id); }; });
@@ -112,6 +117,7 @@ function repondre(id){
 }
 function finRep(){ S.rep = null; $('repBar').hidden = true; }
 $('repX').onclick = finRep;
+$('smiMain').innerHTML = barreSmi(); brancherSmi($('smiMain'), $('txt'));
 function menu(id, el){
   var ex = document.querySelector('.cmenu'); if (ex) { var meme = ex.getAttribute('data-id') == id; ex.remove(); if (meme) return; }
   var m = S.msgs[id], moi = m.uid === S.moi.id, modo = S.moi.modo, b = [['repondre','↩ Répondre']];
