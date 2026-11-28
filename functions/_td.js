@@ -273,6 +273,8 @@ export async function extrasResultats(db, iso, X) {
   }
   for (const t of out.autres) {
     const i = info(t.r, t.c, 0);
+    // champ réduit : le nom des chevaux de base
+    if (t.formule === 'reduit') { const parts = L.get(`tdpart-${d}-R${t.r}C${t.c}`), noms = {}; for (const h of (parts && parts.participants) || []) if (t.bases.includes(h.numPmu)) noms[h.numPmu] = h.nom; t.noms = noms; }
     Object.assign(t, { heure: i.heure, hippodrome: i.hippodrome, libelle: i.libelle, arrivee: i.arrivee, nb: NTT.combinaisons(t, i.nb), cout: r2(NTT.cout(t, i.nb)) });
     if (!i.fini) continue;
     const g = NTT.gains(t, i.arrivee, i.raps, i.nb, i.nps);

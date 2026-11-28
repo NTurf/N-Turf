@@ -178,6 +178,14 @@ var NTT = (function(){
     if (t.formule === 'reduit') return (t.bases || []).concat(['X']);
     return t.formule === 'positions' ? (t.spec || []) : (t.chevaux || []);
   }
+
+  // le nom des chevaux de base d'un ticket en champ réduit (« Base : 9 NOM DU CHEVAL »)
+  function basesNoms(t, noms){
+    noms = t.noms || noms || {};
+    var B = t.formule === 'reduit' ? (t.bases || []) : t.formule === 'positions' ? (t.spec || []).filter(function(v){ return v !== 'X'; }) : [];
+    if (!B.length || !B.some(function(n){ return noms[n]; })) return '';
+    return '<p class="assoc"><b>'+(B.length > 1 ? 'Bases' : 'Base')+' :</b> '+B.map(function(n){ return esc(n)+(noms[n] ? ' '+esc(noms[n]) : ''); }).join(' · ')+'</p>';
+  }
   function rendu(T, ctx){
     ctx = ctx || {};
     var arr = ctx.arrivee || [], raps = ctx.rapports || [], partants = ctx.partants || 0;
@@ -193,6 +201,7 @@ var NTT = (function(){
       var ch = vue(t);
       h += '<div class="tkt'+(gagne > 0 ? ' gagnant' : '')+'"><div class="tkh"><b>'+esc(t.auteur || '')+'</b><span>'+esc(t.pari)+' · '+esc(FORMULES[t.formule] || '')+'</span></div>';
       h += '<div class="sel">'+ch.map(function(n){ var hit = arr.slice(0,5).indexOf(n) >= 0; return '<span class="ch'+((t.formule==='champ' || t.formule==='reduit') && n !== 'X' ? ' piv' : '')+(n === 'X' ? ' xx' : '')+(hit?' hit':'')+'">'+esc(n)+'</span>'; }).join('')+'</div>';
+      h += basesNoms(t, ctx.noms);
       if (t.formule === 'champ' && t.spec) h += '<p class="assoc">X = tous les autres partants, à la place indiquée</p>';
       else if (t.associes && t.associes.length) h += '<p class="assoc">X = associés : '+t.associes.map(esc).join(' - ')+'</p>';
       h += '<div class="tkb"><span>'+nb+' combinaison'+(nb>1?'s':'')+' × '+eur(t.mise || 0)+'</span><b>'+eur(c)+'</b></div>';
@@ -283,6 +292,7 @@ var NTT = (function(){
       var h = '<div class="tkt'+(r && r.gagne > 0 ? ' gagnant' : '')+'"><div class="tkh"><b>🎟️ '+esc(t.pari)+'</b><span>'+esc(FORMULES[t.formule] || '')+'</span></div>' +
         '<p class="assoc">R'+t.r+'C'+t.c+(t.heure ? ' · '+hm(t.heure) : '')+(t.hippodrome ? ' · '+esc(t.hippodrome) : '')+(t.libelle ? ' — '+esc(t.libelle) : '')+'</p>' +
         '<div class="sel">'+vue(t).map(function(n){ return '<span class="ch'+((t.formule==='champ' || t.formule==='reduit') && n !== 'X' ? ' piv' : '')+(n === 'X' ? ' xx' : '')+(arr.slice(0, Math.max(3, P.k || 3)).indexOf(n) >= 0 ? ' hit' : '')+'">'+esc(n)+'</span>'; }).join('')+'</div>';
+      h += basesNoms(t);
       if (t.formule === 'champ') h += '<p class="assoc">X = tous les autres partants</p>';
       else if (t.formule === 'reduit' && t.associes && t.associes.length) h += '<p class="assoc">X = associés : '+t.associes.map(esc).join(' - ')+'</p>';
       if (t.commentaire) h += '<p class="assoc" style="font-style:italic">« '+esc(t.commentaire)+' »</p>';
@@ -295,7 +305,7 @@ var NTT = (function(){
     }).join('');
   }
 
-  return { renduAutres: renduAutres, renduExtras: renduExtras, paragraphes: paragraphes, PARIS: PARIS, FORMULES: FORMULES, parPlace: parPlace, specChamp: specChamp, lireSpec: lireSpec, vue: vue, combinaisons: combinaisons, cout: cout, gains: gains, rendu: rendu, lireTexte: lireTexte, nums: nums, eur: eur, esc: esc };
+  return { basesNoms: basesNoms, renduAutres: renduAutres, renduExtras: renduExtras, paragraphes: paragraphes, PARIS: PARIS, FORMULES: FORMULES, parPlace: parPlace, specChamp: specChamp, lireSpec: lireSpec, vue: vue, combinaisons: combinaisons, cout: cout, gains: gains, rendu: rendu, lireTexte: lireTexte, nums: nums, eur: eur, esc: esc };
 })();
 
 export default NTT;

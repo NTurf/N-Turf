@@ -79,6 +79,13 @@ export async function onRequestPost({ request, env }) {
     if (!nb) return json({ erreur: 'Ce ticket ne fait aucune combinaison : vérifie les chevaux et la formule.' }, 400);
     cout = Math.round(NTT.cout(ticket, course.partants) * 100) / 100;
     type = 'ticket';
+    // champ réduit : le nom des chevaux de base, affiché sous le ticket
+    const B = ticket.formule === 'reduit' ? ticket.bases : ticket.formule === 'positions' ? (ticket.spec || []).filter((x) => x !== 'X') : [];
+    if (B.length) try {
+      const parts = await get(`${BASE}/${iso.split('-').reverse().join('')}/R${r}/C${cn}/participants`);
+      const noms = {}; for (const h of (parts && parts.participants) || []) if (B.includes(h.numPmu)) noms[h.numPmu] = h.nom;
+      if (Object.keys(noms).length) ticket.noms = noms;
+    } catch (e) {}
   } else return json({ erreur: 'Type inconnu.' }, 400);
   await db.prepare(`INSERT INTO td_pubs (date, r, c, hippodrome, course, auteur_id, signature, type, chevaux, ticket, cout, joue, commentaire) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`)
     .bind(iso, r, cn, reu.h, course.libelle, u.id, c.signature, type, chevaux ? JSON.stringify(chevaux) : null, ticket ? JSON.stringify(ticket) : null, cout, b.joue ? 1 : 0, commentaire).run();

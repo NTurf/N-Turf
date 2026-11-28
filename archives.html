@@ -23,7 +23,7 @@
 </main>
 <script src="/site.js?v=20261127r"></script>
 <script src="/quinte.js?v=20261127d"></script>
-<script src="/tickets.js?v=20261128b"></script>
+<script src="/tickets.js?v=20261128c"></script>
 <script>
 var JOURS = [];
 function $(i){ return document.getElementById(i); }
@@ -93,7 +93,7 @@ function charger(j){
         var raps = Object.keys((q && q.rapports) || {}).map(function(k){ return { nom: k, euros: q.rapports[k] }; });
         var arr2 = (q && q.arrivee) || [], part = q && q.partants || 0;
         if (live && live.trouve) { if (!arr2.length) arr2 = live.arrivee; raps = (live.rapports || []).concat(raps); if (live.partants.length) part = live.partants.filter(function(p){ return !p.np; }).length; }
-        R.tickets = NTT.rendu(d.tickets, { arrivee: arr2, rapports: raps, partants: part, np: live && live.trouve ? (live.partants || []).filter(function(p){ return p.np; }).map(function(p){ return p.n; }) : [] });
+        R.tickets = NTT.rendu(d.tickets, { noms: (function(){ var o = {}; (((live && live.trouve ? live : null) && (live && live.trouve ? live : null).partants) || []).forEach(function(p){ o[p.n] = p.nom; }); return o; })(), arrivee: arr2, rapports: raps, partants: part, np: live && live.trouve ? (live.partants || []).filter(function(p){ return p.np; }).map(function(p){ return p.n; }) : [] });
       }
       // cheval du jour, reports et texte publiés avec les tickets
       if (d.extras) R.tickets = (R.tickets || '') + NTT.renduExtras(d.extras);

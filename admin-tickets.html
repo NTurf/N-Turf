@@ -97,7 +97,7 @@
 </main>
 <script src="/site.js?v=20261127r"></script>
 <script src="/attente.js?v=20261125a"></script>
-<script src="/tickets.js?v=20261128b"></script>
+<script src="/tickets.js?v=20261128c"></script>
 <script>
 var B = { date: '', tickets: [] }, Q = null, LIVE = null;
 function $(i){ return document.getElementById(i); }
@@ -106,7 +106,7 @@ function ctx(){
   var raps = Object.keys((Q && Q.rapports) || {}).map(function(k){ return { nom: k, euros: Q.rapports[k] }; });
   var arr = (Q && Q.arrivee) || [];
   if (LIVE && LIVE.arrivee && LIVE.arrivee.length) { if (!arr.length) arr = LIVE.arrivee; raps = (LIVE.rapports || []).concat(raps); }
-  return { arrivee: arr, rapports: raps, partants: partants() };
+  return { noms: (function(){ var o = {}; ((LIVE && LIVE.partants) || []).forEach(function(p){ o[p.n] = p.nom; }); return o; })(), arrivee: arr, rapports: raps, partants: partants() };
 }
 function remplirSelects(){
   $('fPari').innerHTML = Object.keys(NTT.PARIS).map(function(k){ return '<option>'+k+'</option>'; }).join('');
@@ -194,7 +194,7 @@ function extrasApercu(){
   if (!aExtras()) return null;
   var x = JSON.parse(JSON.stringify(B.extras));
   if (x.cheval) { var R = reu(x.cheval.r), k = course(x.cheval.r, x.cheval.c); x.cheval.nom = nomDe(x.cheval.r, x.cheval.c, x.cheval.n); x.cheval.hippodrome = R ? R.h : ''; x.cheval.heure = k && k.heure; }
-  (x.autres || []).forEach(function(t){ var R = reu(t.r), k = course(t.r, t.c), n = nbPartants(t.r, t.c); t.hippodrome = R ? R.h : ''; t.heure = k && k.heure; t.libelle = k && k.libelle; t.nb = NTT.combinaisons(t, n); t.cout = NTT.cout(t, n); });
+  (x.autres || []).forEach(function(t){ var R = reu(t.r), k = course(t.r, t.c), n = nbPartants(t.r, t.c); t.hippodrome = R ? R.h : ''; t.heure = k && k.heure; t.libelle = k && k.libelle; t.nb = NTT.combinaisons(t, n); t.cout = NTT.cout(t, n); t.noms = {}; (t.bases || []).forEach(function(b){ t.noms[b] = nomDe(t.r, t.c, b); }); });
   x.reports.forEach(function(p){ var R = reu(p.r), a = course(p.r, p.c1), b = course(p.r, p.c2); p.hippodrome = R ? R.h : ''; p.nom1 = nomDe(p.r, p.c1, p.n1); p.nom2 = nomDe(p.r, p.c2, p.n2); p.heure1 = a && a.heure; p.heure2 = b && b.heure; });
   return x;
 }

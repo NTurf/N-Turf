@@ -78,7 +78,7 @@
 </div>
 </main>
 <script src="/site.js?v=20261127r"></script>
-<script src="/tickets.js?v=20261128b"></script>
+<script src="/tickets.js?v=20261128c"></script>
 <script>
 (function(){
   var $ = function(i){ return document.getElementById(i); };
@@ -177,7 +177,7 @@
   var LIVEQ = null;
   function ctxQ(cq){
     var L = LIVEQ && LIVEQ.date === D.date && LIVEQ.d && LIVEQ.d.trouve ? LIVEQ.d : null;
-    return { arrivee: (L && L.arrivee && L.arrivee.length ? L.arrivee : (cq && cq.arrivee) || []), rapports: (L && L.rapports) || [], partants: L && L.partants && L.partants.length ? L.partants.filter(function(p){ return !p.np; }).length : (cq && cq.partants) || 0, np: L && L.partants ? L.partants.filter(function(p){ return p.np; }).map(function(p){ return p.n; }) : [] };
+    return { noms: (function(){ var o = {}; ((L && L.partants) || []).forEach(function(p){ o[p.n] = p.nom; }); return o; })(), arrivee: (L && L.arrivee && L.arrivee.length ? L.arrivee : (cq && cq.arrivee) || []), rapports: (L && L.rapports) || [], partants: L && L.partants && L.partants.length ? L.partants.filter(function(p){ return !p.np; }).length : (cq && cq.partants) || 0, np: L && L.partants ? L.partants.filter(function(p){ return p.np; }).map(function(p){ return p.n; }) : [] };
   }
   function chargerQ(){
     if (!D || !D.anciens) return;
@@ -200,6 +200,7 @@
     else {
       var t = p.ticket;
       h += '<div class="ou">Ticket ' + E(t.pari) + ' · ' + E(NTT.FORMULES[t.formule] || '') + '</div><div class="sel">' + NTT.vue(t).map(function(n){ return '<span class="ch' + (n === 'X' ? ' xx' : '') + (arr.indexOf(n) >= 0 ? ' hit' : '') + '">' + E(n) + '</span>'; }).join('') + '</div>';
+      h += NTT.basesNoms(t);
       if (t.associes && t.associes.length && t.formule !== 'champ') h += '<p class="assoc">X = associés : ' + t.associes.join(' - ') + '</p>';
       h += '<div class="res">Mise : <b>' + EUR(p.cout) + '</b> (' + EUR(t.mise) + ' la combinaison)' + (p.joue ? ' · <b>joué réellement</b>' : ' · <span class="fictif">non joué : gains en simulation</span>') + '</div>';
     }
