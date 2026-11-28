@@ -104,7 +104,7 @@ if (location.hostname === 'n-turf.pages.dev') location.replace('https://n-turf.n
         // Administrateur : demandes « mot de passe oublié » en attente, bandeau rouge sur toutes les pages
         if (m.demandesMdp && !/admin-membres/.test(location.pathname)) { var mn = document.querySelector('main'); if (mn) { var dm = document.createElement('a'); dm.href = '/admin-membres.html#demandes'; dm.style.cssText = 'display:block;background:#c62832;color:#fff;font-weight:800;padding:10px 14px;border-radius:10px;margin:0 0 12px;text-decoration:none'; dm.textContent = '🔑 ' + m.demandesMdp + ' demande' + (m.demandesMdp > 1 ? 's' : '') + ' de mot de passe oublié — toucher pour répondre'; mn.insertBefore(dm, mn.firstChild); } }
         // Alertes de départ des courses, sur toutes les pages
-        var al = document.createElement('script'); al.src = '/alertes.js?v=20261127a'; document.body.appendChild(al);
+        var al = document.createElement('script'); al.src = '/alertes.js?v=20261128a'; document.body.appendChild(al);
         var b = h.querySelector('.compte');
         var w = document.createElement('span');
         w.className = 'who';

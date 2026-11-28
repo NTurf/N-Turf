@@ -24,6 +24,12 @@
   <h1 class="nlogo"><span>N-TURF</span><small>PRONOSTICS HIPPIQUES</small></h1>
   <p class="lead">Le collectif des passionnés de courses hippiques, réunis par la même passion. Quinté+, course par course, concours et tchat.</p>
 
+  <section class="card" style="text-align:center">
+    <h2>🎬 Découvrez le site en 2 minutes</h2>
+    <p class="note2" style="margin:0 0 8px">Inscription, connexion, pronos, concours, fiche du jour, outils : tout ce que N-TURF vous offre.</p>
+    <video src="/presentation-nturf.mp4" poster="/presentation-nturf.jpg" controls playsinline preload="none" style="width:100%;max-width:360px;border-radius:14px;background:#0e2a5c"></video>
+  </section>
+
   <section class="card">
     <h2>Notre travail</h2>
     <p>N-TURF existe depuis de nombreuses années. Il a réuni une grande communauté de turfistes jusqu'en 2012. Il revient aujourd'hui avec les mêmes principes : un travail sérieux chaque jour et une transparence totale sur les résultats et les mises, qu'on gagne ou qu'on perde.</p>
@@ -93,7 +99,7 @@ fetch('/api/concours/classements', {cache:'no-store'}).then(function(r){ return 
 }).catch(function(){});
 </script>
 
-<script src="/site.js?v=20261127r"></script>
+<script src="/site.js?v=20261128a"></script>
 <script>
 fetch('/api/journal/dernier').then(function(r){return r.json()}).then(function(d){
   var b=d&&d.billet; if(!b) return;

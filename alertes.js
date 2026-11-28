@@ -24,7 +24,7 @@
     el.querySelector('.x').onclick = function (e) { e.stopPropagation(); fin(); };
     el.onclick = function () { if (c.lien) location.href = c.lien; };
     pile.appendChild(el);
-    setTimeout(fin, 15000);
+    setTimeout(fin, 60000); // l'alerte reste 1 minute à l'écran (on peut la fermer avant avec ×)
   }
   function verifier() {
     if (!L.length) return;
