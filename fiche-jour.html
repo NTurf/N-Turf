@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Fiche du jour – N-TURF</title>
+<meta name="theme-color" content="#0D1E3D">
+<meta name="robots" content="noindex">
+<link rel="manifest" href="/manifest.webmanifest?v=2">
+<link rel="icon" href="/icone-nturf-192.png">
+<link rel="stylesheet" href="/style.css?v=20261127f">
+<style>
+.fj{background:#fff;border:2px solid #0e2a5c;border-radius:12px;padding:12px 14px;margin:0 0 14px}
+.fj h1{margin:0;font-size:26px;text-align:center}
+.fj .sous{text-align:center;color:#5b6b85;margin:2px 0 8px}
+.nav{display:flex;gap:6px;align-items:center;justify-content:center;margin:6px 0}
+.nav select{flex:1;max-width:240px}
+.blk{border-top:3px double #0e2a5c;margin-top:12px;padding-top:8px}
+.blk h2{margin:0 0 6px;font-size:20px}
+.crs{font:700 14px Arial,sans-serif;background:#eef3fb;border-left:4px solid #0e2a5c;padding:5px 8px;margin:10px 0 6px}
+.crs .arr{font-weight:400}
+.rd{display:flex;gap:6px;margin:6px 0;align-items:center;flex-wrap:wrap}
+.rd span{width:34px;height:34px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-weight:800;background:#dce8f7;color:#0e2a5c;border:2px solid #9fbbe0}
+.rd span.hit{background:#e5243b;border-color:#a3121f;color:#fff}
+.noms{font-size:14px;line-height:1.5;margin:2px 0 6px}.noms b{color:#1E5BB5}
+.jeu{padding:4px 0 10px;border-bottom:1px dotted #9aa9c2}.jeu:last-child{border:0}
+.mot{white-space:pre-wrap;font-style:italic;margin:4px 0}
+.lj{display:flex;justify-content:space-between;gap:8px;padding:3px 0;border-bottom:1px dashed #e3eaf5;font-size:14px}.lj:last-of-type{border:0}
+.tot{font-weight:800;margin-top:4px;font-size:14px}
+.bil{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;text-align:center;margin:8px 0 0}
+.bil div{background:#f4f7fc;border-radius:8px;padding:6px 2px}.bil span{display:block;font-size:12px;color:#5b6b85}.bil b{font-size:16px}
+.lock{background:#fff6e5;border:1px solid #e0b450;border-radius:8px;padding:8px 10px;margin:8px 0}
+</style>
+</head>
+<body data-page="membres">
+<main>
+<div id="refus" class="note" hidden>🔒 Réservé aux membres. <a href="/inscription.html">S'inscrire gratuitement</a> ou <a href="/inscription.html#connexion">se connecter</a>.</div>
+<div id="rendu"></div>
+</main>
+<script src="/site.js?v=20261127r"></script>
+<script>
+function $(i){ return document.getElementById(i); }
+function E(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+function Fe(x){ return (Math.round(x * 100) / 100).toFixed(2).replace('.', ',') + ' €'; }
+function Ff(x){ return (Math.round(x * 100) / 100).toFixed(2).replace('.', ','); }
+function Fn(x){ return (x > 0 ? '+' : x < 0 ? '−' : '') + Fe(Math.abs(x)); }
+function cl(x){ return x > 0 ? 'pos' : x < 0 ? 'neg' : ''; }
+function iso(k){ return new Date(Date.now() + k*86400000).toLocaleDateString('fr-CA', {timeZone:'Europe/Paris'}); }
+function hm(t){ return t ? new Date(t).toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit', timeZone:'Europe/Paris'}).replace(':', ' h ') : ''; }
+var TYPES = {SG:'Simple gagnant', SP:'Simple placé', CG:'Couplé gagnant', CP:'Couplé placé', CO:'Couplé ordre', TR:'Trio', TO:'Trio ordre', M4:'Multi en 4', S4:'Super 4 ordre'}, ORDRE = ['SG','SP','CG','CP','CO','TR','TO','M4','S4'];
+var Q = new URLSearchParams(location.search), PS = Q.get('p') || '', JOUR = /^\d{4}-\d{2}-\d{2}$/.test(Q.get('jour') || '') ? Q.get('jour') : iso(0);
+
+function chevaux(L, noms, arr){
+  return '<div class="rd">' + L.map(function(n){ return '<span class="' + (arr.indexOf(n) >= 0 ? 'hit' : '') + '">' + n + '</span>'; }).join('') + '</div>' +
+    (L.some(function(n){ return noms && noms[n]; }) ? '<div class="noms">' + L.filter(function(n){ return noms[n]; }).map(function(n){ return '<b>' + n + '</b> ' + E(noms[n]); }).join(' · ') + '</div>' : '');
+}
+// avant la course : les paris joués, type par type
+function jeuPrevu(paris){
+  var h = '';
+  ORDRE.forEach(function(t){ var L = paris.filter(function(x){ return x.t === t; }); if (!L.length) return;
+    h += '<div class="lj"><span><b>' + TYPES[t] + '</b> ' + L.map(function(x){ return x.c.join('-'); }).join(' · ') + '</span><span>' + Fe(L.length) + '</span></div>'; });
+  return h + '<div class="tot">Mise : ' + Fe(paris.length) + ' · résultat après l\'arrivée</div>';
+}
+// après l'arrivée : mise, retour et net type par type
+function resultat(det){
+  var h = '', M = 0, G = 0;
+  ORDRE.forEach(function(t){ var L = det.filter(function(x){ return x.t === t; }); if (!L.length) return;
+    var jo = L.filter(function(x){ return !x.np; }), m = jo.length, g = jo.reduce(function(s, x){ return s + (x.r || 0); }, 0); M += m; G += g;
+    var gg = jo.filter(function(x){ return x.r > 0; }).map(function(x){ return x.c.join('-') + ' : ' + Fe(x.r); });
+    h += '<div class="lj"><span><b>' + TYPES[t] + '</b> · mise ' + Fe(m) + (gg.length ? '<br><small>✓ ' + gg.join(' · ') + '</small>' : '') + '</span><span class="' + cl(g - m) + '"><b>' + Fn(Math.round((g - m) * 100) / 100) + '</b></span></div>'; });
+  var n = Math.round((G - M) * 100) / 100;
+  return h + '<div class="tot">Mise ' + Fe(M) + ' · retour ' + Fe(G) + ' · net <span class="' + cl(n) + '">' + Fn(n) + '</span></div>';
+}
+
+function charger(){
+  history.replaceState(null, '', '/fiche-jour.html?p=' + encodeURIComponent(PS) + '&jour=' + JOUR);
+  fetch('/api/pm?fiche=' + encodeURIComponent(PS) + '&jour=' + JOUR, {credentials:'same-origin'}).then(function(r){ if (r.status === 401) throw 0; return r.json(); }).then(dessiner).catch(function(){ $('refus').hidden = false; });
+}
+function dessiner(d){
+  if (d.erreur) { $('rendu').innerHTML = '<p class="note">' + E(d.erreur) + '</p>'; return; }
+  var jourTxt = new Date(JOUR + 'T12:00:00').toLocaleDateString('fr-FR', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
+  var J = [[-2,''],[-1,'Hier'],[0,'Aujourd\'hui'],[1,'Demain']].map(function(x){ return iso(x[0]); });
+  if (J.indexOf(JOUR) < 0) J.unshift(JOUR);
+  var h = '<section class="fj"><h1>📋 Fiche du jour</h1><p class="sous"><a href="/fiche.html?p=' + encodeURIComponent(d.pseudo) + '"' + (d.modo ? ' style="color:#d8232f"' : '') + '><b>' + E(d.pseudo) + '</b></a> · ' + E(jourTxt) + '</p>' +
+    '<div class="nav"><button type="button" class="btn ghost" id="jP">◀</button><select id="jS">' + J.map(function(j){ return '<option value="' + j + '"' + (j === JOUR ? ' selected' : '') + '>' + j.split('-').reverse().join('/') + (j === iso(0) ? ' (aujourd\'hui)' : '') + '</option>'; }).join('') + '</select><button type="button" class="btn ghost" id="jN">▶</button></div>';
+
+  // le concours Quinté+
+  var K = d.concours;
+  if (K && K.verrou) h += '<div class="blk"><h2>🏆 Concours Quinté+</h2><p class="lock">🔒 Son prono du concours Quinté+ est visible par ceux qui ont aussi joué le concours ce jour-là.</p></div>';
+  else if (K) {
+    var ka = K.arrivee || [];
+    h += '<div class="blk"><h2>🏆 Concours Quinté+</h2><div class="crs">R' + K.r + 'C' + K.c + (K.heure ? ' · ' + hm(K.heure) : '') + ' · ' + E(K.hippo || '') + (K.libelle ? ' — ' + E(K.libelle) : '') + (ka.length ? '<br><span class="arr">Arrivée : <b>' + ka.join(' - ') + '</b></span>' : '') + '</div>' +
+      chevaux(K.chevaux, K.noms, ka);
+    if (K.calcule) {
+      var kn = Math.round(((K.gains || 0) - K.mise) * 100) / 100;
+      h += (K.detail && K.detail.length ? K.detail.map(function(x){ return '<div class="lj"><span>' + E(x.pari) + (x.type !== x.pari ? ' – ' + E(x.type) : '') + (x.nb > 1 ? ' (×' + x.nb + ')' : '') + '</span><span>' + Ff(x.fers) + ' fers</span></div>'; }).join('') : '<p class="note2">Aucun jeu gagnant.</p>') +
+        '<div class="tot">Mise ' + Ff(K.mise) + ' fers · gains ' + Ff(K.gains || 0) + ' fers · net <span class="' + cl(kn) + '">' + (kn > 0 ? '+' : kn < 0 ? '−' : '') + Ff(Math.abs(kn)) + ' fers</span></div>';
+    } else h += '<p class="note2">Mise du jour : ' + Ff(K.mise) + ' fers. Le résultat s\'affichera après l\'arrivée.</p>';
+    h += '</div>';
+  }
+
+  // le course par course
+  h += '<div class="blk"><h2>🏇 Pronos course par course</h2>';
+  if (d.verrou) h += '<p class="lock">🔒 Les fiches des autres membres sont réservées à ceux qui participent : au moins ' + d.verrou.min + ' pronos par jour. Aujourd\'hui, tu en as donné ' + d.verrou.n + '.</p>';
+  else if (!d.jeux.length) h += '<p class="note2">Pas de prono course par course ce jour-là.</p>';
+  else {
+    var M = 0, G = 0, nb = 0, fin = 0;
+    d.jeux.forEach(function(j){
+      var arr = j.arrivee || [], ha = arr.slice(0, j.paris.some(function(x){ return x.t === 'M4' || x.t === 'S4'; }) ? 4 : 3);
+      h += '<div class="jeu"><div class="crs">R' + j.r + 'C' + j.c + (j.heure ? ' · ' + hm(j.heure) : '') + ' · ' + E(j.hippo) + (j.libelle ? ' — ' + E(j.libelle) : '') + (arr.length ? '<br><span class="arr">Arrivée' + (j.definitive ? '' : ' (provisoire)') + ' : <b>' + arr.slice(0, 4).join(' - ') + '</b></span>' : '') + '</div>' +
+        chevaux(j.chevaux, j.noms, ha) + (j.mot ? '<p class="mot">« ' + E(j.mot) + ' »</p>' : '') +
+        (j.statut === 'calcule' && j.detail.length ? resultat(j.detail) : jeuPrevu(j.paris)) + '</div>';
+      nb++; if (j.statut === 'calcule') { fin++; M += j.mise || 0; G += j.gains || 0; }
+    });
+    var n = Math.round((G - M) * 100) / 100;
+    h += '<h2 style="margin-top:10px">Bilan du jour</h2><p class="note2">' + nb + ' prono' + (nb > 1 ? 's' : '') + (fin < nb ? ', dont ' + fin + ' course' + (fin > 1 ? 's' : '') + ' courue' + (fin > 1 ? 's' : '') + ' et calculée' + (fin > 1 ? 's' : '') : '') + '. Paris à 1 €, aux vrais rapports PMU.</p>' +
+      '<div class="bil"><div><span>Pronos</span><b>' + nb + '</b></div><div><span>Mise</span><b>' + Fe(M) + '</b></div><div><span>Retour</span><b>' + Fe(G) + '</b></div><div><span>Net</span><b class="' + cl(n) + '">' + Fn(n) + '</b></div></div>';
+  }
+  h += '</div></section>';
+  $('rendu').innerHTML = h;
+  $('jS').onchange = function(){ JOUR = this.value; charger(); };
+  $('jP').onclick = function(){ var t = new Date(JOUR + 'T12:00:00Z'); t.setUTCDate(t.getUTCDate() - 1); JOUR = t.toISOString().slice(0, 10); charger(); };
+  $('jN').onclick = function(){ var t = new Date(JOUR + 'T12:00:00Z'); t.setUTCDate(t.getUTCDate() + 1); JOUR = t.toISOString().slice(0, 10); charger(); };
+}
+if (!PS) NTURF_MOI.then(function(m){ if (m && m.pseudo) { PS = m.pseudo; charger(); } else $('refus').hidden = false; }); else charger();
+</script>
+</body>
+</html>

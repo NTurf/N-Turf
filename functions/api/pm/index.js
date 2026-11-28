@@ -1,11 +1,13 @@
 import { json, initDb, currentUser, noDb } from '../../_auth.js';
 import { preparer } from '../../_pmu.js';
+import { initConcours, miseDu } from '../../_concours.js';
 import { prepPm, coursePm, construire, choixDepuisParis, resume, verifierEnAttente, ORDRE_TYPES } from '../../_pm.js';
 
 // Pronos des membres
 // GET ?jour=AAAA-MM-JJ                 : nombre de pronos par course
 // GET ?jour=…&r=1&c=3                  : la course (partants, arrivée) et tous ses pronos, avec réactions
 // GET ?classement=mois|tout            : bilan des membres, chacun détaillé jeu par jeu (+ mon bilan)
+// GET ?fiche=pseudo&jour=…         : fiche du jour d'un membre (tous ses jeux du jour, résultat et bilan)
 // GET ?bilan=pseudo                    : bilan d'un membre jeu par jeu (ce mois-ci et depuis le début), pour sa fiche
 // POST {jour, r, c, chevaux:[n…], choix:{s,c,t,m}, mot} : publier / modifier mon prono (jusqu'au départ)
 // POST {action:'supprimer', id} · {action:'reagir', id, texte} · {action:'retirerReaction', id}
@@ -64,6 +66,49 @@ export async function onRequestGet({ request, env }) {
     if (!m) return json({ erreur: 'Membre introuvable.' }, 404);
     if (m.id !== u.id && !ac.ok) return json({ pseudo: m.pseudo, verrou: ac });
     return json({ pseudo: m.pseudo, mois: await bilan(m.id, moisCourant()), tout: await bilan(m.id, null) });
+  }
+  // Fiche du jour d'un membre : tous ses jeux de la journée, course par course, et le bilan du jour
+  // (la sienne toujours ; celle des autres réservée à ceux qui participent : 3 pronos par jour)
+  if (q.get('fiche')) {
+    const jour = isoOk(q.get('jour')) ? q.get('jour') : new Date().toLocaleDateString('fr-CA', { timeZone: 'Europe/Paris' });
+    const m = await db.prepare('SELECT id, pseudo, role, moderateur FROM users WHERE pseudo = ? COLLATE NOCASE AND banni = 0').bind(q.get('fiche')).first();
+    if (!m) return json({ erreur: 'Membre introuvable.' }, 404);
+    const ac = await acces(), soi = m.id === u.id, chef = u.role === 'admin' || !!u.moderateur;
+    // le prono du concours Quinté+ de ce jour : visible par lui, et par ceux qui ont aussi joué le concours ce jour-là
+    let concours = null;
+    try {
+      await initConcours(db);
+      const cp = await db.prepare('SELECT chevaux, retenu, gains, detail FROM concours_pronos WHERE date = ? AND user_id = ?').bind(jour, m.id).first();
+      if (cp) {
+        const joue = soi || u.role === 'admin' || !!(await db.prepare('SELECT 1 FROM concours_pronos WHERE date = ? AND user_id = ?').bind(jour, u.id).first());
+        if (!joue) concours = { verrou: true };
+        else {
+          const j = await db.prepare('SELECT reunion, course, hippodrome, libelle, heure, partants, arrivee, statut FROM concours_jours WHERE date = ?').bind(jour).first();
+          const calc = j && j.statut === 'calcule', P = j ? JSON.parse(j.partants || '[]') : [], ch = JSON.parse(cp.chevaux || '[]');
+          const noms = {}; for (const h of P) if (ch.includes(+h.n)) noms[h.n] = h.nom;
+          concours = { r: j && j.reunion, c: j && j.course, hippo: j && j.hippodrome, libelle: j && j.libelle, heure: j && j.heure, arrivee: j ? JSON.parse(j.arrivee || '[]').slice(0, 5) : [],
+            chevaux: ch, noms, calcule: !!calc, mise: miseDu(jour), gains: calc ? cp.gains || 0 : null, detail: calc && cp.detail ? JSON.parse(cp.detail) : [] };
+        }
+      }
+    } catch (e) { concours = null; }
+    // les jeux du course par course : réservés à ceux qui participent (3 pronos par jour)
+    if (!soi && !ac.ok) return json({ pseudo: m.pseudo, jour, verrou: ac, concours, jeux: [] });
+    const rows = (await db.prepare('SELECT id, reunion, course, hippo, chevaux, jeu, paris, mot, statut, mise, gains, detail FROM pm_pronos WHERE user_id = ? AND jour = ?').bind(m.id, jour).all()).results || [];
+    const infos = await Promise.all(rows.map((p) => coursePm(db, jour, p.reunion, p.course).catch(() => null)));
+    // un nouveau passage, une fois les courses calculées entre-temps
+    const rows2 = (await db.prepare('SELECT id, statut, mise, gains, detail FROM pm_pronos WHERE user_id = ? AND jour = ?').bind(m.id, jour).all()).results || [];
+    const maj = new Map(rows2.map((x) => [x.id, x]));
+    const jeux = rows.map((p, i) => {
+      const x = maj.get(p.id) || p, c = infos[i] || {};
+      const chevaux = JSON.parse(p.chevaux || '[]').map((y) => (typeof y === 'object' ? +y.n : +y));
+      const paris = p.paris ? JSON.parse(p.paris) : [];
+      let detail = []; try { detail = x.detail ? JSON.parse(x.detail) : []; } catch (e) { detail = []; }
+      const noms = {}; for (const h of c.partants || []) if (chevaux.includes(h.n)) noms[h.n] = h.nom;
+      return { r: p.reunion, c: p.course, hippo: c.hippo || p.hippo || '', libelle: c.libelle || '', heure: c.heure || null, arrivee: (c.arrivee || []).slice(0, 5), definitive: !!c.definitive,
+        chevaux, noms, paris, jeuNom: resume(paris, p.jeu), mot: p.mot || '', statut: x.statut, mise: x.mise, gains: x.gains,
+        detail: Array.isArray(detail) ? detail.filter((y) => y && typeof y === 'object') : [] };
+    }).sort((a, b) => (a.heure || 0) - (b.heure || 0) || a.r - b.r || a.c - b.c);
+    return json({ pseudo: m.pseudo, modo: m.role === 'admin' || !!m.moderateur, moi: soi, jour, jeux, concours });
   }
   if (q.get('classement')) {
     await verifierEnAttente(db);

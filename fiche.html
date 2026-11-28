@@ -43,6 +43,7 @@ fetch('/api/social/fiche?pseudo=' + encodeURIComponent(P), {credentials:'same-or
   else if (d.contact.statut === 'accepte') a = '<a class="btn" href="/messages.html?avec=' + encodeURIComponent(d.pseudo) + '">✉ Messages</a>';
   else if (d.contact.statut === 'attente' && d.contact.parMoi) a = '<span class="note2">Ta demande de contact attend sa réponse.</span>';
   else if (d.contact.statut === 'attente') a = '<a class="btn" href="/messages.html?avec=' + encodeURIComponent(d.pseudo) + '">Voir sa demande de contact</a>';
+  a = '<a class="btn ghost" href="/fiche-jour.html?p=' + encodeURIComponent(d.pseudo) + '">📋 ' + (d.moi ? 'Ma fiche du jour' : 'Sa fiche du jour') + '</a> ' + a;
   $('act').innerHTML = a;
   fetch('/api/pm?bilan=' + encodeURIComponent(d.pseudo), {credentials:'same-origin'}).then(function(r){ return r.ok ? r.json() : null; }).then(function(b){
     if (!b) return;

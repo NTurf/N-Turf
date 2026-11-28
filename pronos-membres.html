@@ -73,6 +73,7 @@ Le site t'affiche ta mise totale avant de publier.</li>
 <p class="note2" style="margin:6px 0 0">Après l'arrivée, tes chevaux arrivés passent en <b style="color:#e5243b">rouge</b> et le site indique, pari par pari, ta mise et ton gain mise déduite, avec les vrais rapports PMU. Ton bilan apparaît dans l'onglet <b>Classement</b>. <b>Pour voir les pronos des autres membres, le classement et leurs stats, il faut donner au moins 3 pronos par jour.</b> Sous chaque prono, « 💬 Réagir » permet d'en discuter.</p>
 </details>
 
+<p><a class="btn ghost" href="/fiche-jour.html" id="maFiche">📋 Ma fiche du jour</a></p>
 <div class="pills" id="jours"></div>
 <div class="pills" id="reus" style="margin-top:6px"></div>
 <div class="cbt" id="crs"></div>
@@ -171,7 +172,7 @@ function synthMembres(S, arr){
 }
 function carte(p){
   var arr = (DATA.course && DATA.course.arrivee || []).slice(0, p.paris.some(function(x){ return x.t === 'M4' || x.t === 'S4'; }) ? 4 : 3);
-  var h = '<section class="card pc"><div class="hd"><a href="/fiche.html?p='+encodeURIComponent(p.pseudo)+'"'+(p.modoAuteur ? ' style="color:#d8232f"' : '')+'>'+E(p.pseudo)+'</a><span class="jeu j-couple">'+E(p.jeuNom)+'</span></div>';
+  var h = '<section class="card pc"><div class="hd"><a href="/fiche.html?p='+encodeURIComponent(p.pseudo)+'"'+(p.modoAuteur ? ' style="color:#d8232f"' : '')+'>'+E(p.pseudo)+'</a><span class="jeu j-couple">'+E(p.jeuNom)+'</span><a href="/fiche-jour.html?p='+encodeURIComponent(p.pseudo)+'&jour='+JOUR+'" style="margin-left:auto;font-size:13px">📋 Fiche du jour</a></div>';
   h += '<div class="rd">'+p.chevaux.map(function(n){ return '<span class="'+(arr.indexOf(n)>=0?'hit':'')+'">'+n+'</span>'; }).join('')+'</div>';
   if (p.mot) h += '<p class="mot">'+E(p.mot)+'</p>';
   h += '<div class="blocp">' + (p.statut === 'calcule' && p.detail.length ? resultat(p.detail) : jeuPrevu(p.paris)) + '</div>';
