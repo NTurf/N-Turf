@@ -35,7 +35,7 @@ export async function prepPm(db) {
       cree TEXT NOT NULL DEFAULT (datetime('now')))`),
     db.prepare('CREATE INDEX IF NOT EXISTS pmrep_jour ON pm_reports (jour, reunion)'),
   ]);
-  for (const col of ['paris TEXT', 'essai INTEGER', 'cdj INTEGER']) {
+  for (const col of ['paris TEXT', 'essai INTEGER', 'cdj INTEGER', 'cdj_mise REAL', 'cdj_gains REAL', 'cdj_g REAL', 'cdj_p REAL']) {
     try { await db.prepare('ALTER TABLE pm_pronos ADD COLUMN ' + col).run(); } catch (e) { /* déjà là */ }
   }
   // Conversion des pronos déjà publiés (ancien format « un jeu ») en paris un par un, puis nouveau calcul
@@ -245,9 +245,28 @@ export async function coursePm(db, jour, R, C) {
       const np = partants.filter((p) => p.np).map((p) => p.n);
       const q = (attente.results || []).map((p) => { const e = evaluer(JSON.parse(p.paris || '[]'), raw, np, arrivee); return db.prepare("UPDATE pm_pronos SET statut = 'calcule', mise = ?, gains = ?, detail = ? WHERE id = ?").bind(e.mise, e.gains, JSON.stringify(e.detail), p.id); });
       if (q.length) await db.batch(q);
+      // Cheval du jour : 1 € gagnant + 1 € placé (non partant : remboursé), comme le cheval du jour de Bruno
+      const cd = await db.prepare("SELECT id, cdj FROM pm_pronos WHERE jour = ? AND reunion = ? AND course = ? AND cdj IS NOT NULL AND cdj_mise IS NULL").bind(jour, R, C).all();
+      const q2 = (cd.results || []).map((p) => { const e = evalCdj(raw, np, p.cdj); return db.prepare('UPDATE pm_pronos SET cdj_mise = ?, cdj_gains = ?, cdj_g = ?, cdj_p = ? WHERE id = ?').bind(e.mise, e.gains, e.g, e.p, p.id); });
+      if (q2.length) await db.batch(q2);
     }
   }
   return info;
+}
+async function coursePmCdj(db, jour, R, C) {
+  const d = isoVersPmu(jour);
+  const parts = await cache(db, `part-${d}-R${R}C${C}`, 600, () => get(`${BASE}/${d}/R${R}/C${C}/participants`));
+  const np = ((parts && parts.participants) || []).filter((p) => p.statut === 'NON_PARTANT').map((p) => p.numPmu);
+  let raw = null; try { raw = await cache(db, `rapraw-${d}-R${R}C${C}`, 120, () => get(`${BASE}/${d}/R${R}/C${C}/rapports-definitifs`)); } catch (e) { raw = null; }
+  if (!Array.isArray(raw) || !raw.length) return;
+  const cd = await db.prepare('SELECT id, cdj FROM pm_pronos WHERE jour = ? AND reunion = ? AND course = ? AND cdj IS NOT NULL AND cdj_mise IS NULL').bind(jour, R, C).all();
+  const q = (cd.results || []).map((p) => { const e = evalCdj(raw, np, p.cdj); return db.prepare('UPDATE pm_pronos SET cdj_mise = ?, cdj_gains = ?, cdj_g = ?, cdj_p = ? WHERE id = ?').bind(e.mise, e.gains, e.g, e.p, p.id); });
+  if (q.length) await db.batch(q);
+}
+export function evalCdj(raw, np, n) {
+  if (np.includes(n)) return { mise: 0, gains: 0, g: 0, p: 0 };
+  const g = rapport(blocs(raw, /^SIMPLE_GAGNANT$/), [n], false), pl = rapport(blocs(raw, /^SIMPLE_PLACE$/), [n], false);
+  return { mise: 2, gains: Math.round((g + pl) * 100) / 100, g, p: pl };
 }
 
 // Vérifie les pronos en attente sans attendre qu'un membre ouvre la course (quelques courses à chaque appel)
@@ -261,4 +280,8 @@ export async function verifierEnAttente(db, max = 6) {
     try { await coursePm(db, x.jour, x.reunion, x.course); } catch (e) { /* on réessaiera */ }
   }
   try { await verifierReports(db); } catch (e) { /* on réessaiera */ }
+  try {
+    const z = await db.prepare("SELECT DISTINCT jour, reunion, course FROM pm_pronos WHERE statut = 'calcule' AND cdj IS NOT NULL AND cdj_mise IS NULL AND jour <= ? LIMIT 4").bind(auj).all();
+    for (const x of z.results || []) await coursePmCdj(db, x.jour, x.reunion, x.course);
+  } catch (e) { /* on réessaiera */ }
 }

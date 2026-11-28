@@ -86,7 +86,10 @@ export async function onRequestGet({ request, env }) {
     const m = await db.prepare('SELECT id, pseudo FROM users WHERE pseudo = ? COLLATE NOCASE AND banni = 0').bind(q.get('bilan')).first();
     if (!m) return json({ erreur: 'Membre introuvable.' }, 404);
     if (m.id !== u.id && !ac.ok) return json({ pseudo: m.pseudo, verrou: ac });
-    return json({ pseudo: m.pseudo, mois: await bilan(m.id, moisCourant()), tout: await bilan(m.id, null) });
+    // bilan du cheval du jour : 1 € gagnant + 1 € placé chaque jour
+    const cdjB = async (per) => { const [fw, fb] = filtre(per); const x = await db.prepare(`SELECT COUNT(*) AS n, SUM(CASE WHEN cdj_g > 0 THEN 1 ELSE 0 END) AS gagnants, SUM(CASE WHEN cdj_p > 0 THEN 1 ELSE 0 END) AS places, SUM(cdj_mise) AS mise, SUM(cdj_gains) AS gains FROM pm_pronos WHERE user_id = ? AND cdj_mise IS NOT NULL ${fw}`).bind(m.id, ...fb).first();
+      return { jours: x.n || 0, gagnants: x.gagnants || 0, places: x.places || 0, mise: R2(x.mise || 0), gains: R2(x.gains || 0), net: R2((x.gains || 0) - (x.mise || 0)) }; };
+    return json({ pseudo: m.pseudo, mois: await bilan(m.id, moisCourant()), tout: await bilan(m.id, null), cdj: { mois: await cdjB(moisCourant()), tout: await cdjB(null) } });
   }
   // Fiche du jour d'un membre : tous ses jeux de la journée, course par course, et le bilan du jour
   // (la sienne toujours ; celle des autres réservée à ceux qui participent : 3 pronos par jour)
@@ -129,7 +132,7 @@ export async function onRequestGet({ request, env }) {
     const rows = (await db.prepare('SELECT id, reunion, course, hippo, chevaux, jeu, paris, mot, statut, mise, gains, detail, cdj FROM pm_pronos WHERE user_id = ? AND jour = ?').bind(m.id, jour).all()).results || [];
     const infos = await Promise.all(rows.map((p) => coursePm(db, jour, p.reunion, p.course).catch(() => null)));
     // un nouveau passage, une fois les courses calculées entre-temps
-    const rows2 = (await db.prepare('SELECT id, statut, mise, gains, detail FROM pm_pronos WHERE user_id = ? AND jour = ?').bind(m.id, jour).all()).results || [];
+    const rows2 = (await db.prepare('SELECT id, statut, mise, gains, detail, cdj_mise, cdj_gains, cdj_g, cdj_p FROM pm_pronos WHERE user_id = ? AND jour = ?').bind(m.id, jour).all()).results || [];
     const maj = new Map(rows2.map((x) => [x.id, x]));
     const jeux = rows.map((p, i) => {
       const x = maj.get(p.id) || p, c = infos[i] || {};
@@ -138,11 +141,13 @@ export async function onRequestGet({ request, env }) {
       let detail = []; try { detail = x.detail ? JSON.parse(x.detail) : []; } catch (e) { detail = []; }
       const noms = {}; for (const h of c.partants || []) if (chevaux.includes(h.n)) noms[h.n] = h.nom;
       return { r: p.reunion, c: p.course, hippo: c.hippo || p.hippo || '', libelle: c.libelle || '', heure: c.heure || null, arrivee: (c.arrivee || []).slice(0, 5), definitive: !!c.definitive,
-        chevaux, noms, paris, jeuNom: resume(paris, p.jeu), mot: p.mot || '', statut: x.statut, cdj: p.cdj || null, mise: x.mise, gains: x.gains,
+        chevaux, noms, paris, jeuNom: resume(paris, p.jeu), mot: p.mot || '', statut: x.statut, cdj: p.cdj || null, cdjRes: x.cdj_mise != null ? { mise: x.cdj_mise, gains: x.cdj_gains, g: x.cdj_g, p: x.cdj_p } : null, mise: x.mise, gains: x.gains,
         detail: Array.isArray(detail) ? detail.filter((y) => y && typeof y === 'object') : [] };
     }).sort((a, b) => (a.heure || 0) - (b.heure || 0) || a.r - b.r || a.c - b.c);
     const reps = await reportsVue(db, (await db.prepare('SELECT p.*, u.pseudo, u.role, u.moderateur FROM pm_reports p JOIN users u ON u.id = p.user_id WHERE p.user_id = ? AND p.jour = ? ORDER BY p.c1').bind(m.id, jour).all()).results || [], u);
-    return json({ pseudo: m.pseudo, modo: m.role === 'admin' || !!m.moderateur, moi: soi, jour, jeux, reports: reps, concours, joueurs, moiPseudo: u.pseudo });
+    const cm = await db.prepare("SELECT COUNT(*) AS n, SUM(CASE WHEN cdj_g > 0 THEN 1 ELSE 0 END) AS gagnants, SUM(CASE WHEN cdj_p > 0 THEN 1 ELSE 0 END) AS places, SUM(cdj_mise) AS mise, SUM(cdj_gains) AS gains FROM pm_pronos WHERE user_id = ? AND cdj_mise IS NOT NULL AND substr(jour, 1, 7) = ?").bind(m.id, jour.slice(0, 7)).first();
+    const cdjMois = { jours: cm.n || 0, gagnants: cm.gagnants || 0, places: cm.places || 0, mise: R2(cm.mise || 0), gains: R2(cm.gains || 0), net: R2((cm.gains || 0) - (cm.mise || 0)) };
+    return json({ pseudo: m.pseudo, modo: m.role === 'admin' || !!m.moderateur, moi: soi, jour, jeux, reports: reps, concours, joueurs, moiPseudo: u.pseudo, cdjMois });
   }
   if (q.get('classement')) {
     await verifierEnAttente(db);
@@ -303,11 +308,11 @@ export async function onRequestPost({ request, env }) {
     if (autre) {
       const ia = await coursePm(db, jour, autre.reunion, autre.course);
       if (ia && ia.heure && Date.now() >= ia.heure) return json({ erreur: `Ton cheval du jour est déjà engagé sur R${autre.reunion}C${autre.course}, qui est partie : tu ne peux plus le changer aujourd'hui.` }, 403);
-      await db.prepare('UPDATE pm_pronos SET cdj = NULL WHERE jour = ? AND user_id = ? AND cdj IS NOT NULL').bind(jour, u.id).run();
+      await db.prepare('UPDATE pm_pronos SET cdj = NULL, cdj_mise = NULL, cdj_gains = NULL, cdj_g = NULL, cdj_p = NULL WHERE jour = ? AND user_id = ? AND cdj IS NOT NULL').bind(jour, u.id).run();
     }
   }
   await db.prepare(`INSERT INTO pm_pronos (jour, reunion, course, hippo, user_id, chevaux, jeu, paris, mot, cdj) VALUES (?, ?, ?, ?, ?, ?, 'perso', ?, ?, ?)
-    ON CONFLICT(jour, reunion, course, user_id) DO UPDATE SET chevaux = excluded.chevaux, jeu = excluded.jeu, paris = excluded.paris, mot = excluded.mot, cdj = excluded.cdj, statut = 'attente', essai = NULL, cree = datetime('now')`)
+    ON CONFLICT(jour, reunion, course, user_id) DO UPDATE SET chevaux = excluded.chevaux, jeu = excluded.jeu, paris = excluded.paris, mot = excluded.mot, cdj = excluded.cdj, cdj_mise = NULL, cdj_gains = NULL, cdj_g = NULL, cdj_p = NULL, statut = 'attente', essai = NULL, cree = datetime('now')`)
     .bind(jour, R, C, info.hippo, u.id, JSON.stringify(ch.map((n) => ({ n }))), JSON.stringify(res.paris), mot, cdj).run();
   return json({ ok: true, paris: res.paris.length });
 }

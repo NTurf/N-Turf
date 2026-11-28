@@ -56,6 +56,9 @@ fetch('/api/social/fiche?pseudo=' + encodeURIComponent(P), {credentials:'same-or
       document.querySelectorAll('[data-pp]').forEach(function(x){ x.classList.toggle('on', x.getAttribute('data-pp') === k); });
       var B = b[k], T = B.types, m = 0, g = 0; T.forEach(function(x){ m += x.mise; g += x.gains; }); var n = Math.round((g - m) * 100) / 100;
       $('pmb').innerHTML = T.length ? '<p class="note2">' + B.pronos + ' prono' + (B.pronos > 1 ? 's' : '') + ' vérifié' + (B.pronos > 1 ? 's' : '') + '</p><table class="st"><tr><th>Jeu</th><th>Paris</th><th>Gagnés</th><th>Mise</th><th>Net</th></tr>' + T.map(function(x){ return '<tr><td>'+TYPES[x.t]+'</td><td>'+x.paris+'</td><td>'+x.gagnes+'</td><td>'+Fe(x.mise)+'</td><td class="'+cl(x.net)+'"><b>'+Fn(x.net)+'</b></td></tr>'; }).join('') + '<tr><td><b>Total</b></td><td></td><td></td><td><b>'+Fe(m)+'</b></td><td class="'+cl(n)+'"><b>'+Fn(n)+'</b></td></tr></table>' : '<p class="empty">Pas encore de prono vérifié sur cette période.</p>';
+      // le cheval du jour : 1 € gagnant + 1 € placé chaque jour
+      var K = b.cdj && b.cdj[k];
+      if (K && K.jours) $('pmb').innerHTML += '<h3 style="margin:12px 0 4px">⭐ Son cheval du jour</h3><p class="note2" style="margin:0 0 4px">1 € gagnant + 1 € placé chaque jour, à masse égale.</p><table class="st"><tr><th>Jours</th><th>Gagnants</th><th>Placés</th><th>Mise</th><th>Retour</th><th>Net</th></tr><tr><td>' + K.jours + '</td><td>' + K.gagnants + '</td><td>' + K.places + '</td><td>' + Fe(K.mise) + '</td><td>' + Fe(K.gains) + '</td><td class="' + cl(K.net) + '"><b>' + Fn(K.net) + '</b></td></tr></table>';
     }
     document.querySelectorAll('[data-pp]').forEach(function(x){ x.onclick = function(){ voir(x.getAttribute('data-pp')); }; });
     $('pmz').hidden = false; voir('mois');
