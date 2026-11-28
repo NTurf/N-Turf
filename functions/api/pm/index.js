@@ -74,6 +74,16 @@ export async function onRequestGet({ request, env }) {
     const m = await db.prepare('SELECT id, pseudo, role, moderateur FROM users WHERE pseudo = ? COLLATE NOCASE AND banni = 0').bind(q.get('fiche')).first();
     if (!m) return json({ erreur: 'Membre introuvable.' }, 404);
     const ac = await acces(), soi = m.id === u.id, chef = u.role === 'admin' || !!u.moderateur;
+    // les onglets : tous les membres qui ont joué ce jour-là (course par course si on participe, concours si on l'a joué)
+    let joueurs = [u.pseudo];
+    try {
+      const L = [];
+      if (ac.ok) L.push(...((await db.prepare("SELECT DISTINCT u.pseudo FROM pm_pronos p JOIN users u ON u.id = p.user_id WHERE p.jour = ? AND u.banni = 0").bind(jour).all()).results || []).map((x) => x.pseudo));
+      await initConcours(db);
+      const jc = u.role === 'admin' || !!(await db.prepare('SELECT 1 FROM concours_pronos WHERE date = ? AND user_id = ?').bind(jour, u.id).first());
+      if (jc) L.push(...((await db.prepare("SELECT u.pseudo FROM concours_pronos p JOIN users u ON u.id = p.user_id WHERE p.date = ? AND u.banni = 0 AND u.role != 'robot'").bind(jour).all()).results || []).map((x) => x.pseudo));
+      joueurs = [...new Set([u.pseudo, ...L])].sort((x, y) => (x === u.pseudo ? -1 : y === u.pseudo ? 1 : x.localeCompare(y, 'fr', { sensitivity: 'base' })));
+    } catch (e) {}
     // le prono du concours Quinté+ de ce jour : visible par lui, et par ceux qui ont aussi joué le concours ce jour-là
     let concours = null;
     try {
@@ -92,7 +102,7 @@ export async function onRequestGet({ request, env }) {
       }
     } catch (e) { concours = null; }
     // les jeux du course par course : réservés à ceux qui participent (3 pronos par jour)
-    if (!soi && !ac.ok) return json({ pseudo: m.pseudo, jour, verrou: ac, concours, jeux: [] });
+    if (!soi && !ac.ok) return json({ pseudo: m.pseudo, jour, verrou: ac, concours, jeux: [], joueurs, moiPseudo: u.pseudo });
     const rows = (await db.prepare('SELECT id, reunion, course, hippo, chevaux, jeu, paris, mot, statut, mise, gains, detail FROM pm_pronos WHERE user_id = ? AND jour = ?').bind(m.id, jour).all()).results || [];
     const infos = await Promise.all(rows.map((p) => coursePm(db, jour, p.reunion, p.course).catch(() => null)));
     // un nouveau passage, une fois les courses calculées entre-temps
@@ -108,7 +118,7 @@ export async function onRequestGet({ request, env }) {
         chevaux, noms, paris, jeuNom: resume(paris, p.jeu), mot: p.mot || '', statut: x.statut, mise: x.mise, gains: x.gains,
         detail: Array.isArray(detail) ? detail.filter((y) => y && typeof y === 'object') : [] };
     }).sort((a, b) => (a.heure || 0) - (b.heure || 0) || a.r - b.r || a.c - b.c);
-    return json({ pseudo: m.pseudo, modo: m.role === 'admin' || !!m.moderateur, moi: soi, jour, jeux, concours });
+    return json({ pseudo: m.pseudo, modo: m.role === 'admin' || !!m.moderateur, moi: soi, jour, jeux, concours, joueurs, moiPseudo: u.pseudo });
   }
   if (q.get('classement')) {
     await verifierEnAttente(db);

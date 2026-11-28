@@ -29,6 +29,7 @@
 .tot{font-weight:800;margin-top:4px;font-size:14px}
 .bil{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;text-align:center;margin:8px 0 0}
 .bil div{background:#f4f7fc;border-radius:8px;padding:6px 2px}.bil span{display:block;font-size:12px;color:#5b6b85}.bil b{font-size:16px}
+.ongm{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 10px}.ongm .pill{white-space:nowrap}
 .lock{background:#fff6e5;border:1px solid #e0b450;border-radius:8px;padding:8px 10px;margin:8px 0}
 </style>
 </head>
@@ -81,7 +82,10 @@ function dessiner(d){
   var jourTxt = new Date(JOUR + 'T12:00:00').toLocaleDateString('fr-FR', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
   var J = [[-2,''],[-1,'Hier'],[0,'Aujourd\'hui'],[1,'Demain']].map(function(x){ return iso(x[0]); });
   if (J.indexOf(JOUR) < 0) J.unshift(JOUR);
-  var h = '<section class="fj"><h1>📋 Fiche du jour</h1><p class="sous"><a href="/fiche.html?p=' + encodeURIComponent(d.pseudo) + '"' + (d.modo ? ' style="color:#d8232f"' : '') + '><b>' + E(d.pseudo) + '</b></a> · ' + E(jourTxt) + '</p>' +
+  // les onglets : un par membre qui a joué ce jour-là
+  var JO = d.joueurs || [d.pseudo];
+  var h = '<div class="ongm">' + JO.map(function(x){ return '<button type="button" class="pill' + (x.toLowerCase() === String(d.pseudo).toLowerCase() ? ' on' : '') + '" data-ps="' + E(x) + '">' + (x === d.moiPseudo ? '⭐ Moi' : E(x)) + '</button>'; }).join('') + '</div>' +
+    '<section class="fj"><h1>📋 Fiche du jour</h1><p class="sous"><a href="/fiche.html?p=' + encodeURIComponent(d.pseudo) + '"' + (d.modo ? ' style="color:#d8232f"' : '') + '><b>' + E(d.pseudo) + '</b></a> · ' + E(jourTxt) + '</p>' +
     '<div class="nav"><button type="button" class="btn ghost" id="jP">◀</button><select id="jS">' + J.map(function(j){ return '<option value="' + j + '"' + (j === JOUR ? ' selected' : '') + '>' + j.split('-').reverse().join('/') + (j === iso(0) ? ' (aujourd\'hui)' : '') + '</option>'; }).join('') + '</select><button type="button" class="btn ghost" id="jN">▶</button></div>';
 
   // le concours Quinté+
@@ -118,6 +122,7 @@ function dessiner(d){
   }
   h += '</div></section>';
   $('rendu').innerHTML = h;
+  document.querySelectorAll('[data-ps]').forEach(function(b){ b.onclick = function(){ PS = b.getAttribute('data-ps'); charger(); }; });
   $('jS').onchange = function(){ JOUR = this.value; charger(); };
   $('jP').onclick = function(){ var t = new Date(JOUR + 'T12:00:00Z'); t.setUTCDate(t.getUTCDate() - 1); JOUR = t.toISOString().slice(0, 10); charger(); };
   $('jN').onclick = function(){ var t = new Date(JOUR + 'T12:00:00Z'); t.setUTCDate(t.getUTCDate() + 1); JOUR = t.toISOString().slice(0, 10); charger(); };
