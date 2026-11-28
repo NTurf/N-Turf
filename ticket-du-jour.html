@@ -100,6 +100,17 @@
 .journal .case .tq .lead{display:none}
 .journal .case .tq .bilan{border:0;border-top:2px solid #111;border-radius:0;background:transparent;padding:4px 0;margin:4px 0 0}
 .journal .case .item{border-bottom:1px dotted #999;padding:6px 0}
+/* Les onglets : un Ticket du jour par pronostiqueur, chacun sa couleur */
+.onglets{display:flex;gap:6px;margin:0 0 10px;flex-wrap:wrap}
+.ong{flex:1;min-width:140px;padding:11px 8px;border:2px solid #8a6100;background:#fff;color:#8a6100;font:800 15px Arial,sans-serif;border-radius:10px;cursor:pointer}
+.ong.oh{border-color:#1E5BB5;color:#1E5BB5}
+.ong.on.ob{background:#8a6100;color:#fff}
+.ong.on.oh{background:#1E5BB5;color:#fff}
+.journal .titre2{font:italic 900 30px Georgia,serif;margin:-4px 0 4px}
+.journal.jb{border-top:8px solid #8a6100}.journal.jb .titre2{color:#8a6100}
+.journal.jh{border-top:8px solid #1E5BB5;background:#f6f9ff}.journal.jh .titre2{color:#1E5BB5}
+.journal.jh .rub{color:#1E5BB5;border-color:#1E5BB5}
+.journal.jh .encadre{border-color:#1E5BB5;background:#eef4fd}.journal.jh .encadre .lab{color:#1E5BB5}.journal.jh .encadre .cnum{background:#1E5BB5}
 .charte{background:#FFF6DC;border:1px solid #f0be3c;border-radius:10px;padding:8px 10px}
 </style>
 </head>
@@ -146,27 +157,41 @@
     return { R: R, c: c, txt: 'R' + p.r + 'C' + p.c + (c.heure ? ' · ' + hm(c.heure) : '') + ' · ' + E(R.h || p.hippodrome || '') + (c.libelle || p.course ? ' — ' + E(c.libelle || p.course) : '') };
   }
   function arrLigne(c){ return c && c.arrivee && c.arrivee.length ? '<div class="arrline">Arrivée : <b>' + c.arrivee.slice(0, c.quinte || c.pick5 ? 5 : 4).join(' - ') + '</b></div>' : ''; }
+  var ONG = 'Choix de Bruno'; try { ONG = localStorage.getItem('tdOnglet') || ONG; } catch (e) {}
+  function brancherOnglets(){
+    $('rendu').querySelectorAll('.ong').forEach(function(b){ b.onclick = function(){ ONG = b.getAttribute('data-sig'); try { localStorage.setItem('tdOnglet', ONG); } catch (e) {} dessiner(); }; });
+  }
   function dessiner(){
-    var d = D, P = d.pubs.filter(function(p){ return !p.supprime; }); // les publications supprimées ne s'affichent plus, même pour l'administrateur (elles restent listées dans Administration > Ticket du jour)
+    var d = D, P0 = d.pubs.filter(function(p){ return !p.supprime; }); // les publications supprimées ne s'affichent plus, même pour l'administrateur (elles restent listées dans Administration > Ticket du jour)
+    // un Ticket du jour par pronostiqueur : Bruno, Hippodrome… (un onglet chacun, on passe de l'un à l'autre)
+    var sigDe = function(p){ return /bruno/i.test(p.signature || '') ? 'Choix de Bruno' : (p.signature || ''); };
+    var TQ0 = d.anciens && d.anciens.tickets && d.anciens.tickets.length ? d.anciens : null, X0 = d.extras || null;
+    var SIGS = ['Choix de Bruno']; P0.forEach(function(p){ var k = sigDe(p); if (SIGS.indexOf(k) < 0) SIGS.push(k); });
+    if (SIGS.indexOf(ONG) < 0) ONG = 'Choix de Bruno';
+    var BR = ONG === 'Choix de Bruno', nomCourt = function(sig){ return sig === 'Choix de Bruno' ? 'Bruno' : sig.replace(/^choix\s+(de\s+|d')?/i, ''); };
+    var deNom = function(sig){ var n = nomCourt(sig); return (/^[aeiouyhâéèêîôûAEIOUYHÉ]/.test(n) ? "d'" : 'de ') + n; };
+    var P = P0.filter(function(p){ return sigDe(p) === ONG; });
+    var TQ = BR ? TQ0 : null, X = BR ? X0 : null;
     var jour = new Date(d.date + 'T12:00:00').toLocaleDateString('fr-FR', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
-    var h = '<div class="journal"><div class="mast"><img src="/banniere.png" alt="N-TURF"><div class="titre">Le Ticket du Jour</div><div class="devise">Le collectif des passionnés de courses hippiques</div></div>' +
-      '<div class="dateline"><span>Édition du ' + E(jour) + '</span><span>' + (function(){ var n = P.filter(function(p){ return !p.supprime; }).length + (d.anciens && d.anciens.tickets ? d.anciens.tickets.length : 0) + (d.extras ? (d.extras.cheval ? 1 : 0) + (d.extras.reports || []).length + (d.extras.autres || []).length + (d.extras.texte && d.extras.texte.trim() ? 1 : 0) : 0); return n + ' publication' + (n > 1 ? 's' : ''); })() + '</span></div>';
-    var TQ = d.anciens && d.anciens.tickets && d.anciens.tickets.length ? d.anciens : null, X = d.extras || null;
-    if (!P.length && !TQ && !X) { $('rendu').innerHTML = h + '<p class="vide2">' + (d.erreurPmu ? 'Le programme du PMU ne répond pas pour le moment.' : 'L\'édition du jour se prépare : les pronostics de nos contributeurs arrivent.') + '</p></div>'; return; }
+    var nPub = P.length + (TQ ? TQ.tickets.length : 0) + (X ? (X.cheval ? 1 : 0) + (X.reports || []).length + (X.autres || []).length + (X.texte && X.texte.trim() ? 1 : 0) : 0);
+    var h = '<div class="onglets">' + SIGS.map(function(sig){ return '<button type="button" class="ong' + (sig === ONG ? ' on' : '') + (sig === 'Choix de Bruno' ? ' ob' : ' oh') + '" data-sig="' + E(sig) + '">Ticket ' + E(deNom(sig)) + '</button>'; }).join('') + '</div>' +
+      '<div class="journal ' + (BR ? 'jb' : 'jh') + '"><div class="mast"><img src="/banniere.png" alt="N-TURF"><div class="titre">Le Ticket du Jour</div><div class="titre2">' + E(deNom(ONG)) + '</div><div class="devise">Le collectif des passionnés de courses hippiques</div></div>' +
+      '<div class="dateline"><span>Édition du ' + E(jour) + '</span><span>' + nPub + ' publication' + (nPub > 1 ? 's' : '') + '</span></div>';
+    if (!P.length && !TQ && !X) { $('rendu').innerHTML = h + '<p class="vide2">' + (d.erreurPmu ? 'Le programme du PMU ne répond pas pour le moment.' : 'L\'édition du jour se prépare : les pronostics ' + E(deNom(ONG)) + ' arrivent.') + '</p></div>'; brancherOnglets(); return; }
     // À la une : les coups de cœur
     var C = P.filter(function(p){ return p.type === 'coeur'; }), K = X && X.cheval;
     if (C.length || K) {
       h += '<div class="rub">À la une</div><div class="une' + ((K ? 1 : 0) + C.length > 1 ? ' g2' : '') + '">';
       if (K) {
         var rk = K.resultat;
-        h += '<div class="encadre"><div class="lab">❤ Le cheval du jour</div><div class="cnum">' + K.n + '</div><div class="cnom">' + E(K.nom || 'N° ' + K.n) + '</div><div class="ccrs">R' + K.r + 'C' + K.c + (K.heure ? ' · ' + hm(K.heure) : '') + (K.hippodrome ? ' · ' + E(K.hippodrome) : '') + (K.libelle ? ' — ' + E(K.libelle) : '') + '</div><div class="csig">par Choix de Bruno</div>' +
+        h += '<div class="encadre"><div class="lab">❤ Le cheval du jour</div><div class="cnum">' + K.n + '</div><div class="cnom">' + E(K.nom || 'N° ' + K.n) + '</div><div class="ccrs">R' + K.r + 'C' + K.c + (K.heure ? ' · ' + hm(K.heure) : '') + (K.hippodrome ? ' · ' + E(K.hippodrome) : '') + (K.libelle ? ' — ' + E(K.libelle) : '') + '</div>' +
           (K.commentaire ? '<p class="com" style="font-style:italic;margin:6px 0 0">« ' + E(K.commentaire) + ' »</p>' : '') +
           (rk ? '<div class="res" style="margin-top:6px;font-family:Arial,sans-serif">' + (rk.np ? 'Non partant : remboursé' : (rk.rang === 1 ? '<span class="pos">GAGNANT !</span>' : rk.place ? '<span class="pos">Placé ' + rk.rang + 'e</span>' : (rk.rang ? rk.rang + 'e' : 'Non placé')) + ' · 1 € gagnant + 1 € placé : rapporte <b>' + EUR(rk.gagne + rk.place) + '</b> pour 2,00 € · net ' + netH(rk.gagne + rk.place - 2)) + '</div>'
             : (K.arrivee && K.arrivee.length ? '<div class="arrline">Arrivée : <b>' + K.arrivee.slice(0, 4).join(' - ') + '</b></div>' : '')) + '</div>';
       }
       C.forEach(function(p){
         var i = infoCourse(p), n = p.chevaux[0], r = p.resultat;
-        h += '<div class="encadre' + (p.supprime ? ' item sup' : '') + '"><div class="lab">❤ Coup de cœur du jour</div><div class="cnum">' + n + '</div><div class="cnom">' + E((p.ticket && p.ticket.nom) || 'N° ' + n) + '</div><div class="ccrs">' + i.txt + '</div><div class="csig">par ' + E(p.signature) + '</div>' + (p.commentaire ? '<p class="com" style="font-style:italic;margin:6px 0 0">« ' + E(p.commentaire) + ' »</p>' : '') +
+        h += '<div class="encadre' + (p.supprime ? ' item sup' : '') + '"><div class="lab">❤ Coup de cœur du jour</div><div class="cnum">' + n + '</div><div class="cnom">' + E((p.ticket && p.ticket.nom) || 'N° ' + n) + '</div><div class="ccrs">' + i.txt + '</div>' + (p.commentaire ? '<p class="com" style="font-style:italic;margin:6px 0 0">« ' + E(p.commentaire) + ' »</p>' : '') +
           (r ? '<div class="res" style="margin-top:6px;font-family:Arial,sans-serif">' + (r.rang === 1 ? '<span class="pos">GAGNANT !</span>' : r.place ? '<span class="pos">Placé ' + r.rang + 'e</span>' : (r.rang ? r.rang + 'e' : 'Non placé')) + ' · 1 € gagnant + 1 € placé : rapporte <b>' + EUR(r.gagne + r.place) + '</b> pour 2,00 €</div>' : arrLigne(i.c)) + actions(p, i.c) + '</div>';
       });
       h += '</div>';
@@ -178,7 +203,7 @@
     var par = {}, ordre = [];
     Q.sort(function(a, b){ return (infoCourse(a).c.heure || 0) - (infoCourse(b).c.heure || 0); }).forEach(function(p){ var k = /bruno/i.test(p.signature) ? 'Choix de Bruno' : p.signature; if (!par[k]) { par[k] = []; ordre.push(k); } par[k].push(p); });
     var aBruno = (X && ((X.texte && X.texte.trim()) || (X.reports && X.reports.length) || (X.autres && X.autres.length))) || TQ || par['Choix de Bruno'];
-    if (aBruno && ordre.indexOf('Choix de Bruno') < 0) ordre.push('Choix de Bruno');
+    if (BR && aBruno && ordre.indexOf('Choix de Bruno') < 0) ordre.push('Choix de Bruno');
     ordre.sort(function(a, b){ return (b === 'Choix de Bruno' ? 1 : 0) - (a === 'Choix de Bruno' ? 1 : 0); });
     // les publications d'un pronostiqueur, regroupées par course (la course écrite une seule fois)
     // dans sa propre case, le nom « Choix Bruno » n'est pas répété sur chaque ticket (TCR, ALGO… restent indiqués)
@@ -190,9 +215,9 @@
         h2 += '<div class="item">' + corps(p, i.c) + '</div>'; });
       return h2;
     }
-    if (ordre.length) h += '<div class="rub">Nos pronostiqueurs</div>';
+    if (ordre.length) h += '<div class="rub">Les pronostics du jour</div>';
     ordre.forEach(function(sig){
-      var c = '<section class="case"><h2 class="sig' + (sig === 'Choix de Bruno' ? ' bruno' : '') + '">' + E(sig) + '</h2>';
+      var c = '<section class="case">';
       if (sig === 'Choix de Bruno') {
         if (X && X.texte && X.texte.trim()) c += '<div class="edito"><h3>' + E(X.titre || 'Le mot du jour') + '</h3>' + NTT.paragraphes(X.texte) + '</div>';
         if (TQ) c += '<div class="crs">' + txtQ + ' · <b>Quinté+</b>' + arrLigne(cq) + '</div><div class="tq">' + NTT.rendu(sansNom(TQ), ctxQ(cq)) + '</div>';
@@ -209,6 +234,7 @@
       h += c + '</section>';
     });
     $('rendu').innerHTML = h + '</div>';
+    brancherOnglets();
     $('rendu').querySelectorAll('.act').forEach(function(b){ b.onclick = function(){
       var adm = D.moi.admin, motif = adm ? prompt('Retirer cette publication ? Motif (facultatif, gardé pour toi) :', '') : (confirm('Retirer ta publication ?') ? '' : null);
       if (motif === null) return;
