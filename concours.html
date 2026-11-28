@@ -20,7 +20,9 @@
 <div id="refus" class="note" hidden>🔒 Pour jouer, il faut être membre (gratuit). <a href="/inscription.html">S'inscrire</a> ou <a href="/inscription.html#connexion">se connecter</a>. Les podiums ci-dessous sont visibles de tous.</div>
 
 <section id="zJeu" hidden>
-  <div class="sectit"><span>Mon pronostic</span></div>
+  <div class="sectit"><span>📚 Archives : choisis un jour</span></div>
+  <div class="jourbar"><button type="button" class="btn ghost" id="jPrec" aria-label="Jour précédent">◀</button><select id="jSel"></select><button type="button" class="btn ghost" id="jSuiv" aria-label="Jour suivant">▶</button></div>
+  <div class="sectit"><span id="titPr">Mon pronostic</span></div>
   <section class="card" id="cSaisie">
     <p class="sub" id="aide">Touche les chevaux dans l'ordre de ton classement : 1er, 2e… jusqu'au 8e. Touche une case pour la vider.</p>
     <div class="pgrid" id="pgrid"></div>
@@ -79,8 +81,11 @@
   var F7 = function(){ return D && D.format === 7; };
   var D = null, choix = [], ecart = 0, globeMoi = null;
 
+  var DATE = '';
+  function frD(iso){ return iso.split('-').reverse().join('/'); }
+  function changerJour(iso){ DATE = iso === (D && D.jourCourant) ? '' : iso; choix = []; document.getElementById('msg').textContent = ''; chargerJour(); }
   function chargerJour(){
-    return fetch('/api/concours/jour', {credentials:'same-origin', cache:'no-store'}).then(function(r){
+    return fetch('/api/concours/jour' + (DATE ? '?date=' + DATE : ''), {credentials:'same-origin', cache:'no-store'}).then(function(r){
       if (r.status === 401) { document.getElementById('refus').hidden = false; return null; }
       return r.json();
     }).then(function(d){
@@ -89,6 +94,10 @@
       document.getElementById('miseJ').textContent = F(d.miseJour) + ' fers';
       document.getElementById('zJeu').hidden = false;
       if (d.moi && !choix.length) choix = d.moi.chevaux.slice();
+      // archives : tous les jours du concours ; un jour passé montre mon ticket, l'arrivée, les gains et les pronostics de tous
+      var J = d.jours || [d.date];
+      document.getElementById('jSel').innerHTML = J.map(function(j){ return '<option value="' + j + '"' + (j === d.date ? ' selected' : '') + '>' + frD(j) + (j === d.jourCourant ? ' (en cours)' : '') + '</option>'; }).join('');
+      document.getElementById('titPr').textContent = d.date === d.jourCourant ? 'Mon pronostic' : 'Mon ticket du ' + d.dateFr;
       dessinerJeu();
     });
   }
@@ -264,6 +273,9 @@
 
   document.getElementById('lienRegl').onclick = function(e){ e.preventDefault(); var d = document.getElementById('dRegl'); d.open = true; document.getElementById('reglement').scrollIntoView({behavior:'smooth'}); };
   if (location.hash === '#reglement') document.getElementById('dRegl').open = true;
+  document.getElementById('jSel').onchange = function(){ changerJour(this.value); };
+  document.getElementById('jPrec').onclick = function(){ var J = D && D.jours || [], i = J.indexOf(D.date); if (i >= 0 && i < J.length - 1) changerJour(J[i + 1]); };
+  document.getElementById('jSuiv').onclick = function(){ var J = D && D.jours || [], i = J.indexOf(D.date); if (i > 0) changerJour(J[i - 1]); };
   chargerJour().then(chargerCl).then(tic);
   // Rafraîchit toutes les minutes : dès que l'arrivée est validée, les résultats apparaissent
   setInterval(function(){ if (D && D.course && !D.course.calcule && (Date.now() + ecart) > D.course.cloture) chargerJour().then(chargerCl); }, 60000);

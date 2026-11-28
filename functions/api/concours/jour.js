@@ -36,5 +36,10 @@ export async function onRequestGet({ request, env }) {
   const auj = new Date().toLocaleDateString('fr-CA', { timeZone: 'Europe/Paris' });
   out.grilles = u.role === 'admin' || !!(await db.prepare('SELECT 1 FROM concours_pronos WHERE user_id = ? AND date >= ? LIMIT 1').bind(u.id, auj).first());
   out.participants = (await db.prepare('SELECT COUNT(*) AS n FROM concours_pronos WHERE date = ?').bind(iso).first()).n;
+  // archives : les jours du concours, du plus récent au plus ancien (le jour en cours en tête)
+  const courant = await jourConcours(db);
+  out.jourCourant = courant;
+  out.jours = ((await db.prepare('SELECT DISTINCT date FROM concours_pronos WHERE date <= ? ORDER BY date DESC LIMIT 200').bind(courant).all()).results || []).map((x) => x.date);
+  if (!out.jours.includes(courant)) out.jours.unshift(courant);
   return json(out);
 }
