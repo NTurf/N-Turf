@@ -603,3 +603,9 @@ main > h1:not(.nlogo), main h1#titre{display:inline-block;font-family:'Barlow Co
 .pmsyn{margin:-4px 0 10px;font-size:14px;display:flex;flex-wrap:wrap;align-items:center;gap:5px}
 .pmsyn span{display:inline-flex;align-items:center;justify-content:center;min-width:28px;height:28px;border-radius:50%;background:#dce8f7;border:2px solid #9fbbe0;font-weight:800;color:#0e2a5c}
 .pmsyn span.pt3{background:#f6d77a;border-color:#b8860b}
+/* Tchat sur ordinateur : toute la largeur de l'écran, et la case pour écrire visible sans faire défiler */
+@media (min-width:900px){
+  .chatpage main{max-width:min(1500px,96vw)}
+  .chatpage .fil{height:calc(100vh - 380px);min-height:380px}
+  .chatpage .cm{max-width:96%}
+}
