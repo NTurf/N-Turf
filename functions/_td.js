@@ -9,7 +9,7 @@ import { lireContenu, ecrireContenu } from './_auth.js';
 
 export const PARIS = Object.keys(NTT.PARIS); // Tiercé, Quarté+, Quinté+, Multi, 2 sur 4, Trio, Super 4
 // Codes PMU de chaque pari, pour ne proposer que ce qui existe sur la course
-const CODES = { 'Tiercé': ['TIERCE'], 'Quarté+': ['QUARTE_PLUS'], 'Quinté+': ['QUINTE_PLUS'], 'Multi': ['MULTI', 'MINI_MULTI'], '2 sur 4': ['DEUX_SUR_QUATRE'], 'Trio': ['TRIO'], 'Super 4': ['SUPER_QUATRE'] };
+const CODES = { 'Tiercé': ['TIERCE'], 'Quarté+': ['QUARTE_PLUS'], 'Quinté+': ['QUINTE_PLUS'], 'Multi': ['MULTI', 'MINI_MULTI'], '2 sur 4': ['DEUX_SUR_QUATRE'], 'Trio': ['TRIO'], 'Super 4': ['SUPER_QUATRE'], 'Couplé gagnant': ['COUPLE_GAGNANT'], 'Couplé placé': ['COUPLE_PLACE'] };
 export const CHARTE = "La rubrique Ticket du jour fonctionne sur le principe de la publication libre par les contributeurs autorisés, avec modération a posteriori. L'administrateur conserve le droit de supprimer toute publication qu'il estime inadaptée ou ne correspondant pas à l'esprit de la rubrique.";
 export const auj = () => new Date().toLocaleDateString('fr-CA', { timeZone: 'Europe/Paris' });
 const pmuDate = (iso) => iso.split('-').reverse().join('');
@@ -215,17 +215,24 @@ export { NTT };
 // On complète avec le nom des chevaux, l'heure, l'arrivée, et le résultat calculé aux rapports définitifs du PMU.
 // Cheval du jour : 1 € gagnant + 1 € placé. Report : la mise sur le 1er cheval, tout ce qu'il rapporte est rejoué sur le 2e.
 export function aDesExtras(X) {
-  return !!(X && (X.cheval || (X.reports && X.reports.length) || (X.texte && String(X.texte).trim())));
+  return !!(X && (X.cheval || (X.reports && X.reports.length) || (X.autres && X.autres.length) || (X.texte && String(X.texte).trim())));
 }
 export async function extrasResultats(db, iso, X) {
   if (!aDesExtras(X)) return null;
   const N = (v) => { const n = parseInt(v, 10); return n > 0 && n < 100 ? n : 0; };
   const out = { cheval: X.cheval && N(X.cheval.n) ? { r: N(X.cheval.r), c: N(X.cheval.c), n: N(X.cheval.n), commentaire: String(X.cheval.commentaire || '').slice(0, 200) } : null,
     reports: (X.reports || []).filter((p) => N(p.n1) && N(p.n2)).map((p) => ({ r: N(p.r), c1: N(p.c1), n1: N(p.n1), c2: N(p.c2), n2: N(p.n2), pari: p.pari === 'P' ? 'P' : 'G', mise: Math.round((Number(p.mise) || 1) * 100) / 100, commentaire: String(p.commentaire || '').slice(0, 200) })),
-    titre: String(X.titre || '').slice(0, 80), texte: String(X.texte || '').slice(0, 5000) };
+    titre: String(X.titre || '').slice(0, 80), texte: String(X.texte || '').slice(0, 5000),
+    // tickets sur d'autres courses (couplé, trio, tiercé… en combiné, champ réduit ou champ total)
+    autres: (X.autres || []).filter((t) => t && NTT.PARIS[t.pari] && NTT.FORMULES[t.formule] && N(t.r) && N(t.c)).map((t) => {
+      const L = (a) => [...new Set((Array.isArray(a) ? a : []).map(N).filter(Boolean))];
+      return { r: N(t.r), c: N(t.c), pari: t.pari, formule: t.formule, chevaux: L(t.chevaux), bases: L(t.bases), associes: L(t.associes),
+        mise: Math.round((Number(t.mise) || NTT.PARIS[t.pari].mise) * 100) / 100, commentaire: String(t.commentaire || '').slice(0, 200) };
+    }) };
   const besoins = new Set();
   if (out.cheval) besoins.add(`${out.cheval.r}-${out.cheval.c}`);
   for (const p of out.reports) { besoins.add(`${p.r}-${p.c1}`); besoins.add(`${p.r}-${p.c2}`); }
+  for (const t of out.autres) besoins.add(`${t.r}-${t.c}`);
   if (!besoins.size || !/^\d{4}-\d{2}-\d{2}$/.test(iso || '')) return out;
   let P = []; try { P = await programme(db, iso); } catch (e) { return out; }
   const d = pmuDate(iso), now = Date.now(), items = [];
@@ -243,7 +250,9 @@ export async function extrasResultats(db, iso, X) {
     const arr = co.arrivee || [], rang = arr.indexOf(+n) + 1;
     let g = 0, pl = 0;
     if (fini) for (const x of lireRapports(blocs)) { if (x.nom === 'Gagnant' && rang === 1) g = x.euros; const m = String(x.nom).match(/^Placé\s+(\d+)$/); if (m && +m[1] === +n) pl = x.euros; }
-    return { nom: h ? h.nom : '', np: !!(h && h.statut === 'NON_PARTANT'), heure: co.heure || 0, hippodrome: R ? R.h : '', libelle: co.libelle || '',
+    const tous = (parts && parts.participants) || [];
+    return { nb: tous.filter((x) => x.statut !== 'NON_PARTANT').length || co.partants || 0, nps: tous.filter((x) => x.statut === 'NON_PARTANT').map((x) => x.numPmu), raps: fini ? lireRapports(blocs) : null,
+      nom: h ? h.nom : '', np: !!(h && h.statut === 'NON_PARTANT'), heure: co.heure || 0, hippodrome: R ? R.h : '', libelle: co.libelle || '',
       arrivee: arr.slice(0, 5), fini, rang: rang || null, g: r2(g), p: r2(pl) };
   };
   if (out.cheval) {
@@ -261,6 +270,14 @@ export async function extrasResultats(db, iso, X) {
     if (!g1) { p.resultat = { mise, reporte: 0, gagne: 0 }; continue; }
     if (!b.fini) { p.resultat = { mise, reporte: g1, attente: true }; continue; }
     p.resultat = { mise, reporte: g1, gagne: r2(g1 * b[cle]) };
+  }
+  for (const t of out.autres) {
+    const i = info(t.r, t.c, 0);
+    Object.assign(t, { heure: i.heure, hippodrome: i.hippodrome, libelle: i.libelle, arrivee: i.arrivee, nb: NTT.combinaisons(t, i.nb), cout: r2(NTT.cout(t, i.nb)) });
+    if (!i.fini) continue;
+    const g = NTT.gains(t, i.arrivee, i.raps, i.nb, i.nps);
+    // une combinaison gagnante dont le rapport manque n'est jamais comptée perdante
+    t.resultat = g && g.attente ? { attente: true, mise: t.cout } : { mise: t.cout, gagne: r2(g ? g.gagne : 0), detail: g ? g.detail : [] };
   }
   return out;
 }

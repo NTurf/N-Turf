@@ -61,6 +61,21 @@
 </div>
 <p><button type="button" class="btn ghost" id="rAdd">Ajouter ce report</button></p>
 <div id="rListe"></div>
+<h3>🎟️ Ticket sur une autre course</h3>
+<p class="note2">Couplé, Trio, Tiercé… sur n'importe quelle course du jour, en combiné, en champ réduit (base + associés) ou en champ total.</p>
+<div class="frm">
+<label>Réunion<select id="aR"></select></label>
+<label>Course<select id="aC"></select></label>
+<label>Pari<select id="aP"></select></label>
+<label>Formule<select id="aF"><option value="combine">Combiné</option><option value="reduit">Champ réduit (base + associés)</option><option value="champ">Champ total (base + tous les partants)</option></select></label>
+<label id="aLch">Chevaux<input id="aCh" inputmode="numeric" autocomplete="off" placeholder="ex. 9 12 3"></label>
+<label id="aLas">Associés<input id="aAs" inputmode="numeric" autocomplete="off" placeholder="ex. 3 7 11 14"></label>
+<label>Mise par combinaison (€)<input id="aMi" inputmode="decimal"></label>
+<label>Commentaire (facultatif)<input id="aCom" maxlength="200"></label>
+</div>
+<p class="note2" id="aCout"></p>
+<p><button type="button" class="btn ghost" id="aAdd">Ajouter ce ticket</button></p>
+<div id="aListe"></div>
 <h3>📝 Texte</h3>
 <div class="frm" style="grid-template-columns:1fr"><label>Titre (facultatif)<input id="xTit" maxlength="80" placeholder="Le mot du jour"></label></div>
 <p><textarea id="xTxt" rows="8" maxlength="5000" placeholder="Ton texte : ton avis sur la journée, une info, un conseil… (une ligne vide = nouveau paragraphe)" style="width:100%;box-sizing:border-box;background:var(--navy2);color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:8px;font-size:15px;font-family:inherit"></textarea></p>
@@ -82,7 +97,7 @@
 </main>
 <script src="/site.js?v=20261127r"></script>
 <script src="/attente.js?v=20261125a"></script>
-<script src="/tickets.js?v=20261128a"></script>
+<script src="/tickets.js?v=20261128b"></script>
 <script>
 var B = { date: '', tickets: [] }, Q = null, LIVE = null;
 function $(i){ return document.getElementById(i); }
@@ -104,7 +119,7 @@ function lireForm(){
   var spec = NTT.lireSpec($('fCh').value);
   var ass = NTT.nums($('fAss').value); if (f === 'positions' && !ass.length) ass = associesDuJour();
   return { id: Date.now().toString(36), auteur: $('fAut').value, pari: $('fPari').value, formule: f,
-    chevaux: f === 'champ' || f === 'positions' ? [] : ch, bases: f === 'champ' ? ch : [], spec: f === 'positions' ? spec : f === 'champ' ? NTT.specChamp(spec, $('fPari').value) : undefined,
+    chevaux: f === 'champ' || f === 'positions' || f === 'reduit' ? [] : ch, bases: f === 'champ' || f === 'reduit' ? ch : [], spec: f === 'positions' ? spec : f === 'champ' ? NTT.specChamp(spec, $('fPari').value) : undefined,
     mise: parseFloat($('fMise').value.replace(',', '.')) || 0, associes: ass };
 }
 function associesDuJour(){
@@ -114,7 +129,7 @@ function associesDuJour(){
 }
 function majCout(){
   var t = lireForm(), nb = NTT.combinaisons(t, partants());
-  $('lCh').firstChild.textContent = t.formule === 'champ' ? 'Bases, et X à la place voulue = tous les partants (ex. 9 X 12)' : t.formule === 'positions' ? 'Chevaux par place, X = associés (ex. 14 16 X)' : 'Chevaux';
+  $('lCh').firstChild.textContent = t.formule === 'champ' ? 'Bases, et X à la place voulue = tous les partants (ex. 9 X 12)' : t.formule === 'positions' ? 'Chevaux par place, X = associés (ex. 14 16 X)' : t.formule === 'reduit' ? 'Base(s) (les associés dans la case Associés)' : 'Chevaux';
   if (!nb && t.formule === 'champ' && t.spec) { var P = NTT.PARIS[t.pari]; $('fCout').textContent = 'Avec le X placé, écris une case par place : ' + P.k + ' pour le ' + t.pari + ' (ex. ' + ['9','X','12','13','14'].slice(0, P.k).join(' ') + ').'; return; }
   $('fCout').textContent = nb + ' combinaison' + (nb>1?'s':'') + ' × ' + NTT.eur(t.mise) + ' = ' + NTT.eur(nb * t.mise) + (t.formule === 'champ' ? ' (' + partants() + ' partants)' : '');
 }
@@ -149,8 +164,8 @@ function envoyer(cle, msg){
 
 // ---------- En plus du Quinté+ : cheval du jour, reports, texte (B.extras) ----------
 var PROG = [], DET = {};
-function X(){ if (!B.extras) B.extras = { cheval: null, reports: [], titre: '', texte: '' }; if (!B.extras.reports) B.extras.reports = []; return B.extras; }
-function aExtras(){ var x = B.extras; return !!(x && (x.cheval || (x.reports && x.reports.length) || (x.texte && x.texte.trim()))); }
+function X(){ if (!B.extras) B.extras = { cheval: null, reports: [], autres: [], titre: '', texte: '' }; if (!B.extras.reports) B.extras.reports = []; if (!B.extras.autres) B.extras.autres = []; return B.extras; }
+function aExtras(){ var x = B.extras; return !!(x && (x.cheval || (x.reports && x.reports.length) || (x.autres && x.autres.length) || (x.texte && x.texte.trim()))); }
 function jourTravail(){ return (Q && Q.date) || B.date || NTA.date; }
 function hmx(t){ return t ? new Date(t).toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit', timeZone:'Europe/Paris'}).replace(':', ' h ') : ''; }
 function reu(r){ return PROG.find(function(x){ return x.r === +r; }); }
@@ -179,6 +194,7 @@ function extrasApercu(){
   if (!aExtras()) return null;
   var x = JSON.parse(JSON.stringify(B.extras));
   if (x.cheval) { var R = reu(x.cheval.r), k = course(x.cheval.r, x.cheval.c); x.cheval.nom = nomDe(x.cheval.r, x.cheval.c, x.cheval.n); x.cheval.hippodrome = R ? R.h : ''; x.cheval.heure = k && k.heure; }
+  (x.autres || []).forEach(function(t){ var R = reu(t.r), k = course(t.r, t.c), n = nbPartants(t.r, t.c); t.hippodrome = R ? R.h : ''; t.heure = k && k.heure; t.libelle = k && k.libelle; t.nb = NTT.combinaisons(t, n); t.cout = NTT.cout(t, n); });
   x.reports.forEach(function(p){ var R = reu(p.r), a = course(p.r, p.c1), b = course(p.r, p.c2); p.hippodrome = R ? R.h : ''; p.nom1 = nomDe(p.r, p.c1, p.n1); p.nom2 = nomDe(p.r, p.c2, p.n2); p.heure1 = a && a.heure; p.heure2 = b && b.heure; });
   return x;
 }
@@ -192,6 +208,44 @@ function dessinerReports(){
   $('rListe').innerHTML = L.length ? L.map(function(p, i){ var R = reu(p.r);
     return '<div class="trow"><div><b>Report ' + (p.pari === 'P' ? 'placé' : 'gagnant') + '</b> · R' + p.r + (R ? ' ' + NTT.esc(R.h) : '') + '<br><span class="mono">C' + p.c1 + ' n° ' + p.n1 + ' ' + NTT.esc(nomDe(p.r, p.c1, p.n1)) + ' → C' + p.c2 + ' n° ' + p.n2 + ' ' + NTT.esc(nomDe(p.r, p.c2, p.n2)) + '</span> — ' + NTT.eur(p.mise) + '</div><div class="tact"><button data-i="' + i + '">✕</button></div></div>'; }).join('') : '';
   $('rListe').querySelectorAll('button').forEach(function(b){ b.onclick = function(){ X().reports.splice(+b.getAttribute('data-i'), 1); dessinerReports(); dessiner(); }; });
+}
+
+function nbPartants(r, c){ var k = course(r, c); return k && k.partants ? k.partants.filter(function(p){ return !p.np; }).length : 0; }
+function lireAutre(){
+  var f = $('aF').value, ch = NTT.nums($('aCh').value), m = parseFloat(String($('aMi').value).replace(',', '.')) || 0;
+  return { r: +$('aR').value, c: +$('aC').value, pari: $('aP').value, formule: f, chevaux: f === 'combine' ? ch : [], bases: f === 'combine' ? [] : ch, associes: f === 'reduit' ? NTT.nums($('aAs').value) : [], mise: m, commentaire: $('aCom').value.trim() };
+}
+function majAutre(){
+  var f = $('aF').value;
+  $('aLch').firstChild.textContent = f === 'combine' ? 'Chevaux' : 'Base(s)';
+  $('aLas').style.display = f === 'reduit' ? '' : 'none';
+  var t = lireAutre(), n = nbPartants(t.r, t.c), nb = NTT.combinaisons(t, n);
+  $('aCout').textContent = nb ? nb + ' combinaison' + (nb > 1 ? 's' : '') + ' × ' + NTT.eur(t.mise) + ' = ' + NTT.eur(nb * t.mise) + (f === 'champ' ? ' (' + n + ' partants)' : '') : (t.chevaux.length || t.bases.length ? 'Aucune combinaison : vérifie les chevaux et la formule.' : '');
+}
+function dessinerAutres(){
+  var L = X().autres;
+  $('aListe').innerHTML = L.map(function(t, i){ var R = reu(t.r), n = nbPartants(t.r, t.c);
+    return '<div class="trow"><div><b>' + NTT.esc(t.pari) + '</b> · ' + NTT.esc(NTT.FORMULES[t.formule]) + ' · R' + t.r + 'C' + t.c + (R ? ' ' + NTT.esc(R.h) : '') + '<br><span class="mono">' + NTT.esc(NTT.vue(t).join(' ')) + (t.formule === 'reduit' ? ' · X = ' + NTT.esc(t.associes.join(' ')) : '') + '</span> — ' + NTT.eur(NTT.cout(t, n)) + '</div><div class="tact"><button data-i="' + i + '">✕</button></div></div>'; }).join('');
+  $('aListe').querySelectorAll('button').forEach(function(b){ b.onclick = function(){ X().autres.splice(+b.getAttribute('data-i'), 1); dessinerAutres(); dessiner(); }; });
+}
+function initAutres(){
+  var P = ['Couplé gagnant', 'Couplé placé', 'Trio', '2 sur 4', 'Tiercé', 'Quarté+', 'Multi', 'Super 4', 'Quinté+'];
+  $('aP').innerHTML = P.map(function(p){ return '<option>' + p + '</option>'; }).join('');
+  $('aMi').value = String(NTT.PARIS[$('aP').value].mise).replace('.', ',');
+  optsReu($('aR'));
+  function chargerA(){ return detail($('aR').value).then(function(){ optsCourse($('aC'), $('aR').value); majAutre(); }); }
+  chargerA().then(function(){ dessinerAutres(); dessiner(); });
+  $('aR').onchange = chargerA; $('aC').onchange = majAutre;
+  $('aP').onchange = function(){ $('aMi').value = String(NTT.PARIS[this.value].mise).replace('.', ','); majAutre(); };
+  ['aF', 'aCh', 'aAs', 'aMi'].forEach(function(id){ $(id).addEventListener('input', majAutre); $(id).addEventListener('change', majAutre); });
+  $('aAdd').onclick = function(){
+    var t = lireAutre(), n = nbPartants(t.r, t.c);
+    if (!(t.mise > 0)) { $('aCout').textContent = 'Indique la mise par combinaison.'; return; }
+    if (!NTT.combinaisons(t, n)) { $('aCout').textContent = 'Ce ticket ne fait aucune combinaison : vérifie les chevaux et la formule.'; return; }
+    X().autres.push(t); $('aCh').value = ''; $('aAs').value = ''; $('aCom').value = '';
+    $('xMsg').className = 'msg ok'; $('xMsg').textContent = 'Ticket ajouté au brouillon.';
+    majAutre(); dessinerAutres(); dessiner();
+  };
 }
 function initExtras(){
   var x = X();
@@ -207,6 +261,7 @@ function initExtras(){
     function chargerR(){ return detail($('rR').value).then(function(){ optsCourse($('rC1'), $('rR').value); optsCourse($('rC2'), $('rR').value, null, +$('rC1').value); optsCheval($('rN1'), $('rR').value, $('rC1').value); optsCheval($('rN2'), $('rR').value, $('rC2').value); }); }
     chargerK(true).then(function(){ if (k && k.commentaire) $('kCom').value = k.commentaire; dessiner(); });
     chargerR().then(function(){ dessinerReports(); dessiner(); });
+    initAutres();
     $('kR').onchange = function(){ chargerK(false).then(majCheval); };
     $('kC').onchange = function(){ optsCheval($('kN'), $('kR').value, $('kC').value); majCheval(); };
     $('kN').onchange = majCheval; $('kCom').oninput = majCheval;

@@ -8,9 +8,11 @@ var NTT = (function(){
     'Multi':    { k: 4, mise: 3 },
     '2 sur 4':  { k: 2, mise: 3 },
     'Trio':     { k: 3, mise: 1 },
-    'Super 4':  { k: 4, mise: 3, ordre: true }
+    'Super 4':  { k: 4, mise: 3, ordre: true },
+    'Couplé gagnant': { k: 2, mise: 1.5 },
+    'Couplé placé':   { k: 2, mise: 1.5 }
   };
-  var FORMULES = { combine: 'Combiné', ligne: 'Ligne (dans l\'ordre écrit)', champ: 'Champ (X = tous les partants, à la place voulue)', positions: 'Champ réduit par place (X = associés)' };
+  var FORMULES = { combine: 'Combiné', ligne: 'Ligne (dans l\'ordre écrit)', champ: 'Champ (X = tous les partants, à la place voulue)', positions: 'Champ réduit par place (X = associés)', reduit: 'Champ réduit (bases + associés)' };
   function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
   function eur(v){ return (Math.round(v*100)/100).toFixed(2).replace('.', ',') + ' €'; }
   function C(n, k){ if (k < 0 || n < k) return 0; var r = 1; for (var i = 1; i <= k; i++) r = r * (n - k + i) / i; return Math.round(r); }
@@ -20,6 +22,8 @@ var NTT = (function(){
   // ensemble des chevaux possibles d'un ticket
   function pool(t, partants){
     if (t.formule === 'champ') { var p = []; for (var i = 1; i <= (partants || 0); i++) p.push(i); return p; }
+    // champ réduit : les bases + les associés choisis
+    if (t.formule === 'reduit') return (t.bases || []).concat((t.associes || []).filter(function(n){ return (t.bases || []).indexOf(n) < 0; }));
     return t.chevaux || [];
   }
   // champ réduit par place : chaque place reçoit un cheval précis ou X (= la liste des associés)
@@ -50,6 +54,11 @@ var NTT = (function(){
     var P = PARIS[t.pari]; if (!P) return 0;
     if (t.formule === 'positions' || (t.formule === 'champ' && t.spec)) { if (!parPlace(t)) return 0; var c = 0; tuples(t, function(){ c++; }, partants); return c; }
     if (t.formule === 'ligne') return (t.chevaux || []).length === P.k ? 1 : 0;
+    if (t.formule === 'reduit') {
+      var bb = (t.bases || []).length; if (!bb || bb >= P.k) return 0;
+      var cr = C(pool(t).length - bb, P.k - bb);
+      return P.ordre ? cr * F(P.k) : cr;
+    }
     var b = t.formule === 'champ' ? (t.bases || []).length : 0;
     var n = t.formule === 'champ' ? (partants || 0) - b : (t.chevaux || []).length;
     var c = C(n, P.k - b);
@@ -68,9 +77,20 @@ var NTT = (function(){
     'Quarté ordre': ['quarteordre'], 'Quarté désordre': ['quartedesordre'], 'Quarté bonus 3': ['quartebonus3', 'quartebonus'],
     'Quinté ordre': ['quinteordre'], 'Quinté désordre': ['quintedesordre'], 'Quinté bonus 4': ['quintebonus4'],
     'Quinté bonus 4 sur 5': ['quintebonus4sur5'], 'Quinté bonus 3': ['quintebonus3'],
-    'Multi en 4': ['multien4', 'multi'], '2 sur 4': ['2sur4', 'deuxsurquatre'], 'Trio': ['trio'], 'Super 4': ['super4']
+    'Multi en 4': ['multien4', 'multi'], '2 sur 4': ['2sur4', 'deuxsurquatre'], 'Trio': ['trio'], 'Super 4': ['super4'],
+    'Couplé gagnant': ['couplegagnant']
   };
   function rapport(nom, raps){
+    // couplé placé : un rapport par paire (« Couplé placé 2-7 »), retrouvé par ses deux numéros
+    var mcp = String(nom).match(/^Couplé placé (\d+)-(\d+)$/);
+    if (mcp) {
+      for (var j = 0; j < raps.length; j++) {
+        if (!/^couplé placé/i.test(String(raps[j].nom || ''))) continue;
+        var nn = String(raps[j].nom).replace(/^couplé placé/i, '').split(/[^0-9]+/).filter(Boolean).map(Number);
+        if (nn.length === 2 && nn.indexOf(+mcp[1]) >= 0 && nn.indexOf(+mcp[2]) >= 0) { var e = raps[j].euros; return typeof e === 'string' ? (parseFloat(e.replace(',', '.')) || 0) : e; }
+      }
+      return undefined;
+    }
     var v = chercher(raps, CLES[nom] || [cle(nom)]);
     if (typeof v === 'string') { v = parseFloat(v.replace(',', '.')); if (isNaN(v)) v = 0; }
     return v;
@@ -97,6 +117,8 @@ var NTT = (function(){
     function memeOrdre(R, T){ return R.length >= T.length && T.every(function(n, i){ return R[i] === n; }); }
     function evalue(S, ordreExact){
       var nNP = NP.length ? S.filter(function(n){ return NP.indexOf(n) >= 0; }).length : 0;
+      // couplé avec un non-partant : la combinaison est remboursée
+      if (nNP >= 1 && /^Couplé/.test(t.pari)) { ajoute('Remboursé (non-partants)'); return; }
       if (nNP >= 2 && (t.pari === 'Tiercé' || t.pari === 'Quarté+' || t.pari === 'Quinté+')) { ajoute('Remboursé (non-partants)'); return; }
       if (nNP === 1) {
         var R = S.filter(function(n){ return NP.indexOf(n) < 0; }), ord = ordreExact !== false && ordreExact !== null;
@@ -121,6 +143,8 @@ var NTT = (function(){
         case '2 sur 4': if (contient(T4, S)) ajoute('2 sur 4'); break;
         case 'Trio': if (contient(S, T3)) ajoute('Trio'); break;
         case 'Super 4': if (ordreExact === true) ajoute('Super 4'); break;
+        case 'Couplé gagnant': if (A.length >= 2 && contient(S, A.slice(0,2))) ajoute('Couplé gagnant'); break;
+        case 'Couplé placé': if (T3.length === 3 && contient(T3, S)) ajoute('Couplé placé ' + S.slice().sort(function(a, b){ return a - b; }).join('-')); break;
       }
     }
     if (parPlace(t)) {
@@ -131,10 +155,10 @@ var NTT = (function(){
       evalue(L, exact ? true : 'rang');
     } else if (P.ordre) {
       // Super 4 combiné ou en champ : gagnant si les 4 premiers sont tous dans le jeu
-      var pl = pool(t, partants), bs = t.formule === 'champ' ? (t.bases || []) : [];
+      var pl = pool(t, partants), bs = t.formule === 'champ' || t.formule === 'reduit' ? (t.bases || []) : [];
       if (contient(pl, T4) && contient(T4, bs)) ajoute('Super 4');
     } else {
-      sousEnsembles(pool(t, partants), P.k, t.formule === 'champ' ? (t.bases || []) : [], function(S){ evalue(S, false); });
+      sousEnsembles(pool(t, partants), P.k, t.formule === 'champ' || t.formule === 'reduit' ? (t.bases || []) : [], function(S){ evalue(S, false); });
     }
     var total = 0, detail = [];
     Object.keys(lignes).forEach(function(nom){
@@ -151,6 +175,7 @@ var NTT = (function(){
   // ce qui s'écrit sur le ticket : le X reste à la place choisie
   function vue(t){
     if (t.formule === 'champ') return t.spec ? t.spec : (t.bases || []).concat(['X']);
+    if (t.formule === 'reduit') return (t.bases || []).concat(['X']);
     return t.formule === 'positions' ? (t.spec || []) : (t.chevaux || []);
   }
   function rendu(T, ctx){
@@ -167,7 +192,7 @@ var NTT = (function(){
       if (gagne !== null) totG += gagne;
       var ch = vue(t);
       h += '<div class="tkt'+(gagne > 0 ? ' gagnant' : '')+'"><div class="tkh"><b>'+esc(t.auteur || '')+'</b><span>'+esc(t.pari)+' · '+esc(FORMULES[t.formule] || '')+'</span></div>';
-      h += '<div class="sel">'+ch.map(function(n){ var hit = arr.slice(0,5).indexOf(n) >= 0; return '<span class="ch'+(t.formule==='champ' && n !== 'X' ? ' piv' : '')+(n === 'X' ? ' xx' : '')+(hit?' hit':'')+'">'+esc(n)+'</span>'; }).join('')+'</div>';
+      h += '<div class="sel">'+ch.map(function(n){ var hit = arr.slice(0,5).indexOf(n) >= 0; return '<span class="ch'+((t.formule==='champ' || t.formule==='reduit') && n !== 'X' ? ' piv' : '')+(n === 'X' ? ' xx' : '')+(hit?' hit':'')+'">'+esc(n)+'</span>'; }).join('')+'</div>';
       if (t.formule === 'champ' && t.spec) h += '<p class="assoc">X = tous les autres partants, à la place indiquée</p>';
       else if (t.associes && t.associes.length) h += '<p class="assoc">X = associés : '+t.associes.map(esc).join(' - ')+'</p>';
       h += '<div class="tkb"><span>'+nb+' combinaison'+(nb>1?'s':'')+' × '+eur(t.mise || 0)+'</span><b>'+eur(c)+'</b></div>';
@@ -212,7 +237,65 @@ var NTT = (function(){
     return { tickets: out, erreurs: erreurs };
   }
 
-  return { PARIS: PARIS, FORMULES: FORMULES, parPlace: parPlace, specChamp: specChamp, lireSpec: lireSpec, vue: vue, combinaisons: combinaisons, cout: cout, gains: gains, rendu: rendu, lireTexte: lireTexte, nums: nums, eur: eur, esc: esc };
+  // ---- cheval du jour, reports et texte, publiés avec les tickets (Administration > Tickets du jour) ----
+  // X vient du site, déjà complété du nom des chevaux et du résultat (aux rapports définitifs du PMU)
+  function hm(t){ return t ? new Date(t).toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit', timeZone:'Europe/Paris'}).replace(':', ' h ') : ''; }
+  function net(g, m){ var n = g - m; return '<b class="'+(n>=0?'pos':'neg')+'">'+(n>=0?'+':'−')+eur(Math.abs(n))+'</b>'; }
+  function paragraphes(t){ return String(t || '').trim().split(/\n\s*\n/).map(function(p){ return '<p>'+esc(p).replace(/\n/g, '<br>')+'</p>'; }).join(''); }
+  function renduExtras(X){
+    if (!X) return '';
+    var h = '';
+    var k = X.cheval;
+    if (k && k.n) {
+      var r = k.resultat;
+      h += '<div class="tkt'+(r && r.rang === 1 ? ' gagnant' : '')+'" style="text-align:center"><div class="tkh"><b>❤ Cheval du jour</b><span>R'+k.r+'C'+k.c+(k.heure ? ' · '+hm(k.heure) : '')+(k.hippodrome ? ' · '+esc(k.hippodrome) : '')+'</span></div>' +
+        '<div class="sel"><span class="ch piv'+(r && r.rang && r.rang <= 3 ? ' hit' : '')+'" style="font-size:20px;min-width:40px;height:40px">'+k.n+'</span> <b style="font-size:18px">'+esc(k.nom || '')+'</b></div>' +
+        (k.commentaire ? '<p class="assoc" style="font-style:italic">« '+esc(k.commentaire)+' »</p>' : '');
+      if (r && r.np) h += '<div class="tkb"><span>Non partant</span><b>remboursé</b></div>';
+      else if (r) h += '<div class="tkb"><span>'+(r.rang === 1 ? 'Gagnant' : r.place ? 'Placé '+r.rang+'e' : (r.rang ? r.rang+'e' : 'Non placé'))+' · 1 € gagnant + 1 € placé</span><b class="'+(r.gagne + r.place > 0 ? 'pos' : '')+'">'+eur(r.gagne + r.place)+'</b></div><div class="tkb"><span>Net pour '+eur(r.mise)+' misés</span>'+net(r.gagne + r.place, r.mise)+'</div>';
+      else h += '<p class="note2">Mise : 1 € gagnant + 1 € placé (2,00 €). Le résultat s\'affichera après l\'arrivée.</p>';
+      h += '</div>';
+    }
+    (X.reports || []).forEach(function(p){
+      var r = p.resultat, P = p.pari === 'P' ? 'placé' : 'gagnant';
+      h += '<div class="tkt'+(r && r.gagne > 0 ? ' gagnant' : '')+'"><div class="tkh"><b>🔁 Report '+P+'</b><span>R'+p.r+(p.hippodrome ? ' · '+esc(p.hippodrome) : '')+'</span></div>' +
+        '<div class="sel"><small>C'+p.c1+(p.heure1 ? ' '+hm(p.heure1) : '')+'</small> <span class="ch piv'+(p.rang1 && (p.pari === 'P' ? p.rang1 <= 3 : p.rang1 === 1) ? ' hit' : '')+'">'+p.n1+'</span> '+esc(p.nom1 || '')+
+        ' <b>→</b> <small>C'+p.c2+(p.heure2 ? ' '+hm(p.heure2) : '')+'</small> <span class="ch piv'+(p.rang2 && (p.pari === 'P' ? p.rang2 <= 3 : p.rang2 === 1) ? ' hit' : '')+'">'+p.n2+'</span> '+esc(p.nom2 || '')+'</div>' +
+        '<p class="assoc">'+eur(p.mise)+' sur le '+p.n1+' en simple '+P+' ; tout ce qu\'il rapporte est rejoué sur le '+p.n2+'.</p>' +
+        (p.commentaire ? '<p class="assoc" style="font-style:italic">« '+esc(p.commentaire)+' »</p>' : '') +
+        '<div class="tkb"><span>Mise</span><b>'+eur(p.mise)+'</b></div>';
+      if (r && r.np) h += '<p class="assoc" style="color:#b06000;font-weight:700">Un cheval du report est non partant : se reporter au règlement du PMU.</p>';
+      else if (r && r.attente) h += '<div class="tkb"><span>Le '+p.n1+' rapporte, reporté sur le '+p.n2+'</span><b class="pos">'+eur(r.reporte)+'</b></div><p class="note2">Résultat final après la course '+p.c2+'.</p>';
+      else if (r) h += (r.reporte ? '<div class="tkb"><span>Le '+p.n1+' rapporte, reporté sur le '+p.n2+'</span><b>'+eur(r.reporte)+'</b></div>' : '<div class="tkb"><span>Le '+p.n1+' n\'est pas '+(p.pari === 'P' ? 'placé' : 'gagnant')+'</span><b>report perdu</b></div>') +
+        '<div class="tkb"><span>Gagné</span><b class="'+(r.gagne > 0 ? 'pos' : '')+'">'+eur(r.gagne)+'</b></div><div class="tkb"><span>Net pour '+eur(r.mise)+' misés</span>'+net(r.gagne, r.mise)+'</div>';
+      else h += '<p class="note2">Le résultat s\'affichera après les courses.</p>';
+      h += '</div>';
+    });
+    h += renduAutres(X);
+    if (X.texte && String(X.texte).trim()) h += '<div class="tkt"><div class="tkh"><b>📝 '+esc(X.titre || 'Le mot du jour')+'</b></div><div style="text-align:left;line-height:1.5">'+paragraphes(X.texte)+'</div></div>';
+    return h;
+  }
+
+  // tickets sur d'autres courses que le Quinté+ (couplé, trio, tiercé… en combiné, champ réduit ou champ total)
+  function renduAutres(X){
+    return ((X && X.autres) || []).map(function(t){
+      var r = t.resultat, arr = t.arrivee || [], P = PARIS[t.pari] || {};
+      var h = '<div class="tkt'+(r && r.gagne > 0 ? ' gagnant' : '')+'"><div class="tkh"><b>🎟️ '+esc(t.pari)+'</b><span>'+esc(FORMULES[t.formule] || '')+'</span></div>' +
+        '<p class="assoc">R'+t.r+'C'+t.c+(t.heure ? ' · '+hm(t.heure) : '')+(t.hippodrome ? ' · '+esc(t.hippodrome) : '')+(t.libelle ? ' — '+esc(t.libelle) : '')+'</p>' +
+        '<div class="sel">'+vue(t).map(function(n){ return '<span class="ch'+((t.formule==='champ' || t.formule==='reduit') && n !== 'X' ? ' piv' : '')+(n === 'X' ? ' xx' : '')+(arr.slice(0, Math.max(3, P.k || 3)).indexOf(n) >= 0 ? ' hit' : '')+'">'+esc(n)+'</span>'; }).join('')+'</div>';
+      if (t.formule === 'champ') h += '<p class="assoc">X = tous les autres partants</p>';
+      else if (t.formule === 'reduit' && t.associes && t.associes.length) h += '<p class="assoc">X = associés : '+t.associes.map(esc).join(' - ')+'</p>';
+      if (t.commentaire) h += '<p class="assoc" style="font-style:italic">« '+esc(t.commentaire)+' »</p>';
+      if (t.nb) h += '<div class="tkb"><span>'+t.nb+' combinaison'+(t.nb > 1 ? 's' : '')+' × '+eur(t.mise || 0)+'</span><b>'+eur(t.cout || 0)+'</b></div>';
+      if (arr.length) h += '<p class="assoc">Arrivée : <b>'+arr.slice(0, 4).join(' - ')+'</b></p>';
+      if (r && r.attente) h += '<p class="assoc" style="color:#b06000;font-weight:700">⚠ Combinaison gagnante dont le rapport n\'est pas encore lu : le net s\'affichera dès qu\'il le sera.</p>';
+      else if (r) h += '<div class="tkb"><span>Gagné</span><b class="'+(r.gagne > 0 ? 'pos' : '')+'">'+eur(r.gagne)+'</b></div>'+(r.detail && r.detail.length ? '<p class="assoc">'+r.detail.map(esc).join(' · ')+'</p>' : '')+'<div class="tkb"><span>Net pour '+eur(r.mise)+' misés</span>'+net(r.gagne, r.mise)+'</div>';
+      else h += '<p class="note2">Le résultat s\'affichera après l\'arrivée.</p>';
+      return h + '</div>';
+    }).join('');
+  }
+
+  return { renduAutres: renduAutres, renduExtras: renduExtras, paragraphes: paragraphes, PARIS: PARIS, FORMULES: FORMULES, parPlace: parPlace, specChamp: specChamp, lireSpec: lireSpec, vue: vue, combinaisons: combinaisons, cout: cout, gains: gains, rendu: rendu, lireTexte: lireTexte, nums: nums, eur: eur, esc: esc };
 })();
 
 export default NTT;

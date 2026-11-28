@@ -78,7 +78,7 @@
 </div>
 </main>
 <script src="/site.js?v=20261127r"></script>
-<script src="/tickets.js?v=20261128a"></script>
+<script src="/tickets.js?v=20261128b"></script>
 <script>
 (function(){
   var $ = function(i){ return document.getElementById(i); };
@@ -109,7 +109,7 @@
     var d = D, P = d.pubs.filter(function(p){ return !p.supprime || d.moi.admin; });
     var jour = new Date(d.date + 'T12:00:00').toLocaleDateString('fr-FR', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
     var h = '<div class="journal"><div class="mast"><img src="/banniere.png" alt="N-TURF"><div class="titre">Le Ticket du Jour</div><div class="devise">Le collectif des passionnés de courses hippiques</div></div>' +
-      '<div class="dateline"><span>Édition du ' + E(jour) + '</span><span>' + (function(){ var n = P.filter(function(p){ return !p.supprime; }).length + (d.anciens && d.anciens.tickets ? d.anciens.tickets.length : 0) + (d.extras ? (d.extras.cheval ? 1 : 0) + (d.extras.reports || []).length + (d.extras.texte && d.extras.texte.trim() ? 1 : 0) : 0); return n + ' publication' + (n > 1 ? 's' : ''); })() + '</span></div>';
+      '<div class="dateline"><span>Édition du ' + E(jour) + '</span><span>' + (function(){ var n = P.filter(function(p){ return !p.supprime; }).length + (d.anciens && d.anciens.tickets ? d.anciens.tickets.length : 0) + (d.extras ? (d.extras.cheval ? 1 : 0) + (d.extras.reports || []).length + (d.extras.autres || []).length + (d.extras.texte && d.extras.texte.trim() ? 1 : 0) : 0); return n + ' publication' + (n > 1 ? 's' : ''); })() + '</span></div>';
     var TQ = d.anciens && d.anciens.tickets && d.anciens.tickets.length ? d.anciens : null, X = d.extras || null;
     if (!P.length && !TQ && !X) { $('rendu').innerHTML = h + '<p class="vide2">' + (d.erreurPmu ? 'Le programme du PMU ne répond pas pour le moment.' : 'L\'édition du jour se prépare : les pronostics de nos contributeurs arrivent.') + '</p></div>'; return; }
     // À la une : les coups de cœur
@@ -144,6 +144,8 @@
             : (r.reporte ? 'Le ' + p.n1 + ' rapporte ' + EUR(r.reporte) + ', reportés sur le ' + p.n2 + ' · ' : 'Le ' + p.n1 + ' n\'est pas ' + J + ' : report perdu · ') + 'rapporté <b>' + EUR(r.gagne) + '</b> pour ' + EUR(r.mise) + ' · net ' + netH(r.gagne - r.mise)) + '</div>' : '') + '</div>';
       }).join('');
     }
+    // Les tickets de Bruno sur d'autres courses (couplé, trio…)
+    if (X && X.autres && X.autres.length) h += '<div class="rub">Nos tickets du jour</div><div class="tq">' + NTT.renduAutres(X) + '</div>';
     // Spécial Quinté+
     var Q = P.filter(function(p){ return p.type !== 'coeur' && infoCourse(p).c.quinte; });
     if (Q.length || TQ) {
@@ -266,6 +268,7 @@
       var pari = $('pPari') && $('pPari').value; if (!pari) return null;
       var f = $('pF').value, txt = $('pCh').value, t = { pari: pari, formule: f, chevaux: [], bases: [], associes: NTT.nums($('pAs').value), mise: parseFloat(String($('pMi').value).replace(',', '.')) || 0 };
       if (f === 'positions') t.spec = NTT.lireSpec(txt);
+      else if (f === 'reduit') t.bases = NTT.nums(txt);
       else if (f === 'champ') { t.bases = NTT.nums(txt); var sc = NTT.specChamp(NTT.lireSpec(txt), pari); if (sc) t.spec = sc; }
       else t.chevaux = NTT.nums(txt);
       return t;
