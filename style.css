@@ -637,3 +637,12 @@ main > h1:not(.nlogo), main h1#titre{display:inline-block;font-family:'Barlow Co
   .chatpage main>h1,.chatpage main>#refus{grid-column:1/-1}
   .chatpage .pubslot{position:sticky;top:12px}
 }
+
+.forum .frbox{background:#fff;border:2px solid #1E5BB5;border-radius:6px;margin:4px 0 10px 34px;padding:10px 12px;box-shadow:0 3px 10px rgba(0,0,0,.12)}
+.forum .frh{display:flex;justify-content:space-between;align-items:center;font-size:15px;margin-bottom:8px;color:#1E5BB5}
+.forum .frx{background:none;border:0;font-size:18px;cursor:pointer;color:#666}
+.forum .frbox textarea{width:100%;min-height:110px;font:inherit;font-size:16px;padding:8px;border:1px solid #9bb3d9;border-radius:4px;box-sizing:border-box;resize:vertical}
+.forum .frb{display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap}
+.forum .fract{margin-left:auto;background:none;border:0;color:#888;font-size:13px;cursor:pointer;text-decoration:underline}
+.forum .fract+.fract{margin-left:0}
+.forum .frmsg:empty{display:none}

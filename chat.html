@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#0D1E3D">
 <link rel="manifest" href="/manifest.webmanifest?v=2">
 <link rel="icon" href="/icone-nturf-192.png">
-<link rel="stylesheet" href="/style.css?v=20261128f">
+<link rel="stylesheet" href="/style.css?v=20261128g">
 </head>
 <body data-page="membres" class="chatpage">
 <main>
@@ -58,8 +58,38 @@ function dessinerForum(){
       '<button type="button" class="fplus crep" data-r="'+id+'" title="Répondre" aria-label="Répondre">+</button>' +
       '<a class="fps'+(m.modo?' modo':'')+'" href="/fiche.html?p='+encodeURIComponent(m.pseudo)+'" onclick="event.stopPropagation()">'+esc(m.pseudo)+'</a><span class="fdt">'+dh(m.cree)+'</span></div>'; };
   f.innerHTML = tetes.length ? tetes.map(function(id){ return '<div class="fth">' + ligne(id, false) + (fils[id] || []).map(function(x){ return ligne(x, true); }).join('') + '</div>'; }).join('') : '<p class="empty">Aucun message pour l\'instant. Lance la discussion !</p>';
-  f.querySelectorAll('.fr').forEach(function(el){ el.onclick = function(){ menu(+el.getAttribute('data-id'), el); }; });
-  f.querySelectorAll('.crep').forEach(function(b){ b.onclick = function(e){ e.stopPropagation(); repondre(+b.getAttribute('data-r')); }; });
+  f.querySelectorAll('.fr').forEach(function(el){ el.onclick = function(){ boite(+el.getAttribute('data-id'), el); }; });
+  f.querySelectorAll('.crep').forEach(function(b){ b.onclick = function(e){ e.stopPropagation(); boite(+b.getAttribute('data-r'), b.closest('.fr')); }; });
+}
+// Forum : clic sur un message ou sur « + » → une fenêtre de réponse s'ouvre juste sous le message (comme ZEturf)
+var ATTENTE = false;
+function fermerBoite(){ var x = document.querySelector('.frbox'); if (x) x.remove(); if (ATTENTE) { ATTENTE = false; dessiner(); } }
+function boite(id, el){
+  var ex = document.querySelector('.frbox'); if (ex) { var meme = ex.getAttribute('data-id') == id; fermerBoite(); if (meme) return; el = $('m' + id); }
+  var m = S.msgs[id]; if (!m || m.supprime || !el) return;
+  var moi = m.uid === S.moi.id, modo = S.moi.modo, act = [];
+  if (!moi) act.push(['signaler','Signaler']);
+  if (moi || modo) act.push(['supprimer','Supprimer']);
+  if (modo && !moi && !m.modo) act.push(['bannir','Bannir '+m.pseudo]);
+  var d = document.createElement('div'); d.className = 'frbox'; d.setAttribute('data-id', id);
+  d.innerHTML = '<div class="frh"><span>↩ Répondre à <b>'+esc(m.pseudo)+'</b></span><button type="button" class="frx" aria-label="Fermer">✕</button></div>' +
+    '<textarea maxlength="500" placeholder="Ta réponse…"></textarea>' +
+    '<div class="frb"><button type="button" class="btn frok">Envoyer</button><button type="button" class="btn ghost frno">Annuler</button>' +
+    act.map(function(a){ return '<button type="button" class="fract" data-a="'+a[0]+'">'+esc(a[1])+'</button>'; }).join('') + '</div><p class="msg frmsg"></p>';
+  el.after(d);
+  var ta = d.querySelector('textarea'); ta.focus();
+  d.onclick = function(e){ e.stopPropagation(); };
+  d.querySelector('.frx').onclick = d.querySelector('.frno').onclick = fermerBoite;
+  d.querySelectorAll('.fract').forEach(function(b){ b.onclick = function(){ fermerBoite(); action(b.getAttribute('data-a'), id); }; });
+  ta.addEventListener('keydown', function(e){ if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); d.querySelector('.frok').click(); } if (e.key === 'Escape') fermerBoite(); });
+  d.querySelector('.frok').onclick = function(){
+    var t = ta.value.trim(), bt = this; if (!t) { ta.focus(); return; }
+    bt.disabled = true;
+    fetch('/api/chat/messages', { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({ salon: S.salon, texte: t, reponse: id }) })
+      .then(function(r){ return r.json().then(function(x){ return {ok:r.ok, d:x}; }); })
+      .then(function(x){ if (x.ok) { fermerBoite(); charger(); } else { d.querySelector('.frmsg').className = 'msg err frmsg'; d.querySelector('.frmsg').textContent = x.d.erreur || 'Erreur.'; bt.disabled = false; } })
+      .catch(function(){ d.querySelector('.frmsg').className = 'msg err frmsg'; d.querySelector('.frmsg').textContent = 'Connexion impossible, réessaie.'; bt.disabled = false; });
+  };
 }
 function dessiner(garderBas){
   if (FORUM) return dessinerForum();
@@ -124,7 +154,7 @@ function charger(premier){
       var nouveau = false;
       d.messages.forEach(function(m){ if (!S.msgs[m.id]) { S.ordre.push(m.id); nouveau = true; } S.msgs[m.id] = m; if (m.id > S.dernier) S.dernier = m.id; });
       (d.supprimes || []).forEach(function(id){ if (S.msgs[id] && !S.msgs[id].supprime) { S.msgs[id].supprime = 1; nouveau = true; } });
-      if (premier || nouveau) dessiner(premier);
+      if (premier || nouveau) { if (FORUM && !premier && document.querySelector('.frbox')) ATTENTE = true; else dessiner(premier); }
       $('bSig').hidden = !S.moi.modo; $('nSig').textContent = d.signalements || 0;
       $('bSig').classList.toggle('alerte', (d.signalements || 0) > 0);
     }).catch(function(){}).then(function(){ enCours = false; });
