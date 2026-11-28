@@ -52,17 +52,31 @@ export async function onRequestPost({ request, env }) {
     if (sc.length) { if (!j.sg && !j.sp) return json({ erreur: 'Jeu simple : coche Gagnant, Placé ou les deux.' }, 400); for (const n of sc) { if (j.sg) paris.push({ t: 'SG', c: [n] }); if (j.sp) paris.push({ t: 'SP', c: [n] }); } }
     const cc = [...new Set((j.couple || []).map(num))];
     if (cc.some((x) => !x)) return json({ erreur: `Numéros de 1 à ${max} pour le couplé.` }, 400);
+    // champ réduit : la ou les bases (1 à 3) avec chaque associé, et les bases entre elles
+    const aa = j.reduit ? [...new Set((j.associes || []).map(num))].filter((x) => !cc.includes(x)) : [];
+    if (aa.some((x) => !x)) return json({ erreur: `Numéros de 1 à ${max} pour les associés.` }, 400);
     if (cc.length) {
-      if (cc.length < 2 || cc.length > 5) return json({ erreur: 'Couplé : de 2 à 5 chevaux.' }, 400);
-      if (petit) { for (const a of cc) for (const z of cc) if (a !== z) paris.push({ t: 'CO', c: [a, z] }); }
+      let paires = [];
+      if (j.reduit) {
+        if (cc.length > 3) return json({ erreur: 'Couplé en champ réduit : de 1 à 3 bases.' }, 400);
+        if (!aa.length) return json({ erreur: 'Couplé en champ réduit : indique au moins un associé.' }, 400);
+        if (aa.length > 15) return json({ erreur: 'Couplé en champ réduit : 15 associés au plus.' }, 400);
+        for (const x of cc) for (const y of aa) paires.push([x, y]);
+        for (let i = 0; i < cc.length; i++) for (let k = i + 1; k < cc.length; k++) paires.push([cc[i], cc[k]]);
+      } else {
+        if (cc.length < 2 || cc.length > 5) return json({ erreur: 'Couplé : de 2 à 5 chevaux.' }, 400);
+        for (let i = 0; i < cc.length; i++) for (let k = i + 1; k < cc.length; k++) paires.push([cc[i], cc[k]]);
+      }
+      if (petit) { for (const [a, z] of paires) { paris.push({ t: 'CO', c: [a, z] }); paris.push({ t: 'CO', c: [z, a] }); } }
       else {
         if (!j.cg && !j.cp) return json({ erreur: 'Couplé : coche Gagnant, Placé ou les deux.' }, 400);
-        for (let i = 0; i < cc.length; i++) for (let k = i + 1; k < cc.length; k++) { if (j.cg) paris.push({ t: 'CG', c: [cc[i], cc[k]] }); if (j.cp) paris.push({ t: 'CP', c: [cc[i], cc[k]] }); }
+        for (const pr of paires) { if (j.cg) paris.push({ t: 'CG', c: pr }); if (j.cp) paris.push({ t: 'CP', c: pr }); }
       }
     }
     if (!paris.length) return json({ erreur: 'Indique au moins un cheval en jeu simple ou en couplé.' }, 400);
-    chevaux = [...new Set([...sc, ...cc])];
+    chevaux = [...new Set([...sc, ...cc, ...aa])];
     ticket = { jeu: true, mise, paris, petit };
+    if (aa.length) { ticket.bases = cc; ticket.associes = aa; }
     cout = Math.round(paris.length * mise * 100) / 100;
     type = 'jeu';
   } else if (b.type === 'ticket') {
