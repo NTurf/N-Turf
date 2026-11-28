@@ -648,7 +648,7 @@ main > h1:not(.nlogo), main h1#titre{display:inline-block;font-family:'Barlow Co
 .forum .frmsg:empty{display:none}
 
 .smibar{display:flex;flex-wrap:wrap;gap:2px;margin:6px 0 2px}
-.smi{background:none;border:0;font-size:22px;line-height:1;padding:3px;cursor:pointer;border-radius:6px}
+.smi{background:none;border:0;font-size:17px;line-height:1;padding:2px;cursor:pointer;border-radius:6px}
 .smi:hover{background:#e3ecfa;transform:scale(1.15)}
-.forum .smi{font-size:24px}
+.forum .smi{font-size:18px}
 .forum #smiMain{order:-3;margin:-4px 0 12px}
