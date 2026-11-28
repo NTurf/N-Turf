@@ -109,6 +109,14 @@ function dessiner(d){
   if (d.verrou) h += '<p class="lock">🔒 Les fiches des autres membres sont réservées à ceux qui participent : au moins ' + d.verrou.min + ' pronos par jour. Aujourd\'hui, tu en as donné ' + d.verrou.n + '.</p>';
   else if (!d.jeux.length && !(d.reports || []).length) h += '<p class="note2">Pas de prono course par course ce jour-là.</p>';
   else {
+    // le cheval du jour, annoncé en tête
+    var K1 = d.jeux.filter(function(j){ return j.cdj; })[0];
+    if (K1) { var ar = K1.arrivee || [], rg = ar.indexOf(K1.cdj) + 1;
+      h += '<div style="border:3px solid #e0a800;background:#fff8e1;border-radius:12px;padding:10px;text-align:center;margin:4px 0 10px"><div style="font:800 15px Arial;color:#a87c06;letter-spacing:2px">⭐ CHEVAL DU JOUR</div>' +
+        '<div style="font:900 40px Georgia;color:#0e2a5c">' + K1.cdj + '</div><div style="font-weight:800;font-size:18px">' + E((K1.noms || {})[K1.cdj] || '') + '</div>' +
+        '<div style="color:#5b6b85;font-size:14px">R' + K1.r + 'C' + K1.c + (K1.heure ? ' · ' + hm(K1.heure) : '') + ' · ' + E(K1.hippo) + '</div>' +
+        (ar.length ? '<div style="margin-top:4px;font-weight:800;font-size:17px" class="' + (rg && rg <= 3 ? 'pos' : 'neg') + '">' + (rg === 1 ? '🏆 GAGNANT !' : rg && rg <= 3 ? 'Placé ' + rg + 'e' : rg ? rg + 'e' : 'Non placé') + '</div>' : '<div style="font-size:14px;margin-top:4px">Résultat après l\'arrivée</div>') + '</div>';
+    }
     var M = 0, G = 0, nb = 0, fin = 0, ST = {};
     d.jeux.forEach(function(j){
       var arr = j.arrivee || [], ha = arr.slice(0, j.paris.some(function(x){ return x.t === 'M4' || x.t === 'S4'; }) ? 4 : 3);

@@ -126,7 +126,7 @@ export async function onRequestGet({ request, env }) {
     } catch (e) { concours = null; }
     // les jeux du course par course : réservés à ceux qui participent (3 pronos par jour)
     if (!soi && !ac.ok) return json({ pseudo: m.pseudo, jour, verrou: ac, concours, jeux: [], joueurs, moiPseudo: u.pseudo });
-    const rows = (await db.prepare('SELECT id, reunion, course, hippo, chevaux, jeu, paris, mot, statut, mise, gains, detail FROM pm_pronos WHERE user_id = ? AND jour = ?').bind(m.id, jour).all()).results || [];
+    const rows = (await db.prepare('SELECT id, reunion, course, hippo, chevaux, jeu, paris, mot, statut, mise, gains, detail, cdj FROM pm_pronos WHERE user_id = ? AND jour = ?').bind(m.id, jour).all()).results || [];
     const infos = await Promise.all(rows.map((p) => coursePm(db, jour, p.reunion, p.course).catch(() => null)));
     // un nouveau passage, une fois les courses calculées entre-temps
     const rows2 = (await db.prepare('SELECT id, statut, mise, gains, detail FROM pm_pronos WHERE user_id = ? AND jour = ?').bind(m.id, jour).all()).results || [];
@@ -138,7 +138,7 @@ export async function onRequestGet({ request, env }) {
       let detail = []; try { detail = x.detail ? JSON.parse(x.detail) : []; } catch (e) { detail = []; }
       const noms = {}; for (const h of c.partants || []) if (chevaux.includes(h.n)) noms[h.n] = h.nom;
       return { r: p.reunion, c: p.course, hippo: c.hippo || p.hippo || '', libelle: c.libelle || '', heure: c.heure || null, arrivee: (c.arrivee || []).slice(0, 5), definitive: !!c.definitive,
-        chevaux, noms, paris, jeuNom: resume(paris, p.jeu), mot: p.mot || '', statut: x.statut, mise: x.mise, gains: x.gains,
+        chevaux, noms, paris, jeuNom: resume(paris, p.jeu), mot: p.mot || '', statut: x.statut, cdj: p.cdj || null, mise: x.mise, gains: x.gains,
         detail: Array.isArray(detail) ? detail.filter((y) => y && typeof y === 'object') : [] };
     }).sort((a, b) => (a.heure || 0) - (b.heure || 0) || a.r - b.r || a.c - b.c);
     const reps = await reportsVue(db, (await db.prepare('SELECT p.*, u.pseudo, u.role, u.moderateur FROM pm_reports p JOIN users u ON u.id = p.user_id WHERE p.user_id = ? AND p.jour = ? ORDER BY p.c1').bind(m.id, jour).all()).results || [], u);
@@ -202,7 +202,7 @@ export async function onRequestGet({ request, env }) {
   }
   let info = null;
   try { info = await coursePm(db, jour, R, C); } catch (e) { info = null; }
-  const pr = await db.prepare(`SELECT p.id, p.user_id, u.pseudo, u.role, u.moderateur, p.chevaux, p.jeu, p.paris, p.mot, p.statut, p.mise, p.gains, p.detail, p.cree
+  const pr = await db.prepare(`SELECT p.id, p.user_id, u.pseudo, u.role, u.moderateur, p.chevaux, p.jeu, p.paris, p.mot, p.statut, p.mise, p.gains, p.detail, p.cree, p.cdj
     FROM pm_pronos p JOIN users u ON u.id = p.user_id WHERE p.jour = ? AND p.reunion = ? AND p.course = ? AND u.banni = 0 ORDER BY p.cree`).bind(jour, R, C).all();
   const ac = await acces();
   // pas 3 pronos aujourd'hui : il ne voit que le sien
@@ -218,7 +218,9 @@ export async function onRequestGet({ request, env }) {
     synth.gagnants = (pr.results || []).filter((p) => p.statut === 'calcule' && (p.gains || 0) > (p.mise || 0))
       .map((p) => ({ pseudo: p.pseudo, mise: R2(p.mise || 0), gains: R2(p.gains || 0), net: R2((p.gains || 0) - (p.mise || 0)) })).sort((a, b) => b.net - a.net);
   }
+  const monCdj = await db.prepare('SELECT reunion, course, cdj FROM pm_pronos WHERE jour = ? AND user_id = ? AND cdj IS NOT NULL').bind(jour, u.id).first();
   return json({
+    monCdj: monCdj ? { r: monCdj.reunion, c: monCdj.course, n: monCdj.cdj } : null,
     course: info, moi: u.pseudo, modo, verrou: ac.ok ? null : { n: ac.n, min: ac.min, caches }, synthese: synth,
     ouvert: !!(info && info.heure && Date.now() < info.heure && !(info.arrivee || []).length),
     pronos: L.map((p) => {
@@ -227,7 +229,7 @@ export async function onRequestGet({ request, env }) {
       let detail = []; try { detail = p.detail ? JSON.parse(p.detail) : []; } catch (e) { detail = []; }
       return {
       id: p.id, pseudo: p.pseudo, moi: p.user_id === u.id, modoAuteur: p.role === 'admin' || !!p.moderateur,
-      chevaux, paris, choix: choixDepuisParis(paris, chevaux), jeuNom: resume(paris, p.jeu), mot: p.mot || '', statut: p.statut,
+      chevaux, paris, choix: choixDepuisParis(paris, chevaux), jeuNom: resume(paris, p.jeu), mot: p.mot || '', statut: p.statut, cdj: p.cdj || null,
       mise: p.mise, gains: p.gains, detail: Array.isArray(detail) ? detail.filter((x) => x && typeof x === 'object') : [],
       reactions: (reac.results || []).filter((r) => r.prono_id === p.id).map((r) => ({ id: r.id, pseudo: r.pseudo, texte: r.texte, cree: r.cree, moi: r.user_id === u.id })),
       };
@@ -294,8 +296,18 @@ export async function onRequestPost({ request, env }) {
   const res = construire(b.choix || {}, ch, ok.size <= 7);
   if (res.erreur) return json({ erreur: res.erreur }, 400);
   const mot = String(b.mot || '').trim().slice(0, 500);
-  await db.prepare(`INSERT INTO pm_pronos (jour, reunion, course, hippo, user_id, chevaux, jeu, paris, mot) VALUES (?, ?, ?, ?, ?, ?, 'perso', ?, ?)
-    ON CONFLICT(jour, reunion, course, user_id) DO UPDATE SET chevaux = excluded.chevaux, jeu = excluded.jeu, paris = excluded.paris, mot = excluded.mot, statut = 'attente', essai = NULL, cree = datetime('now')`)
-    .bind(jour, R, C, info.hippo, u.id, JSON.stringify(ch.map((n) => ({ n }))), JSON.stringify(res.paris), mot).run();
+  // Cheval du jour : un seul par membre et par jour, choisi parmi les chevaux d'un de ses pronos
+  const cdj = ch.includes(+b.cdj) ? +b.cdj : null;
+  if (cdj) {
+    const autre = await db.prepare('SELECT reunion, course FROM pm_pronos WHERE jour = ? AND user_id = ? AND cdj IS NOT NULL AND NOT (reunion = ? AND course = ?)').bind(jour, u.id, R, C).first();
+    if (autre) {
+      const ia = await coursePm(db, jour, autre.reunion, autre.course);
+      if (ia && ia.heure && Date.now() >= ia.heure) return json({ erreur: `Ton cheval du jour est déjà engagé sur R${autre.reunion}C${autre.course}, qui est partie : tu ne peux plus le changer aujourd'hui.` }, 403);
+      await db.prepare('UPDATE pm_pronos SET cdj = NULL WHERE jour = ? AND user_id = ? AND cdj IS NOT NULL').bind(jour, u.id).run();
+    }
+  }
+  await db.prepare(`INSERT INTO pm_pronos (jour, reunion, course, hippo, user_id, chevaux, jeu, paris, mot, cdj) VALUES (?, ?, ?, ?, ?, ?, 'perso', ?, ?, ?)
+    ON CONFLICT(jour, reunion, course, user_id) DO UPDATE SET chevaux = excluded.chevaux, jeu = excluded.jeu, paris = excluded.paris, mot = excluded.mot, cdj = excluded.cdj, statut = 'attente', essai = NULL, cree = datetime('now')`)
+    .bind(jour, R, C, info.hippo, u.id, JSON.stringify(ch.map((n) => ({ n }))), JSON.stringify(res.paris), mot, cdj).run();
   return json({ ok: true, paris: res.paris.length });
 }

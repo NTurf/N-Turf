@@ -35,7 +35,7 @@ export async function prepPm(db) {
       cree TEXT NOT NULL DEFAULT (datetime('now')))`),
     db.prepare('CREATE INDEX IF NOT EXISTS pmrep_jour ON pm_reports (jour, reunion)'),
   ]);
-  for (const col of ['paris TEXT', 'essai INTEGER']) {
+  for (const col of ['paris TEXT', 'essai INTEGER', 'cdj INTEGER']) {
     try { await db.prepare('ALTER TABLE pm_pronos ADD COLUMN ' + col).run(); } catch (e) { /* déjà là */ }
   }
   // Conversion des pronos déjà publiés (ancien format « un jeu ») en paris un par un, puis nouveau calcul
