@@ -106,7 +106,7 @@
   }
   function arrLigne(c){ return c && c.arrivee && c.arrivee.length ? '<div class="arrline">Arrivée : <b>' + c.arrivee.slice(0, c.quinte || c.pick5 ? 5 : 4).join(' - ') + '</b></div>' : ''; }
   function dessiner(){
-    var d = D, P = d.pubs.filter(function(p){ return !p.supprime || d.moi.admin; });
+    var d = D, P = d.pubs.filter(function(p){ return !p.supprime; }); // les publications supprimées ne s'affichent plus, même pour l'administrateur (elles restent listées dans Administration > Ticket du jour)
     var jour = new Date(d.date + 'T12:00:00').toLocaleDateString('fr-FR', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
     var h = '<div class="journal"><div class="mast"><img src="/banniere.png" alt="N-TURF"><div class="titre">Le Ticket du Jour</div><div class="devise">Le collectif des passionnés de courses hippiques</div></div>' +
       '<div class="dateline"><span>Édition du ' + E(jour) + '</span><span>' + (function(){ var n = P.filter(function(p){ return !p.supprime; }).length + (d.anciens && d.anciens.tickets ? d.anciens.tickets.length : 0) + (d.extras ? (d.extras.cheval ? 1 : 0) + (d.extras.reports || []).length + (d.extras.autres || []).length + (d.extras.texte && d.extras.texte.trim() ? 1 : 0) : 0); return n + ' publication' + (n > 1 ? 's' : ''); })() + '</span></div>';
