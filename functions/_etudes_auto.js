@@ -132,3 +132,50 @@ export async function etudeTrot(db, d) {
   }
   return { reunions: [...parR.entries()].map(([r, courses]) => ({ r: r.numOfficiel, h: hippoDe(r), courses })) };
 }
+
+// 5 DERNIÈRES PERFS (méthode proposée par un membre) : pour chaque cheval, ses 5 dernières places (musique PMU),
+// au-delà de la 10e, non placé, disqualifié ou tombé = 10 ; une perf qui manque compte aussi 10.
+// Note = total ÷ 5 ; on classe de la plus petite note à la plus grande.
+// Suivi : le 1er de l'étude joué 1 € gagnant + 1 € placé sur chaque course courue.
+export function perfsMusique(m) {
+  const s = String(m || '').replace(/\(\d+\)/g, ' ');
+  const out = [];
+  for (const x of s.matchAll(/(\d+|[A-Z])([a-z])/g)) {
+    const n = /^\d+$/.test(x[1]) ? +x[1] : 0;
+    out.push(n >= 1 && n <= 10 ? n : 10);
+    if (out.length === 5) break;
+  }
+  return out;
+}
+export function classerPerfs(partants) {
+  return partants.filter((p) => !p.np).map((p) => {
+    const L = perfsMusique(p.musique), t = L.reduce((a, b) => a + b, 0) + (5 - L.length) * 10;
+    return { n: p.n, nom: p.nom, note: Math.round(t / 5 * 10) / 10, perfs: L };
+  }).sort((a, b) => a.note - b.note || a.n - b.n);
+}
+export async function etudePerfs(db, d) {
+  const reunions = (await programme(db, d)).filter((r) => !(r.pays && r.pays.code && r.pays.code !== 'FRA'));
+  const out = [], bilan = { courses: 0, gagnants: 0, places: 0, mise: 0, retour: 0 };
+  for (const r of reunions) {
+    let dets = []; try { dets = await detailReunion(db, d, r); } catch (e) { dets = []; }
+    const courses = [];
+    for (const det of dets) {
+      const L = classerPerfs(det.partants || []);
+      if (!L.length) continue;
+      const fini = det.arrivee.length > 0 && det.definitive, nbPlaces = L.length >= 8 ? 3 : 2;
+      const x = { c: det.num, nom: det.libelle, heure: det.heure, partants: L.length, classement: L, arrivee: det.arrivee.slice(0, 5), fini };
+      if (fini) {
+        const t = L[0], s = simples(det, t.n), rang = det.arrivee.indexOf(t.n) + 1;
+        x.premier = { n: t.n, rang: rang || null, gagne: s.g, place: s.p };
+        bilan.courses++; bilan.mise += 2; bilan.retour += s.g + s.p;
+        if (rang === 1) bilan.gagnants++;
+        if (rang && rang <= nbPlaces) bilan.places++;
+      }
+      courses.push(x);
+    }
+    if (courses.length) out.push({ r: r.numOfficiel, h: hippoDe(r), courses });
+  }
+  bilan.retour = Math.round(bilan.retour * 100) / 100;
+  bilan.net = Math.round((bilan.retour - bilan.mise) * 100) / 100;
+  return { reunions: out, bilan };
+}

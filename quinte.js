@@ -351,6 +351,22 @@ var NT = (function(){
     });
   }
   // Remplit « 👥 X pronos de membres » au-dessus de chaque synthèse
+  // Projet d'étude « 5 dernières perfs » (méthode d'un membre), en petit sous la synthèse de chaque course
+  function majPerfs(el){
+    var a = el.querySelector('.pmlien'); if (!a) return;
+    var j = a.getAttribute('data-j').split('-').reverse().join('/');
+    fetch('/api/membres/perfs?date=' + encodeURIComponent(j), {credentials:'same-origin'}).then(function(r){ return r.ok ? r.json() : null; }).then(function(d){
+      if (!d || !d.reunions) return; var M = {};
+      d.reunions.forEach(function(r){ r.courses.forEach(function(c){ M[r.r + '-' + c.c] = c; }); });
+      el.querySelectorAll('.pmlien').forEach(function(l){
+        var c = M[l.getAttribute('data-pm')], z = l.parentNode.querySelector('.pfsyn[data-pm="' + l.getAttribute('data-pm') + '"]');
+        if (!c) { if (z) z.remove(); return; }
+        if (!z) { z = document.createElement('div'); z.className = 'pfsyn'; z.setAttribute('data-pm', l.getAttribute('data-pm')); l.parentNode.insertBefore(z, l); }
+        var arr = (c.arrivee || []).slice(0, 4);
+        z.innerHTML = '📐 <i>Projet d\'études · 5 dernières perfs :</i> ' + c.classement.slice(0, 8).map(function(x){ return arr.indexOf(x.n) >= 0 ? '<b style="color:#c0392b">' + x.n + '</b>' : x.n; }).join(' - ');
+      });
+    }).catch(function(){});
+  }
   function majPm(el){
     var a = el.querySelector('.pmlien'); if (!a) return;
     fetch('/api/pm?jour=' + a.getAttribute('data-j'), {credentials:'same-origin'}).then(function(r){ return r.ok ? r.json() : null; }).then(function(t){
@@ -397,5 +413,5 @@ var NT = (function(){
     }
     return out;
   }
-  return { lire: lire, lireArchive: lireArchive, afficher: afficher, chargerQuinte: chargerQuinte, lireCpc: lireCpc, afficherCpc: afficherCpc, brancherOnglets: brancherOnglets, chargerLive: chargerLive, majPm: majPm };
+  return { lire: lire, lireArchive: lireArchive, afficher: afficher, chargerQuinte: chargerQuinte, lireCpc: lireCpc, afficherCpc: afficherCpc, brancherOnglets: brancherOnglets, chargerLive: chargerLive, majPm: majPm, majPerfs: majPerfs };
 })();

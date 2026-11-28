@@ -8,7 +8,7 @@
 <meta name="robots" content="noindex">
 <link rel="manifest" href="/manifest.webmanifest?v=2">
 <link rel="icon" href="/icone-nturf-192.png">
-<link rel="stylesheet" href="/style.css?v=20261127f">
+<link rel="stylesheet" href="/style.css?v=20261128a">
 </head>
 <body data-page="membres">
 <main>
@@ -24,7 +24,7 @@
 </div>
 </main>
 <script src="/site.js?v=20261128a"></script>
-<script src="/quinte.js?v=20261127d"></script>
+<script src="/quinte.js?v=20261128a"></script>
 <script>
 fetch('/api/membres/quinte', {credentials:'same-origin'})
   .then(function(r){ return r.json().then(function(d){ return {ok:r.ok, d:d}; }); })
@@ -40,7 +40,7 @@ fetch('/api/membres/quinte', {credentials:'same-origin'})
       function dessiner(live){
         var on = el.querySelector('nav.inner a.on'), ong = on ? parseInt(on.getAttribute('data-r'), 10) : 0;
         var ouverts = [].map.call(el.querySelectorAll('details[open]'), function(x){ return x.parentNode.id; });
-        el.innerHTML = NT.afficherCpc(cpc, ong, live); NT.brancherOnglets(el); NT.majPm(el);
+        el.innerHTML = NT.afficherCpc(cpc, ong, live); NT.brancherOnglets(el); NT.majPm(el); NT.majPerfs(el);
         ouverts.forEach(function(id){ var x = document.getElementById(id); if (x) { var dt = x.querySelector('details'); if (dt) dt.open = true; } });
       }
       dessiner();

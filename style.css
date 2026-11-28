@@ -599,6 +599,7 @@ main > h1:not(.nlogo), main h1#titre{display:inline-block;font-family:'Barlow Co
 .arr .n .cite,.note2 .cite{background:none;border:0;min-width:0;padding:0;color:#c62832;font-weight:900}
 
 /* Synthèse des pronos des membres sous le lien « Pronos des membres » (réservée aux participants) */
+.pfsyn{font-size:12.5px;color:#5b6b85;margin:2px 0 6px;line-height:1.5}
 .pmsyn{margin:-4px 0 10px;font-size:14px;display:flex;flex-wrap:wrap;align-items:center;gap:5px}
 .pmsyn span{display:inline-flex;align-items:center;justify-content:center;min-width:28px;height:28px;border-radius:50%;background:#dce8f7;border:2px solid #9fbbe0;font-weight:800;color:#0e2a5c}
 .pmsyn span.pt3{background:#f6d77a;border-color:#b8860b}
