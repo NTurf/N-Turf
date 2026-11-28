@@ -22,6 +22,21 @@ function synthese(rows) {
   return { membres: rows.length, chevaux: [...T.values()].sort((a, b) => b.pts - a.pts || b.nb - a.nb || b.premier - a.premier || a.n - b.n) };
 }
 
+// les reports tels qu'on les affiche : courses, noms des chevaux, heure, arrivée, résultat
+async function reportsVue(db, L, u) {
+  const memo = {};
+  const crs = (jour, R, C) => { const k = jour + R + '-' + C; return memo[k] || (memo[k] = coursePm(db, jour, R, C).catch(() => null)); };
+  return Promise.all(L.map(async (x) => {
+    const a = (await crs(x.jour, x.reunion, x.c1)) || {}, b = (await crs(x.jour, x.reunion, x.c2)) || {};
+    const nom = (c, n) => ((c.partants || []).find((h) => h.n === n) || {}).nom || '';
+    let detail = []; try { detail = x.detail ? JSON.parse(x.detail) : []; } catch (e) { detail = []; }
+    return { id: x.id, pseudo: x.pseudo, moi: x.user_id === u.id, modoAuteur: x.role === 'admin' || !!x.moderateur, jour: x.jour, r: x.reunion, hippo: a.hippo || x.hippo || '',
+      c1: x.c1, n1: x.n1, t1: x.t1, nom1: nom(a, x.n1), heure1: a.heure || null, arr1: (a.arrivee || []).slice(0, 4),
+      c2: x.c2, n2: x.n2, t2: x.t2, nom2: nom(b, x.n2), heure2: b.heure || null, arr2: (b.arrivee || []).slice(0, 4),
+      ouvert: !!(a.heure && Date.now() < a.heure), mot: x.mot || '', statut: x.statut, mise: x.mise, gains: x.gains, detail };
+  }));
+}
+
 async function base(env, request) {
   if (!env.DB) return { err: noDb() };
   const db = env.DB; await initDb(db); await preparer(db); await prepPm(db);
@@ -50,13 +65,19 @@ export async function onRequestGet({ request, env }) {
         k.paris++; k.mise += 1; k.gains += Number(p.r) || 0; if (p.r > 0) k.gagnes++;
       }
     }
-    return { pronos: (m.results || []).length, types: ORDRE_TYPES.filter((t) => T[t]).map((t) => ({ ...T[t], gains: R2(T[t].gains), net: R2(T[t].gains - T[t].mise) })) };
+    const rp = await db.prepare(`SELECT detail FROM pm_reports WHERE user_id = ? AND statut = 'calcule' ${fw}`).bind(uid, ...fb).all();
+    for (const x of rp.results || []) {
+      let d = []; try { d = JSON.parse(x.detail || '[]'); } catch (e) { d = []; }
+      for (const p of Array.isArray(d) ? d : []) { if (!p || p.np) continue; const k = T.RP || (T.RP = { t: 'RP', paris: 0, gagnes: 0, mise: 0, gains: 0 }); k.paris++; k.mise += 1; k.gains += Number(p.r) || 0; if (p.r > 0) k.gagnes++; }
+    }
+    return { pronos: (m.results || []).length + (rp.results || []).length, types: ORDRE_TYPES.filter((t) => T[t]).map((t) => ({ ...T[t], gains: R2(T[t].gains), net: R2(T[t].gains - T[t].mise) })) };
   }
   // Stats des autres membres : réservées à ceux qui ont donné au moins 3 pronos aujourd'hui (admin et modérateurs toujours)
   const MIN_JOUR = 3;
   async function acces() {
     const auj = new Date().toLocaleDateString('fr-CA', { timeZone: 'Europe/Paris' });
-    const n = (await db.prepare('SELECT COUNT(*) AS n FROM pm_pronos WHERE user_id = ? AND jour = ?').bind(u.id, auj).first()).n || 0;
+    const n = ((await db.prepare('SELECT COUNT(*) AS n FROM pm_pronos WHERE user_id = ? AND jour = ?').bind(u.id, auj).first()).n || 0)
+      + ((await db.prepare('SELECT COUNT(*) AS n FROM pm_reports WHERE user_id = ? AND jour = ?').bind(u.id, auj).first()).n || 0);
     return { ok: u.role === 'admin' || !!u.moderateur || n >= MIN_JOUR, n, min: MIN_JOUR };
   }
   if (q.get('bilan')) {
@@ -70,6 +91,7 @@ export async function onRequestGet({ request, env }) {
   // Fiche du jour d'un membre : tous ses jeux de la journée, course par course, et le bilan du jour
   // (la sienne toujours ; celle des autres réservée à ceux qui participent : 3 pronos par jour)
   if (q.get('fiche')) {
+    await verifierEnAttente(db);
     const jour = isoOk(q.get('jour')) ? q.get('jour') : new Date().toLocaleDateString('fr-CA', { timeZone: 'Europe/Paris' });
     const m = await db.prepare('SELECT id, pseudo, role, moderateur FROM users WHERE pseudo = ? COLLATE NOCASE AND banni = 0').bind(q.get('fiche')).first();
     if (!m) return json({ erreur: 'Membre introuvable.' }, 404);
@@ -79,6 +101,7 @@ export async function onRequestGet({ request, env }) {
     try {
       const L = [];
       if (ac.ok) L.push(...((await db.prepare("SELECT DISTINCT u.pseudo FROM pm_pronos p JOIN users u ON u.id = p.user_id WHERE p.jour = ? AND u.banni = 0").bind(jour).all()).results || []).map((x) => x.pseudo));
+      if (ac.ok) L.push(...((await db.prepare("SELECT DISTINCT u.pseudo FROM pm_reports p JOIN users u ON u.id = p.user_id WHERE p.jour = ? AND u.banni = 0").bind(jour).all()).results || []).map((x) => x.pseudo));
       await initConcours(db);
       const jc = u.role === 'admin' || !!(await db.prepare('SELECT 1 FROM concours_pronos WHERE date = ? AND user_id = ?').bind(jour, u.id).first());
       if (jc) L.push(...((await db.prepare("SELECT u.pseudo FROM concours_pronos p JOIN users u ON u.id = p.user_id WHERE p.date = ? AND u.banni = 0 AND u.role != 'robot'").bind(jour).all()).results || []).map((x) => x.pseudo));
@@ -118,7 +141,8 @@ export async function onRequestGet({ request, env }) {
         chevaux, noms, paris, jeuNom: resume(paris, p.jeu), mot: p.mot || '', statut: x.statut, mise: x.mise, gains: x.gains,
         detail: Array.isArray(detail) ? detail.filter((y) => y && typeof y === 'object') : [] };
     }).sort((a, b) => (a.heure || 0) - (b.heure || 0) || a.r - b.r || a.c - b.c);
-    return json({ pseudo: m.pseudo, modo: m.role === 'admin' || !!m.moderateur, moi: soi, jour, jeux, concours, joueurs, moiPseudo: u.pseudo });
+    const reps = await reportsVue(db, (await db.prepare('SELECT p.*, u.pseudo, u.role, u.moderateur FROM pm_reports p JOIN users u ON u.id = p.user_id WHERE p.user_id = ? AND p.jour = ? ORDER BY p.c1').bind(m.id, jour).all()).results || [], u);
+    return json({ pseudo: m.pseudo, modo: m.role === 'admin' || !!m.moderateur, moi: soi, jour, jeux, reports: reps, concours, joueurs, moiPseudo: u.pseudo });
   }
   if (q.get('classement')) {
     await verifierEnAttente(db);
@@ -139,6 +163,10 @@ export async function onRequestGet({ request, env }) {
       FROM pm_pronos p JOIN users u ON u.id = p.user_id WHERE p.statut = 'calcule' AND u.banni = 0 ${fw.replace(/jour/g, 'p.jour')}
       GROUP BY p.user_id`).bind(...fb).all();
     const L = r.results || [];
+    // les reports comptent comme un prono de plus (1 € chacun)
+    const rr = (await db.prepare(`SELECT u.id, u.pseudo, COUNT(*) AS n, SUM(CASE WHEN p.gains > 0 THEN 1 ELSE 0 END) AS gagnes, SUM(p.mise) AS mise, SUM(p.gains) AS gains
+      FROM pm_reports p JOIN users u ON u.id = p.user_id WHERE p.statut = 'calcule' AND u.banni = 0 ${fw.replace(/jour/g, 'p.jour')} GROUP BY p.user_id`).bind(...fb).all()).results || [];
+    for (const y of rr) { const x = L.find((z) => z.id === y.id); if (x) { x.n += y.n; x.gagnes += y.gagnes; x.mise += y.mise || 0; x.gains += y.gains || 0; } else L.push(y); }
     const det = await Promise.all(L.map((x) => bilan(x.id, per)));
     const moi = (await bilan(u.id, per)).types;
     const tous = L.map((x, i) => ({ pseudo: x.pseudo, n: x.n, gagnes: x.gagnes, mise: R2(x.mise), gains: R2(x.gains), net: R2(x.gains - x.mise), rendu: x.mise > 0 ? R2(x.gains / x.mise) : 0, types: det[i].types }));
@@ -149,6 +177,15 @@ export async function onRequestGet({ request, env }) {
   }
   const jour = q.get('jour');
   if (!isoOk(jour)) return json({ erreur: 'Jour invalide.' }, 400);
+  // les reports d'une réunion : réservés à ceux qui participent (le sien toujours)
+  if (q.get('reports')) {
+    const Rn = +q.get('reports');
+    await verifierEnAttente(db);
+    const ac = await acces();
+    const rows = (await db.prepare(`SELECT p.*, u.pseudo, u.role, u.moderateur FROM pm_reports p JOIN users u ON u.id = p.user_id WHERE p.jour = ? AND p.reunion = ? AND u.banni = 0 ORDER BY p.cree`).bind(jour, Rn).all()).results || [];
+    const L = rows.filter((x) => ac.ok || x.user_id === u.id);
+    return json({ reports: await reportsVue(db, L, u), caches: rows.length - L.length, acces: ac.ok, min: ac.min, n: ac.n });
+  }
   const R = +q.get('r'), C = +q.get('c');
   if (!R || !C) {
     await verifierEnAttente(db);
@@ -215,6 +252,27 @@ export async function onRequestPost({ request, env }) {
     const p = await db.prepare('SELECT id FROM pm_pronos WHERE id = ?').bind(+b.id || 0).first();
     if (!p) return json({ erreur: 'Prono introuvable.' }, 404);
     await db.prepare('INSERT INTO pm_reactions (prono_id, user_id, texte) VALUES (?, ?, ?)').bind(p.id, u.id, t).run();
+    return json({ ok: true });
+  }
+  if (b.action === 'report') {
+    const jour = String(b.jour || ''), R = +b.r, c1 = +b.c1, c2 = +b.c2, n1 = +b.n1, n2 = +b.n2;
+    const t1 = b.t1 === 'P' ? 'P' : 'G', t2 = b.t2 === 'P' ? 'P' : 'G';
+    if (!isoOk(jour) || !R || !c1 || !c2 || !n1 || !n2) return json({ erreur: 'Report : choisis les deux courses et les deux chevaux.' }, 400);
+    const a = await coursePm(db, jour, R, c1), z = await coursePm(db, jour, R, c2);
+    if (!a || !z) return json({ erreur: 'Course introuvable au programme.' }, 404);
+    if (!a.heure || Date.now() >= a.heure || (a.arrivee || []).length) return json({ erreur: 'Trop tard : la 1re course du report est partie.' }, 403);
+    if (!(z.heure > a.heure)) return json({ erreur: 'La 2e course du report doit partir après la 1re.' }, 400);
+    const okA = a.partants.some((h) => h.n === n1 && !h.np), okZ = z.partants.some((h) => h.n === n2 && !h.np);
+    if (!okA || !okZ) return json({ erreur: 'Un des chevaux choisis n\'est pas partant.' }, 400);
+    const mot = String(b.mot || '').trim().slice(0, 500);
+    await db.prepare('INSERT INTO pm_reports (jour, reunion, hippo, c1, n1, t1, c2, n2, t2, user_id, mot) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').bind(jour, R, a.hippo, c1, n1, t1, c2, n2, t2, u.id, mot).run();
+    return json({ ok: true });
+  }
+  if (b.action === 'supprimerReport') {
+    const x = await db.prepare('SELECT * FROM pm_reports WHERE id = ?').bind(+b.id || 0).first();
+    if (!x || (x.user_id !== u.id && !modo)) return json({ erreur: 'Report introuvable.' }, 404);
+    if (x.user_id === u.id && !modo) { const a = await coursePm(db, x.jour, x.reunion, x.c1); if (!a || !a.heure || Date.now() >= a.heure) return json({ erreur: 'La 1re course est partie : le report reste visible.' }, 403); }
+    await db.prepare('DELETE FROM pm_reports WHERE id = ?').bind(x.id).run();
     return json({ ok: true });
   }
   if (b.action === 'retirerReaction') {

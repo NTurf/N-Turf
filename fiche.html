@@ -48,7 +48,7 @@ fetch('/api/social/fiche?pseudo=' + encodeURIComponent(P), {credentials:'same-or
   fetch('/api/pm?bilan=' + encodeURIComponent(d.pseudo), {credentials:'same-origin'}).then(function(r){ return r.ok ? r.json() : null; }).then(function(b){
     if (!b) return;
     if (b.verrou) { $('pmz').hidden = false; $('pmb').innerHTML = '<div class="note">🔒 Les stats des autres membres sont réservées à ceux qui donnent au moins ' + b.verrou.min + ' pronos par jour. Aujourd\'hui, tu en as donné ' + b.verrou.n + ' sur ' + b.verrou.min + '.</div>'; document.querySelectorAll('[data-pp]').forEach(function(x){ x.hidden = true; }); return; }
-    var TYPES = {SG:'Simple gagnant', SP:'Simple placé', CG:'Couplé gagnant', CP:'Couplé placé', CO:'Couplé ordre', TR:'Trio', TO:'Trio ordre', M4:'Multi en 4', S4:'Super 4 ordre'};
+    var TYPES = {SG:'Simple gagnant', SP:'Simple placé', CG:'Couplé gagnant', CP:'Couplé placé', CO:'Couplé ordre', TR:'Trio', TO:'Trio ordre', DQ:'2 sur 4', M4:'Multi en 4', S4:'Super 4 ordre', RP:'Report'};
     function Fe(x){ return (Math.round(x * 100) / 100).toFixed(2).replace('.', ',') + ' €'; }
     function Fn(x){ return (x > 0 ? '+' : x < 0 ? '−' : '') + Fe(Math.abs(x)); }
     function cl(x){ return x > 0 ? 'pos' : x < 0 ? 'neg' : ''; }

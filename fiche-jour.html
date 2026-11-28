@@ -49,7 +49,7 @@ function Fn(x){ return (x > 0 ? '+' : x < 0 ? '−' : '') + Fe(Math.abs(x)); }
 function cl(x){ return x > 0 ? 'pos' : x < 0 ? 'neg' : ''; }
 function iso(k){ return new Date(Date.now() + k*86400000).toLocaleDateString('fr-CA', {timeZone:'Europe/Paris'}); }
 function hm(t){ return t ? new Date(t).toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit', timeZone:'Europe/Paris'}).replace(':', ' h ') : ''; }
-var TYPES = {SG:'Simple gagnant', SP:'Simple placé', CG:'Couplé gagnant', CP:'Couplé placé', CO:'Couplé ordre', TR:'Trio', TO:'Trio ordre', M4:'Multi en 4', S4:'Super 4 ordre'}, ORDRE = ['SG','SP','CG','CP','CO','TR','TO','M4','S4'];
+var TYPES = {SG:'Simple gagnant', SP:'Simple placé', CG:'Couplé gagnant', CP:'Couplé placé', CO:'Couplé ordre', TR:'Trio', TO:'Trio ordre', DQ:'2 sur 4', M4:'Multi en 4', S4:'Super 4 ordre', RP:'Report'}, ORDRE = ['SG','SP','CG','CP','CO','TR','TO','DQ','M4','S4','RP'];
 var Q = new URLSearchParams(location.search), PS = Q.get('p') || '', JOUR = /^\d{4}-\d{2}-\d{2}$/.test(Q.get('jour') || '') ? Q.get('jour') : iso(0);
 
 function chevaux(L, noms, arr){
@@ -107,7 +107,7 @@ function dessiner(d){
   // le course par course
   h += '<div class="blk"><h2>🏇 Pronos course par course</h2>';
   if (d.verrou) h += '<p class="lock">🔒 Les fiches des autres membres sont réservées à ceux qui participent : au moins ' + d.verrou.min + ' pronos par jour. Aujourd\'hui, tu en as donné ' + d.verrou.n + '.</p>';
-  else if (!d.jeux.length) h += '<p class="note2">Pas de prono course par course ce jour-là.</p>';
+  else if (!d.jeux.length && !(d.reports || []).length) h += '<p class="note2">Pas de prono course par course ce jour-là.</p>';
   else {
     var M = 0, G = 0, nb = 0, fin = 0, ST = {};
     d.jeux.forEach(function(j){
@@ -116,6 +116,22 @@ function dessiner(d){
         chevaux(j.chevaux, j.noms, ha) + (j.mot ? '<p class="mot">« ' + E(j.mot) + ' »</p>' : '') +
         (j.statut === 'calcule' && j.detail.length ? resultat(j.detail) : jeuPrevu(j.paris)) + '</div>';
       nb++; if (j.statut === 'calcule') { fin++; M += j.mise || 0; G += j.gains || 0; j.detail.forEach(function(x){ if (x.np) return; var k = ST[x.t] || (ST[x.t] = {n:0, g:0, m:0, r:0}); k.n++; k.m += 1; k.r += x.r || 0; if (x.r > 0) k.g++; }); }
+    });
+    // ses reports
+    var J = {G:'gagnant', P:'placé'};
+    (d.reports || []).forEach(function(x){
+      var dt = x.detail && x.detail[0], r = '';
+      if (x.statut === 'calcule' && dt) {
+        if (dt.np) r = 'Le ' + x.n1 + ' est non partant : remboursé.';
+        else { r = !dt.r1 ? 'Le ' + x.n1 + ' n\'est pas ' + J[x.t1] + ' : report perdu.' : dt.np2 ? 'Le ' + x.n1 + ' rapporte ' + Fe(dt.r1) + ' ; le ' + x.n2 + ' est non partant, on garde ' + Fe(dt.r1) + '.' : 'Le ' + x.n1 + ' rapporte ' + Fe(dt.r1) + ', rejoué sur le ' + x.n2 + (dt.r2 ? ' (rapport ' + Fe(dt.r2) + ')' : ' : perdu') + '.';
+          var nt = Math.round(((x.gains || 0) - 1) * 100) / 100; r += '<div class="tot">Mise 1,00 € · retour ' + Fe(x.gains || 0) + ' · net <span class="' + cl(nt) + '">' + Fn(nt) + '</span></div>'; }
+        if (!dt.np) { fin++; M += 1; G += x.gains || 0; var k = ST.RP || (ST.RP = {n:0, g:0, m:0, r:0}); k.n++; k.m += 1; k.r += x.gains || 0; if (x.gains > 0) k.g++; }
+      } else r = '<div class="tot">Mise : 1,00 € · résultat après les deux courses</div>';
+      nb++;
+      h += '<div class="jeu"><div class="crs">🔁 Report · ' + E(x.hippo) + '</div>' +
+        '<div class="lj"><span><b>C' + x.c1 + '</b> ' + hm(x.heure1) + ' · <b>' + x.n1 + '</b> ' + E(x.nom1) + ' <small>(' + J[x.t1] + ')</small></span></div>' +
+        '<div class="lj"><span>↳ <b>C' + x.c2 + '</b> ' + hm(x.heure2) + ' · <b>' + x.n2 + '</b> ' + E(x.nom2) + ' <small>(' + J[x.t2] + ')</small></span></div>' +
+        (x.mot ? '<p class="mot">« ' + E(x.mot) + ' »</p>' : '') + r + '</div>';
     });
     var n = Math.round((G - M) * 100) / 100;
     h += '<h2 style="margin-top:10px">Bilan du jour</h2><p class="note2">' + nb + ' prono' + (nb > 1 ? 's' : '') + (fin < nb ? ', dont ' + fin + ' course' + (fin > 1 ? 's' : '') + ' courue' + (fin > 1 ? 's' : '') + ' et calculée' + (fin > 1 ? 's' : '') : '') + '. Paris à 1 €, aux vrais rapports PMU.</p>' +

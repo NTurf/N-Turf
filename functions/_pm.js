@@ -2,14 +2,16 @@
 //  - Simple : pour chaque cheval, gagnant, placé, les deux ou rien
 //  - Couplé : 2 à 4 de ses chevaux (toutes les paires), en gagnant, en placé ou les deux
 //  - Trio : 3 ou 4 de ses chevaux (toutes les combinaisons de 3)
+//  - 2 sur 4 : 2 à 4 de ses chevaux (toutes les paires)
 //  - Multi en 4 : ses 4 chevaux
+//  - Report : un cheval d'une course, puis un cheval d'une course plus tard de la même réunion (table pm_reports)
 //  - Courses de 7 partants ou moins : couplé ordre, trio ordre, Super 4 ordre, dans l'ordre où il a choisi ses chevaux
 //    (8 puis 5 = 8-5 ; s'il a mis 5-8 et que l'arrivée est 8-5, il perd), ou « tout ordre » (toutes les permutations, plus cher)
 // Chaque pari est stocké un par un (colonne paris) et vérifié après l'arrivée avec les rapports définitifs PMU.
 import { BASE, cache, get } from './_pmu.js';
 
-export const TYPES = { SG: 'Simple gagnant', SP: 'Simple placé', CG: 'Couplé gagnant', CP: 'Couplé placé', CO: 'Couplé ordre', TR: 'Trio', TO: 'Trio ordre', M4: 'Multi en 4', S4: 'Super 4 ordre' };
-export const ORDRE_TYPES = ['SG', 'SP', 'CG', 'CP', 'CO', 'TR', 'TO', 'M4', 'S4'];
+export const TYPES = { SG: 'Simple gagnant', SP: 'Simple placé', CG: 'Couplé gagnant', CP: 'Couplé placé', CO: 'Couplé ordre', TR: 'Trio', TO: 'Trio ordre', DQ: '2 sur 4', M4: 'Multi en 4', S4: 'Super 4 ordre', RP: 'Report' };
+export const ORDRE_TYPES = ['SG', 'SP', 'CG', 'CP', 'CO', 'TR', 'TO', 'DQ', 'M4', 'S4', 'RP'];
 const EN_ORDRE = ['CO', 'TO', 'S4'];
 const TAILLE = { SG: 1, SP: 1, CG: 2, CP: 2, TR: 3, M4: 4 };
 // anciens pronos (avant le 24/11/26 au soir) : un seul jeu
@@ -25,6 +27,13 @@ export async function prepPm(db) {
     db.prepare('CREATE INDEX IF NOT EXISTS pm_jour ON pm_pronos (jour, reunion, course)'),
     db.prepare(`CREATE TABLE IF NOT EXISTS pm_reactions (id INTEGER PRIMARY KEY AUTOINCREMENT, prono_id INTEGER NOT NULL, user_id INTEGER NOT NULL, texte TEXT NOT NULL, cree TEXT NOT NULL DEFAULT (datetime('now')))`),
     db.prepare('CREATE INDEX IF NOT EXISTS pmr_prono ON pm_reactions (prono_id)'),
+    // Reports : un cheval d'une 1re course (gagnant ou placé), tout ce qu'il rapporte est rejoué sur un cheval d'une course plus tard de la même réunion
+    db.prepare(`CREATE TABLE IF NOT EXISTS pm_reports (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, jour TEXT NOT NULL, reunion INTEGER NOT NULL, hippo TEXT,
+      c1 INTEGER NOT NULL, n1 INTEGER NOT NULL, t1 TEXT NOT NULL, c2 INTEGER NOT NULL, n2 INTEGER NOT NULL, t2 TEXT NOT NULL,
+      user_id INTEGER NOT NULL, mot TEXT, statut TEXT NOT NULL DEFAULT 'attente', mise REAL, gains REAL, detail TEXT, essai INTEGER,
+      cree TEXT NOT NULL DEFAULT (datetime('now')))`),
+    db.prepare('CREATE INDEX IF NOT EXISTS pmrep_jour ON pm_reports (jour, reunion)'),
   ]);
   for (const col of ['paris TEXT', 'essai INTEGER']) {
     try { await db.prepare('ALTER TABLE pm_pronos ADD COLUMN ' + col).run(); } catch (e) { /* déjà là */ }
@@ -99,12 +108,19 @@ export function construire(choix, chevaux, petit) {
     if (tch.length < 3) return { erreur: `Pour le trio${petit ? ' ordre' : ''}, choisis 3 ou 4 de tes chevaux.` };
     for (const tr of (petit ? ordonnes(tch, 3, t.to) : combis(tch, 3))) paris.push({ t: petit ? 'TO' : 'TR', c: tr });
   }
+  // 2 sur 4 : toutes les paires des chevaux cochés (2 à 4), 1 € la paire (le PMU la vend 3 €, rapport donné pour 1 €)
+  const d = (choix && choix.d) || {};
+  const dch = pris(d.ch);
+  if (dch.length && !petit) {
+    if (dch.length < 2) return { erreur: 'Pour le 2 sur 4, choisis au moins 2 de tes chevaux.' };
+    for (const paire of combis(dch, 2)) paris.push({ t: 'DQ', c: paire });
+  }
   if (choix && choix.m) {
     if (chevaux.length !== 4) return { erreur: `Le ${petit ? 'Super 4 ordre' : 'Multi en 4'} se joue avec tes 4 chevaux.` };
     if (petit) for (const o of ordonnes(chevaux, 4, choix.mto)) paris.push({ t: 'S4', c: o });
     else paris.push({ t: 'M4', c: [...chevaux].sort((a, b) => a - b) });
   }
-  if (!paris.length) return { erreur: 'Choisis au moins un pari (simple, couplé, trio ou multi).' };
+  if (!paris.length) return { erreur: 'Choisis au moins un pari (simple, couplé, trio, 2 sur 4 ou multi).' };
   return { paris };
 }
 
@@ -116,7 +132,7 @@ export function choixDepuisParis(paris, chevaux) {
   const tout = (t) => { const L = paris.filter((p) => p.t === t).map((p) => p.c.join('-')); const v = new Set(L); return paris.some((p) => p.t === t && v.has([...p.c].reverse().join('-')) && p.c.length > 1) ? 1 : 0; };
   return {
     s, c: { ch: dans(['CG', 'CP', 'CO']), g: paris.some((p) => p.t === 'CG') ? 1 : 0, p: paris.some((p) => p.t === 'CP') ? 1 : 0, to: tout('CO') },
-    t: { ch: dans(['TR', 'TO']), to: tout('TO') }, m: paris.some((p) => p.t === 'M4' || p.t === 'S4') ? 1 : 0, mto: paris.filter((p) => p.t === 'S4').length > 1 ? 1 : 0,
+    t: { ch: dans(['TR', 'TO']), to: tout('TO') }, d: { ch: dans(['DQ']) }, m: paris.some((p) => p.t === 'M4' || p.t === 'S4') ? 1 : 0, mto: paris.filter((p) => p.t === 'S4').length > 1 ? 1 : 0,
   };
 }
 
@@ -130,6 +146,7 @@ export function resume(paris, jeu) {
   if (a('CO')) L.push('Couplé ordre');
   if (a('TR')) L.push('Trio');
   if (a('TO')) L.push('Trio ordre');
+  if (a('DQ')) L.push('2 sur 4');
   if (a('M4')) L.push('Multi en 4');
   if (a('S4')) L.push('Super 4 ordre');
   return L.join(' · ');
@@ -156,7 +173,7 @@ export function evaluer(paris, raw, np, arrivee) {
   const B = {
     SG: blocs(raw, /^SIMPLE_GAGNANT$/), SP: blocs(raw, /^SIMPLE_PLACE$/), CG: blocs(raw, /^COUPLE_GAGNANT$/),
     CP: blocs(raw, /^COUPLE_PLACE$/), TR: blocs(raw, /^TRIO$/), M4: blocs(raw, /^MULTI$|^E_MULTI$/),
-    CO: blocs(raw, /^COUPLE_ORDRE$/), TO: blocs(raw, /^TRIO_ORDRE$/), S4: blocs(raw, /^SUPER_QUATRE$/),
+    CO: blocs(raw, /^COUPLE_ORDRE$/), TO: blocs(raw, /^TRIO_ORDRE$/), S4: blocs(raw, /^SUPER_QUATRE$/), DQ: blocs(raw, /^DEUX_SUR_QUATRE$|^E_DEUX_SUR_QUATRE$/),
   };
   // Multi en 4 : le PMU ne donne pas de combinaison, on compare aux 4 premiers de l'arrivée
   const m4 = B.M4 ? ((B.M4.rapports || []).find((r) => /en\s*4$/i.test(String(r.libelle || '').trim())) || null) : null;
@@ -165,12 +182,47 @@ export function evaluer(paris, raw, np, arrivee) {
   for (const p of paris) {
     if (p.c.some((n) => np.includes(n))) { out.detail.push({ t: p.t, c: p.c, r: 0, np: 1 }); continue; }
     out.mise += 1;
-    const r = p.t === 'M4' ? (m4 && top4.length === 4 && memes(p.c, top4) ? (Number(m4.dividendePourUnEuro) || 0) / 100 : 0) : rapport(B[p.t], p.c, EN_ORDRE.includes(p.t));
+    // 2 sur 4 : gagnant si les 2 chevaux sont dans les 4 premiers ; rapport de la paire si le PMU la détaille, sinon le rapport unique
+    const r = p.t === 'DQ' ? (top4.length >= 4 && p.c.every((n) => top4.includes(n)) ? (rapport(B.DQ, p.c, false) || (B.DQ && B.DQ.rapports && B.DQ.rapports[0] ? (Number(B.DQ.rapports[0].dividendePourUnEuro) || 0) / 100 : 0)) : 0) : p.t === 'M4' ? (m4 && top4.length === 4 && memes(p.c, top4) ? (Number(m4.dividendePourUnEuro) || 0) / 100 : 0) : rapport(B[p.t], p.c, EN_ORDRE.includes(p.t));
     out.gains += r;
     out.detail.push({ t: p.t, c: p.c, r: Math.round(r * 100) / 100 });
   }
   out.gains = Math.round(out.gains * 100) / 100;
   return out;
+}
+
+// ---------- Reports ----------
+// Une jambe du report : le cheval est-il non partant, la course a-t-elle ses rapports définitifs, et que rapporte 1 € (gagnant ou placé)
+async function jambe(db, jour, R, C, n, t) {
+  const d = isoVersPmu(jour);
+  const parts = await cache(db, `part-${d}-R${R}C${C}`, 600, () => get(`${BASE}/${d}/R${R}/C${C}/participants`));
+  const h = ((parts && parts.participants) || []).find((x) => x.numPmu === n);
+  if (h && h.statut === 'NON_PARTANT') return { np: true, fini: true, r: 0 };
+  let raw = null; try { raw = await cache(db, `rapraw-${d}-R${R}C${C}`, 120, () => get(`${BASE}/${d}/R${R}/C${C}/rapports-definitifs`)); } catch (e) { raw = null; }
+  if (!Array.isArray(raw) || !raw.length) return { fini: false };
+  const b = t === 'P' ? blocs(raw, /^SIMPLE_PLACE$/) : blocs(raw, /^SIMPLE_GAGNANT$/);
+  return { fini: true, r: rapport(b, [n], false) };
+}
+// Calcul d'un report : 1 € sur le 1er cheval ; s'il rapporte, tout est rejoué sur le 2e.
+// 1er cheval non partant : remboursé. 2e cheval non partant : on garde ce qu'a rapporté le 1er.
+export async function calculerReport(db, x) {
+  const a = await jambe(db, x.jour, x.reunion, x.c1, x.n1, x.t1);
+  if (a.np) return { mise: 0, gains: 0, detail: [{ t: 'RP', c: [x.n1, x.n2], r: 0, np: 1 }] };
+  if (!a.fini) return null;
+  if (!a.r) return { mise: 1, gains: 0, detail: [{ t: 'RP', c: [x.n1, x.n2], r: 0, r1: 0 }] };
+  const b = await jambe(db, x.jour, x.reunion, x.c2, x.n2, x.t2);
+  if (b.np) return { mise: 1, gains: a.r, detail: [{ t: 'RP', c: [x.n1, x.n2], r: a.r, r1: a.r, np2: 1 }] };
+  if (!b.fini) return null;
+  const g = Math.round(a.r * b.r * 100) / 100;
+  return { mise: 1, gains: g, detail: [{ t: 'RP', c: [x.n1, x.n2], r: g, r1: a.r, r2: b.r }] };
+}
+export async function verifierReports(db, max = 6) {
+  const auj = new Date().toLocaleDateString('fr-CA', { timeZone: 'Europe/Paris' }), now = Date.now();
+  const r = await db.prepare("SELECT * FROM pm_reports WHERE statut = 'attente' AND jour <= ? AND COALESCE(essai, 0) < ? ORDER BY COALESCE(essai, 0), id LIMIT ?").bind(auj, now - 120000, max).all();
+  for (const x of r.results || []) {
+    await db.prepare('UPDATE pm_reports SET essai = ? WHERE id = ?').bind(now, x.id).run();
+    try { const e = await calculerReport(db, x); if (e) await db.prepare("UPDATE pm_reports SET statut = 'calcule', mise = ?, gains = ?, detail = ? WHERE id = ?").bind(e.mise, e.gains, JSON.stringify(e.detail), x.id).run(); } catch (e) { /* on réessaiera */ }
+  }
 }
 
 // Infos PMU d'une course (heure, partants, arrivée) et calcul des pronos dès que les rapports définitifs sont là
@@ -208,4 +260,5 @@ export async function verifierEnAttente(db, max = 6) {
     await db.prepare("UPDATE pm_pronos SET essai = ? WHERE jour = ? AND reunion = ? AND course = ? AND statut = 'attente'").bind(now, x.jour, x.reunion, x.course).run();
     try { await coursePm(db, x.jour, x.reunion, x.course); } catch (e) { /* on réessaiera */ }
   }
+  try { await verifierReports(db); } catch (e) { /* on réessaiera */ }
 }

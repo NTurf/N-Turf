@@ -65,7 +65,9 @@
 <ul style="margin:4px 0"><li><b>Simple</b> : pour chaque cheval, « Gagnant », « Placé », les deux, ou rien.</li>
 <li><b>Couplé</b> : coche les chevaux à mettre dans ton couplé (2 à 4), puis gagnant, placé ou les deux.</li>
 <li><b>Trio</b> : coche 3 ou 4 de tes chevaux.</li>
+<li><b>2 sur 4</b> : coche 2 à 4 de tes chevaux (toutes les paires, 1 € la paire).</li>
 <li><b>Multi en 4</b> : avec tes 4 chevaux, si tu veux.</li>
+<li><b>Report</b> : sous les pronos, touche « + Mon report » : un cheval d'une course (gagnant ou placé), puis un cheval d'une course plus tard de la même réunion (gagnant ou placé). Tout ce que rapporte le 1er est rejoué sur le 2e.</li>
 <li><b>Courses de 7 partants ou moins</b> : couplé ordre, trio ordre et Super 4 ordre, dans l'ordre où tu as touché tes chevaux (8 puis 5 = 8-5). Coche « tout ordre » pour jouer tous les ordres, c'est plus cher.</li></ul>
 Le site t'affiche ta mise totale avant de publier.</li>
 <li>Ajoute <b>un petit mot</b> si tu veux expliquer ton choix, puis touche <b>« Publier mon prono »</b>. Tu peux le modifier jusqu'au départ.</li>
@@ -78,6 +80,7 @@ Le site t'affiche ta mise totale avant de publier.</li>
 <div class="pills" id="reus" style="margin-top:6px"></div>
 <div class="cbt" id="crs"></div>
 <div id="course"></div>
+<div id="reps"></div>
 </div>
 <div id="vC" hidden>
 <p><a class="btn ghost" href="/stats-pronos-membres.html">📊 Fiches et statistiques complètes des membres</a></p>
@@ -97,7 +100,7 @@ function iso(k){ return new Date(Date.now() + k*86400000).toLocaleDateString('fr
 function frc(i){ return i.slice(8,10) + '/' + i.slice(5,7) + '/' + i.slice(0,4); }
 var Q = new URLSearchParams(location.search);
 var JOURAUTO = !Q.get('jour'), JOUR = Q.get('jour') || iso(0), R = +Q.get('r') || 0, C = +Q.get('c') || 0, PROG = [], COMPTES = {}, DATA = null, SEL = [], CH = null, FORM = false;
-var TYPES = {SG:'Simple gagnant', SP:'Simple placé', CG:'Couplé gagnant', CP:'Couplé placé', CO:'Couplé ordre', TR:'Trio', TO:'Trio ordre', M4:'Multi en 4', S4:'Super 4 ordre'}, ORDRE = ['SG','SP','CG','CP','CO','TR','TO','M4','S4'];
+var TYPES = {SG:'Simple gagnant', SP:'Simple placé', CG:'Couplé gagnant', CP:'Couplé placé', CO:'Couplé ordre', TR:'Trio', TO:'Trio ordre', DQ:'2 sur 4', M4:'Multi en 4', S4:'Super 4 ordre', RP:'Report'}, ORDRE = ['SG','SP','CG','CP','CO','TR','TO','DQ','M4','S4','RP'];
 function Fn(x){ return (x > 0 ? '+' : x < 0 ? '−' : '') + Fe(Math.abs(x)); }
 function cl(x){ return x > 0 ? 'pos' : x < 0 ? 'neg' : ''; }
 function post(b){ return fetch('/api/pm', {method:'POST', credentials:'same-origin', headers:{'content-type':'application/json'}, body: JSON.stringify(b)}).then(function(r){ return r.json().then(function(x){ if (!r.ok) throw new Error(x.erreur || 'Erreur'); return x; }); }); }
@@ -132,7 +135,7 @@ function reunions(){
   if (!C) C = re.courses[0];
   $('crs').innerHTML = re.courses.map(function(c){ var n = COMPTES[R + '-' + c] || 0; return '<a href="#" data-c="'+c+'" class="'+(c===C?'on':'')+'">C'+c+(n ? ' <small>'+n+'</small>' : '')+'</a>'; }).join('');
   document.querySelectorAll('#crs [data-c]').forEach(function(a){ a.onclick = function(e){ e.preventDefault(); C = +a.getAttribute('data-c'); FORM = false; reunions(); }; });
-  url(); course();
+  url(); course(); REPF = false; reports();
 }
 function course(){
   $('course').innerHTML = '<p class="note2">Chargement…</p>';
@@ -154,7 +157,7 @@ function dessiner(){
   if (d.verrou) h += '<div class="note">🔒 <b>La synthèse et les pronos des autres membres sont réservés à ceux qui participent : au moins ' + d.verrou.min + ' pronos par jour.</b><br>' + (d.verrou.caches ? d.verrou.caches + ' prono' + (d.verrou.caches > 1 ? 's' : '') + ' d\'autres membres sur cette course. ' : '') + 'Aujourd\'hui, tu en as donné ' + d.verrou.n + ' sur ' + d.verrou.min + '. Encore ' + (d.verrou.min - d.verrou.n) + ' et tu y as accès.</div>';
   h += d.pronos.length ? d.pronos.map(carte).join('') : (d.verrou ? '' : '<p class="empty">Pas encore de prono sur cette course. Sois le premier !</p>');
   $('course').innerHTML = h;
-  if ($('plus')) $('plus').onclick = function(){ FORM = true; SEL = mien ? mien.chevaux.slice() : []; CH = mien ? JSON.parse(JSON.stringify(mien.choix)) : {s:[], c:{ch:[], g:0, p:0, to:0}, t:{ch:[], to:0}, m:0, mto:0}; dessiner(); };
+  if ($('plus')) $('plus').onclick = function(){ FORM = true; SEL = mien ? mien.chevaux.slice() : []; CH = mien ? JSON.parse(JSON.stringify(mien.choix)) : {s:[], c:{ch:[], g:0, p:0, to:0}, t:{ch:[], to:0}, d:{ch:[]}, m:0, mto:0}; if (!CH.d) CH.d = {ch:[]}; dessiner(); };
   if (FORM) brancherForm(mien);
   document.querySelectorAll('[data-sup]').forEach(function(b){ b.onclick = function(){ if (b.textContent !== 'Confirmer') { b.textContent = 'Confirmer'; return; } post({action:'supprimer', id:+b.getAttribute('data-sup')}).then(function(){ FORM = false; course(); charger(); }); }; });
   document.querySelectorAll('form[data-re]').forEach(function(f){ f.onsubmit = function(e){ e.preventDefault(); var i = f.querySelector('input'); if (!i.value.trim()) return; post({action:'reagir', id:+f.getAttribute('data-re'), texte:i.value}).then(course).catch(function(x){ alert(x.message); }); }; });
@@ -218,6 +221,7 @@ function parisChoisis(){
   } else {
     if (cc.length >= 2) comb(cc, 2).forEach(function(c){ if (CH.c.g) P.push({t:'CG', c:c}); if (CH.c.p) P.push({t:'CP', c:c}); });
     if (tc.length >= 3) comb(tc, 3).forEach(function(c){ P.push({t:'TR', c:c}); });
+    var dc = pris(CH.d.ch); if (dc.length >= 2) comb(dc, 2).forEach(function(c){ P.push({t:'DQ', c:c}); });
     if (CH.m && SEL.length === 4) P.push({t:'M4', c:SEL.slice().sort(function(a, b){ return a - b; })});
   }
   return P;
@@ -241,8 +245,8 @@ function brancherForm(){
     if (!SEL.length) h = '<p class="empty">Choisis d\'abord tes chevaux.</p>';
     else {
       if (pt) h += '<p class="note2">Course de 7 partants ou moins : couplé, trio et Super 4 se jouent <b>en ordre</b>, dans l\'ordre où tu as touché tes chevaux. <b>Ton ordre : '+SEL.join(' - ')+'</b>. Pour le changer, retire un cheval et touche-le de nouveau. Coche « tout ordre » pour jouer tous les ordres (plus cher).</p>';
-      h += '<table class="mp"><tr><th>Cheval</th><th>Gagnant</th><th>Placé</th><th>Couplé'+(pt ? ' ordre' : '')+'</th><th>Trio'+(pt ? ' ordre' : '')+'</th></tr>' + SEL.map(function(n, i){ var x = sx(n);
-        return '<tr><td>'+(pt ? (i + 1) + (i ? 'e' : 'er') + ' : ' : '')+n+'</td><td>'+tg(x.g, 'data-sg="'+n+'"', x.g ? '✓' : '—')+'</td><td>'+tg(x.p, 'data-sp="'+n+'"', x.p ? '✓' : '—')+'</td><td>'+tg(CH.c.ch.indexOf(n) >= 0, 'data-cc="'+n+'"', CH.c.ch.indexOf(n) >= 0 ? '✓' : '—', SEL.length < 2)+'</td><td>'+tg(CH.t.ch.indexOf(n) >= 0, 'data-tc="'+n+'"', CH.t.ch.indexOf(n) >= 0 ? '✓' : '—', SEL.length < 3)+'</td></tr>'; }).join('') + '</table>';
+      h += '<table class="mp"><tr><th>Cheval</th><th>Gagnant</th><th>Placé</th><th>Couplé'+(pt ? ' ordre' : '')+'</th><th>Trio'+(pt ? ' ordre' : '')+'</th>'+(pt ? '' : '<th>2 sur 4</th>')+'</tr>' + SEL.map(function(n, i){ var x = sx(n);
+        return '<tr><td>'+(pt ? (i + 1) + (i ? 'e' : 'er') + ' : ' : '')+n+'</td><td>'+tg(x.g, 'data-sg="'+n+'"', x.g ? '✓' : '—')+'</td><td>'+tg(x.p, 'data-sp="'+n+'"', x.p ? '✓' : '—')+'</td><td>'+tg(CH.c.ch.indexOf(n) >= 0, 'data-cc="'+n+'"', CH.c.ch.indexOf(n) >= 0 ? '✓' : '—', SEL.length < 2)+'</td><td>'+tg(CH.t.ch.indexOf(n) >= 0, 'data-tc="'+n+'"', CH.t.ch.indexOf(n) >= 0 ? '✓' : '—', SEL.length < 3)+'</td>'+(pt ? '' : '<td>'+tg(CH.d.ch.indexOf(n) >= 0, 'data-dc="'+n+'"', CH.d.ch.indexOf(n) >= 0 ? '✓' : '—', SEL.length < 2)+'</td>')+'</tr>'; }).join('') + '</table>';
       if (pt) {
         if (SEL.length >= 2) h += '<p style="margin:6px 0"><b>Couplé ordre :</b> '+tg(CH.c.to, 'data-cto', 'tout ordre')+(SEL.length >= 3 ? ' &nbsp; <b>Trio ordre :</b> '+tg(CH.t.to, 'data-tto', 'tout ordre') : '')+'</p>';
         if (SEL.length === 4) h += '<p style="margin:6px 0">'+tg(CH.m, 'data-m4', 'Super 4 ordre avec mes 4 chevaux')+(CH.m ? ' '+tg(CH.mto, 'data-mto', 'tout ordre') : '')+'</p>';
@@ -255,6 +259,7 @@ function brancherForm(){
     $('mesparis').querySelectorAll('[data-sg]').forEach(function(b){ b.onclick = function(){ var x = sx(+b.getAttribute('data-sg')); x.g = x.g ? 0 : 1; maj(); }; });
     $('mesparis').querySelectorAll('[data-sp]').forEach(function(b){ b.onclick = function(){ var x = sx(+b.getAttribute('data-sp')); x.p = x.p ? 0 : 1; maj(); }; });
     $('mesparis').querySelectorAll('[data-cc]').forEach(function(b){ b.onclick = function(){ bascule(CH.c.ch, +b.getAttribute('data-cc')); if (!petit() && CH.c.ch.length >= 2 && !CH.c.g && !CH.c.p) CH.c.p = 1; maj(); }; });
+    $('mesparis').querySelectorAll('[data-dc]').forEach(function(b){ b.onclick = function(){ bascule(CH.d.ch, +b.getAttribute('data-dc')); maj(); }; });
     $('mesparis').querySelectorAll('[data-tc]').forEach(function(b){ b.onclick = function(){ bascule(CH.t.ch, +b.getAttribute('data-tc')); maj(); }; });
     $('mesparis').querySelectorAll('[data-cg]').forEach(function(b){ b.onclick = function(){ CH.c.g = CH.c.g ? 0 : 1; maj(); }; });
     $('mesparis').querySelectorAll('[data-cp]').forEach(function(b){ b.onclick = function(){ CH.c.p = CH.c.p ? 0 : 1; maj(); }; });
@@ -269,11 +274,12 @@ function brancherForm(){
     if (cc === 1) av.push('couplé : coche au moins 2 chevaux');
     if (cc >= 2 && !petit() && !CH.c.g && !CH.c.p) av.push('couplé : choisis gagnant ou placé');
     if (tc && tc < 3) av.push('trio : coche 3 ou 4 chevaux');
-    $('cout').innerHTML = SEL.length + '/4 chevaux' + (P.length ? ' · <b>mise : ' + Fe(P.length) + '</b> (' + ORDRE.filter(function(t){ return cpt[t]; }).map(function(t){ return TYPES[t] + ' ' + cpt[t]; }).join(', ') + ')' : '') + (av.length ? '<br><span class="neg">' + av.join(' · ') + '</span>' : '');
+    if (!petit() && CH.d.ch.filter(function(n){ return SEL.indexOf(n) >= 0; }).length === 1) av.push('2 sur 4 : coche au moins 2 chevaux');
+    $('cout').innerHTML = SEL.length + '/4 chevaux' + (P.length ? ' · <b>mise : ' + Fe(P.length) + '</b> (' + ORDRE.filter(function(t){ return cpt[t]; }).map(function(t){ return TYPES[t] + ' × ' + cpt[t]; }).join(', ') + ')' : '') + (av.length ? '<br><span class="neg">' + av.join(' · ') + '</span>' : '');
   }
   document.querySelectorAll('.grille [data-n]').forEach(function(b){ b.onclick = function(){
     var n = +b.getAttribute('data-n'), i = SEL.indexOf(n);
-    if (i < 0) { if (SEL.length >= 4) return; SEL.push(n); } else { SEL.splice(i, 1); [CH.c.ch, CH.t.ch].forEach(function(L){ var k = L.indexOf(n); if (k >= 0) L.splice(k, 1); }); CH.s = CH.s.filter(function(x){ return x.n !== n; }); }
+    if (i < 0) { if (SEL.length >= 4) return; SEL.push(n); } else { SEL.splice(i, 1); [CH.c.ch, CH.t.ch, CH.d.ch].forEach(function(L){ var k = L.indexOf(n); if (k >= 0) L.splice(k, 1); }); CH.s = CH.s.filter(function(x){ return x.n !== n; }); }
     if (SEL.length < 4) { CH.m = 0; CH.mto = 0; }
     maj();
   }; });
@@ -287,6 +293,70 @@ function brancherForm(){
       .catch(function(e){ m.className = 'msg err'; m.textContent = e.message; });
   };
   maj();
+}
+
+// ---------- Reports : un cheval d'une course, tout ce qu'il rapporte rejoué sur un cheval d'une course plus tard de la même réunion ----------
+var REPF = false, REPS = null;
+function hm2(t){ return t ? new Date(t).toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit', timeZone:'Europe/Paris'}).replace(':', ' h ') : ''; }
+function reports(){
+  if (!R) { $('reps').innerHTML = ''; return; }
+  fetch('/api/pm?jour=' + JOUR + '&reports=' + R, {credentials:'same-origin'}).then(function(r){ return r.json(); }).then(function(d){ REPS = d; dessinerReports(); }).catch(function(){});
+}
+function dessinerReports(){
+  var d = REPS || {reports: []}, re = PROG.filter(function(x){ return x.r === R; })[0], J = {G:'gagnant', P:'placé'};
+  var h = '<section class="card"><h2 style="margin:0 0 4px">🔁 Les reports' + (re ? ' – ' + E(re.h) : '') + '</h2><p class="note2" style="margin:0 0 6px">Un cheval d\'une course, en gagnant ou en placé ; tout ce qu\'il rapporte est rejoué sur un cheval d\'une course plus tard de la même réunion. 1 € au départ, aux vrais rapports PMU.</p>';
+  h += REPF ? formReport() : '<p><button type="button" class="btn" id="rpPlus">+ Mon report</button></p>';
+  h += '</section>';
+  if (!d.acces && d.caches) h += '<div class="note">🔒 ' + d.caches + ' report' + (d.caches > 1 ? 's' : '') + ' d\'autres membres sur cette réunion : réservés à ceux qui participent (au moins ' + d.min + ' pronos par jour).</div>';
+  h += (d.reports || []).map(function(x){
+    var ok1 = x.arr1.length && (x.t1 === 'P' ? x.arr1.slice(0, 3).indexOf(x.n1) >= 0 : x.arr1[0] === x.n1), ok2 = x.arr2.length && (x.t2 === 'P' ? x.arr2.slice(0, 3).indexOf(x.n2) >= 0 : x.arr2[0] === x.n2);
+    var r = '', dt = x.detail && x.detail[0];
+    if (x.statut === 'calcule' && dt) {
+      if (dt.np) r = 'Le ' + x.n1 + ' est non partant : remboursé.';
+      else if (!dt.r1) r = 'Le ' + x.n1 + ' n\'est pas ' + J[x.t1] + ' : report perdu · net <b class="neg">−1,00 €</b>';
+      else if (dt.np2) r = 'Le ' + x.n1 + ' rapporte ' + Fe(dt.r1) + ' ; le ' + x.n2 + ' est non partant, on garde ' + Fe(dt.r1) + ' · net <b class="' + cl(dt.r1 - 1) + '">' + Fn(Math.round((dt.r1 - 1) * 100) / 100) + '</b>';
+      else r = 'Le ' + x.n1 + ' rapporte ' + Fe(dt.r1) + ', rejoué sur le ' + x.n2 + (dt.r2 ? ' (rapport ' + Fe(dt.r2) + ')' : ' : perdu') + ' · retour <b>' + Fe(x.gains) + '</b> · net <b class="' + cl(x.gains - 1) + '">' + Fn(Math.round((x.gains - 1) * 100) / 100) + '</b>';
+    } else if (x.arr1.length) r = ok1 ? 'Le ' + x.n1 + ' est ' + J[x.t1] + ' : on attend la course ' + x.c2 + '.' : 'Calcul en cours…';
+    return '<section class="card pc"><div class="hd"><a href="/fiche-jour.html?p=' + encodeURIComponent(x.pseudo) + '&jour=' + JOUR + '"' + (x.modoAuteur ? ' style="color:#d8232f"' : '') + '>' + E(x.pseudo) + '</a><span class="jeu j-couple">Report</span></div>' +
+      '<div class="lj"><span><b>C' + x.c1 + '</b> ' + hm2(x.heure1) + ' · <b class="' + (ok1 ? 'neg' : '') + '">' + x.n1 + '</b> ' + E(x.nom1) + ' <small>(' + J[x.t1] + ')</small></span></div>' +
+      '<div class="lj"><span>↳ <b>C' + x.c2 + '</b> ' + hm2(x.heure2) + ' · <b class="' + (ok2 ? 'neg' : '') + '">' + x.n2 + '</b> ' + E(x.nom2) + ' <small>(' + J[x.t2] + ')</small></span></div>' +
+      (x.mot ? '<p class="mot">' + E(x.mot) + '</p>' : '') + '<div class="tot">Mise : 1,00 €' + (r ? '<br><span style="font-weight:400">' + r + '</span>' : '') + '</div>' +
+      (((x.moi && x.ouvert) || (DATA && DATA.modo && !x.moi)) ? '<p><button type="button" class="btn ghost" data-rsup="' + x.id + '">' + (x.moi ? 'Retirer mon report' : 'Retirer (modération)') + '</button></p>' : '') + '</section>';
+  }).join('');
+  $('reps').innerHTML = h;
+  if ($('rpPlus')) $('rpPlus').onclick = function(){ REPF = true; dessinerReports(); brancherReport(); };
+  document.querySelectorAll('[data-rsup]').forEach(function(b){ b.onclick = function(){ if (b.textContent !== 'Confirmer') { b.textContent = 'Confirmer'; return; } post({action:'supprimerReport', id:+b.getAttribute('data-rsup')}).then(reports).catch(function(e){ alert(e.message); }); }; });
+}
+function formReport(){
+  var re = PROG.filter(function(x){ return x.r === R; })[0] || {courses: []};
+  var opts = re.courses.map(function(c){ return '<option value="' + c + '">C' + c + '</option>'; }).join('');
+  var jeu = function(id){ return '<select id="' + id + '"><option value="G">Gagnant</option><option value="P">Placé</option></select>'; };
+  return '<div class="frm" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">' +
+    '<label>1re course<select id="rC1">' + opts + '</select></label><label>Jeu<br>' + jeu('rT1') + '</label>' +
+    '<label style="grid-column:1/-1">1er cheval<select id="rN1"></select></label>' +
+    '<label>2e course (plus tard)<select id="rC2"></select></label><label>Jeu<br>' + jeu('rT2') + '</label>' +
+    '<label style="grid-column:1/-1">2e cheval<select id="rN2"></select></label></div>' +
+    '<textarea id="rMot" maxlength="500" rows="2" style="width:100%;box-sizing:border-box;font:inherit;margin-top:6px" placeholder="Un petit mot (facultatif)"></textarea>' +
+    '<p>Mise : <b>1,00 €</b> sur le 1er cheval. <button type="button" class="btn" id="rPub">Publier mon report</button> <button type="button" class="btn ghost" id="rAnn">Annuler</button> <span class="msg" id="rMsg"></span></p>';
+}
+function brancherReport(){
+  var re = PROG.filter(function(x){ return x.r === R; })[0] || {courses: []}, INFO = {};
+  function info(c){ return INFO[c] ? Promise.resolve(INFO[c]) : fetch('/api/pm?jour=' + JOUR + '&r=' + R + '&c=' + c, {credentials:'same-origin'}).then(function(r){ return r.json(); }).then(function(d){ INFO[c] = d.course || {}; INFO[c].ouvert = d.ouvert; return INFO[c]; }); }
+  function chevaux(sel, c){ return info(c).then(function(k){ sel.innerHTML = '<option value="">— choisir —</option>' + (k.partants || []).map(function(p){ return '<option value="' + p.n + '"' + (p.np ? ' disabled' : '') + '>' + p.n + ' · ' + E(p.nom) + (p.np ? ' (non partant)' : '') + '</option>'; }).join(''); }); }
+  function c2s(){ var c1 = +$('rC1').value; $('rC2').innerHTML = re.courses.filter(function(c){ return c > c1; }).map(function(c){ return '<option value="' + c + '">C' + c + '</option>'; }).join(''); if ($('rC2').value) chevaux($('rN2'), +$('rC2').value); else $('rN2').innerHTML = ''; }
+  $('rC1').onchange = function(){ chevaux($('rN1'), +this.value); c2s(); };
+  $('rC2').onchange = function(){ chevaux($('rN2'), +this.value); };
+  // on part de la course affichée si elle n'est pas encore courue
+  if (re.courses.indexOf(C) >= 0) $('rC1').value = C;
+  chevaux($('rN1'), +$('rC1').value); c2s();
+  $('rAnn').onclick = function(){ REPF = false; dessinerReports(); };
+  $('rPub').onclick = function(){
+    var m = $('rMsg'); m.className = 'msg';
+    if (!$('rN1').value || !$('rC2').value || !$('rN2').value) { m.className = 'msg err'; m.textContent = 'Choisis les deux courses et les deux chevaux.'; return; }
+    m.textContent = 'Envoi…';
+    post({action:'report', jour:JOUR, r:R, c1:+$('rC1').value, n1:+$('rN1').value, t1:$('rT1').value, c2:+$('rC2').value, n2:+$('rN2').value, t2:$('rT2').value, mot:$('rMot').value})
+      .then(function(){ REPF = false; reports(); }).catch(function(e){ m.className = 'msg err'; m.textContent = e.message; });
+  };
 }
 // détail d'un membre, jeu par jeu : paris, gagnés, mise, net
 function detailTypes(T){
