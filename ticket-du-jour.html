@@ -87,6 +87,19 @@
 .journal .art{margin:0;border-top:3px solid #111;padding-top:4px}
 .journal .art h3{font-size:17px;border-bottom:1px solid #111}
 .journal .edito{column-width:260px;column-gap:22px;column-rule:1px solid #cfc4a8}
+/* Une case par pronostiqueur ; dedans, des lignes séparées par des pointillés (pas une case par proposition) */
+.journal .case{border:2px solid #111;background:#fff;padding:8px 10px 10px;margin:0 0 14px}
+.journal .case h2.sig{font:900 24px Georgia,serif;margin:0 0 6px;padding-bottom:4px;border-bottom:3px double #111;text-align:center}
+.journal .case h2.sig.bruno{color:#8a6100}
+.journal .case .edito h3{font:900 18px Georgia,serif;margin:4px 0}
+.journal .case .crs{font:700 13px Arial,sans-serif;background:#f1ede2;border-left:4px solid #111;padding:4px 7px;margin:10px 0 4px}
+.journal .case .crs .arrline{font-weight:400}
+.journal .case .tq .tkt,.journal .case .tkt{border:0;border-bottom:1px dotted #999;border-radius:0;background:transparent;padding:6px 0;margin:0;box-shadow:none}
+.journal .case .tq .tkt.gagnant{background:#f2fbf4}
+.journal .case .tkh{flex-direction:row;justify-content:space-between;border:0;margin:0}
+.journal .case .tq .lead{display:none}
+.journal .case .tq .bilan{border:0;border-top:2px solid #111;border-radius:0;background:transparent;padding:4px 0;margin:4px 0 0}
+.journal .case .item{border-bottom:1px dotted #999;padding:6px 0}
 .charte{background:#FFF6DC;border:1px solid #f0be3c;border-radius:10px;padding:8px 10px}
 </style>
 </head>
@@ -158,44 +171,43 @@
       });
       h += '</div>';
     }
-    // Le mot du jour (texte de Bruno)
-    if (X && X.texte && X.texte.trim()) h += '<div class="rub">' + E(X.titre || 'Le mot du jour') + '</div><div class="edito">' + NTT.paragraphes(X.texte) + '<p class="csig" style="text-align:right;font-style:italic">Choix de Bruno</p></div>';
-    // Les reports
-    if (X && X.reports && X.reports.length) {
-      h += '<div class="rub">Le report du jour</div><div class="' + (X.reports.length > 1 ? 'g2' : '') + '">' + X.reports.map(function(p){
-        var r = p.resultat, J = p.pari === 'P' ? 'placé' : 'gagnant', ok = function(rg){ return rg && (p.pari === 'P' ? rg <= 3 : rg === 1); };
-        return '<div class="encadre" style="text-align:left;border-color:#1E5BB5;background:#eef4fd"><div class="lab" style="color:#1E5BB5;text-align:center">🔁 Report ' + J + ' · R' + p.r + (p.hippodrome ? ' ' + E(p.hippodrome) : '') + '</div>' +
-          '<div class="sel" style="text-align:center;margin:6px 0">C' + p.c1 + (p.heure1 ? ' (' + hm(p.heure1) + ')' : '') + ' <span class="ch piv' + (ok(p.rang1) ? ' hit' : '') + '">' + p.n1 + '</span> ' + E(p.nom1 || '') + ' <b>→</b> C' + p.c2 + (p.heure2 ? ' (' + hm(p.heure2) + ')' : '') + ' <span class="ch piv' + (ok(p.rang2) ? ' hit' : '') + '">' + p.n2 + '</span> ' + E(p.nom2 || '') + '</div>' +
-          '<div class="res" style="font-family:Arial,sans-serif;text-align:center">' + EUR(p.mise) + ' sur le ' + p.n1 + ' en simple ' + J + ', tout ce qu\'il rapporte est rejoué sur le ' + p.n2 + '</div>' +
-          (p.commentaire ? '<p class="com" style="font-style:italic;text-align:center">« ' + E(p.commentaire) + ' »</p>' : '') +
-          (r ? '<div class="res" style="font-family:Arial,sans-serif;text-align:center;margin-top:4px">' + (r.np ? 'Un cheval du report est non partant : se reporter au règlement du PMU.'
-            : r.attente ? 'Le ' + p.n1 + ' rapporte <b class="pos">' + EUR(r.reporte) + '</b>, reportés sur le ' + p.n2 + ' : résultat après la course ' + p.c2 + '.'
-            : (r.reporte ? 'Le ' + p.n1 + ' rapporte ' + EUR(r.reporte) + ', reportés sur le ' + p.n2 + ' · ' : 'Le ' + p.n1 + ' n\'est pas ' + J + ' : report perdu · ') + 'rapporté <b>' + EUR(r.gagne) + '</b> pour ' + EUR(r.mise) + ' · net ' + netH(r.gagne - r.mise)) + '</div>' : '') + '</div>';
-      }).join('') + '</div>';
+    // ---- Une seule case par pronostiqueur, « Choix de Bruno » en premier ; dedans, ses propositions à la suite ----
+    var Q = P.filter(function(p){ return p.type !== 'coeur'; });
+    var cq = null, rq = null; (d.reunions || []).forEach(function(R){ (R.courses || []).forEach(function(c){ if (c.quinte) { cq = c; rq = R; } }); });
+    var txtQ = cq ? 'R' + rq.r + 'C' + cq.c + (cq.heure ? ' · ' + hm(cq.heure) : '') + ' · ' + E(rq.h) + (cq.libelle ? ' — ' + E(cq.libelle) : '') : '';
+    var par = {}, ordre = [];
+    Q.sort(function(a, b){ return (infoCourse(a).c.heure || 0) - (infoCourse(b).c.heure || 0); }).forEach(function(p){ var k = /bruno/i.test(p.signature) ? 'Choix de Bruno' : p.signature; if (!par[k]) { par[k] = []; ordre.push(k); } par[k].push(p); });
+    var aBruno = (X && ((X.texte && X.texte.trim()) || (X.reports && X.reports.length) || (X.autres && X.autres.length))) || TQ || par['Choix de Bruno'];
+    if (aBruno && ordre.indexOf('Choix de Bruno') < 0) ordre.push('Choix de Bruno');
+    ordre.sort(function(a, b){ return (b === 'Choix de Bruno' ? 1 : 0) - (a === 'Choix de Bruno' ? 1 : 0); });
+    // les publications d'un pronostiqueur, regroupées par course (la course écrite une seule fois)
+    // dans sa propre case, le nom « Choix Bruno » n'est pas répété sur chaque ticket (TCR, ALGO… restent indiqués)
+    function sansNom(T){ var o = {}; for (var k in T) o[k] = T[k]; o.tickets = (T.tickets || []).map(function(t){ if (!/bruno/i.test(t.auteur || '')) return t; var u = {}; for (var j in t) u[j] = t[j]; u.auteur = ''; return u; }); return o; }
+    function parCourse(L){
+      var h2 = '', vu = {};
+      L.forEach(function(p){ var i = infoCourse(p), k = p.r + '-' + p.c;
+        if (!vu[k]) { vu[k] = 1; h2 += '<div class="crs">' + i.txt + (i.c.quinte ? ' · <b>Quinté+</b>' : '') + (i.c.pick5 ? ' · Super Pick 5' : '') + arrLigne(i.c) + '</div>'; }
+        h2 += '<div class="item">' + corps(p, i.c) + '</div>'; });
+      return h2;
     }
-    // Les tickets de Bruno sur d'autres courses (couplé, trio…)
-    if (X && X.autres && X.autres.length) h += '<div class="rub">Nos tickets du jour</div><div class="tq g2">' + NTT.renduAutres(X) + '</div>';
-    // Spécial Quinté+
-    var Q = P.filter(function(p){ return p.type !== 'coeur' && infoCourse(p).c.quinte; });
-    if (Q.length || TQ) {
-      // la course du Quinté+ du jour (même sans publication du Ticket du jour)
-      var cq = null, rq = null; (d.reunions || []).forEach(function(R){ (R.courses || []).forEach(function(c){ if (c.quinte) { cq = c; rq = R; } }); });
-      var iq = Q.length ? infoCourse(Q[0]) : (cq ? { c: cq, txt: 'R' + rq.r + 'C' + cq.c + (cq.heure ? ' · ' + hm(cq.heure) : '') + ' · ' + E(rq.h) + (cq.libelle ? ' — ' + E(cq.libelle) : '') } : null);
-      h += '<div class="rub">Spécial Quinté+</div><div class="encadre quinte"><div class="lab">🏆 Le Quinté+ du jour</div>' + (iq ? '<div class="ccrs" style="text-align:center">' + iq.txt + '</div>' + arrLigne(iq.c) : '') +
-        // chaque publication des contributeurs dans son propre cadre, séparée des tickets N-TURF
-        (Q.length ? '<div class="g2">' : '') + Q.map(function(p){ var i = infoCourse(p); return '<div class="tkt pubq"><div class="tkh"><b>' + E(p.signature) + '</b></div><div class="ou">' + i.txt + '</div>' + corps(p, i.c) + arrLigne(i.c) + '</div>'; }).join('') + (Q.length ? '</div>' : '') +
-        (TQ ? '<div class="tq g2">' + NTT.rendu(TQ, ctxQ(cq)) + '</div>' : '') + '</div>';
-    }
-    // Nos pronostiqueurs : une colonne par contributeur, ses courses dans l'ordre de départ
-    var autres = P.filter(function(p){ return p.type !== 'coeur' && !infoCourse(p).c.quinte; });
-    if (autres.length) {
-      var par = {}, ordre = [];
-      autres.sort(function(a, b){ return (infoCourse(a).c.heure || 0) - (infoCourse(b).c.heure || 0); }).forEach(function(p){ if (!par[p.signature]) { par[p.signature] = []; ordre.push(p.signature); } par[p.signature].push(p); });
-      ordre.sort(function(a, b){ return (/bruno/i.test(b) ? 1 : 0) - (/bruno/i.test(a) ? 1 : 0); });
-      h += '<div class="rub">Nos pronostiqueurs</div><div class="cols g2">' + ordre.map(function(sig){
-        return '<div class="art"><h3' + (/bruno/i.test(sig) ? ' class="bruno"' : '') + '>' + E(sig) + '</h3><div class="itemsg">' + par[sig].map(function(p){ var i = infoCourse(p); return '<div class="item' + (p.supprime ? ' sup' : '') + '"><div class="ou">' + i.txt + (i.c.pick5 ? ' · Super Pick 5' : '') + '</div>' + corps(p, i.c) + arrLigne(i.c) + '</div>'; }).join('') + '</div></div>';
-      }).join('') + '</div>';
-    }
+    if (ordre.length) h += '<div class="rub">Nos pronostiqueurs</div>';
+    ordre.forEach(function(sig){
+      var c = '<section class="case"><h2 class="sig' + (sig === 'Choix de Bruno' ? ' bruno' : '') + '">' + E(sig) + '</h2>';
+      if (sig === 'Choix de Bruno') {
+        if (X && X.texte && X.texte.trim()) c += '<div class="edito"><h3>' + E(X.titre || 'Le mot du jour') + '</h3>' + NTT.paragraphes(X.texte) + '</div>';
+        if (TQ) c += '<div class="crs">' + txtQ + ' · <b>Quinté+</b>' + arrLigne(cq) + '</div><div class="tq">' + NTT.rendu(sansNom(TQ), ctxQ(cq)) + '</div>';
+        if (X && X.reports && X.reports.length) c += X.reports.map(function(p){
+          var r = p.resultat, J = p.pari === 'P' ? 'placé' : 'gagnant', ok = function(rg){ return rg && (p.pari === 'P' ? rg <= 3 : rg === 1); };
+          return '<div class="item"><div class="ou"><b>🔁 Report ' + J + '</b> · R' + p.r + (p.hippodrome ? ' ' + E(p.hippodrome) : '') + '</div>' +
+            '<div class="sel">C' + p.c1 + (p.heure1 ? ' (' + hm(p.heure1) + ')' : '') + ' <span class="ch piv' + (ok(p.rang1) ? ' hit' : '') + '">' + p.n1 + '</span> ' + E(p.nom1 || '') + ' → C' + p.c2 + (p.heure2 ? ' (' + hm(p.heure2) + ')' : '') + ' <span class="ch piv' + (ok(p.rang2) ? ' hit' : '') + '">' + p.n2 + '</span> ' + E(p.nom2 || '') + '</div>' +
+            '<div class="res">' + EUR(p.mise) + ' sur le ' + p.n1 + ', tout ce qu\'il rapporte rejoué sur le ' + p.n2 + '</div>' + (p.commentaire ? '<p class="com">« ' + E(p.commentaire) + ' »</p>' : '') +
+            (r ? '<div class="res">' + (r.np ? 'Un cheval non partant : se reporter au règlement du PMU.' : r.attente ? 'Le ' + p.n1 + ' rapporte <b class="pos">' + EUR(r.reporte) + '</b>, reportés sur le ' + p.n2 + '.' : 'Rapporté <b>' + EUR(r.gagne) + '</b> pour ' + EUR(r.mise) + ' · net ' + netH(r.gagne - r.mise)) + '</div>' : '') + '</div>';
+        }).join('');
+        if (X && X.autres && X.autres.length) c += '<div class="tq">' + NTT.renduAutres(X) + '</div>';
+      }
+      if (par[sig]) c += parCourse(par[sig]);
+      h += c + '</section>';
+    });
     $('rendu').innerHTML = h + '</div>';
     $('rendu').querySelectorAll('.act').forEach(function(b){ b.onclick = function(){
       var adm = D.moi.admin, motif = adm ? prompt('Retirer cette publication ? Motif (facultatif, gardé pour toi) :', '') : (confirm('Retirer ta publication ?') ? '' : null);
