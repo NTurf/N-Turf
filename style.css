@@ -617,9 +617,8 @@ main > h1:not(.nlogo), main h1#titre{display:inline-block;font-family:'Barlow Co
   .forum #repBar{order:-4}.forum #fEnv{order:-3;margin:0 0 8px}.forum #msg{order:-2}
   .forum .fil{background:#fff;padding:0;border-radius:8px}
   .forum .fth{border-bottom:3px solid #fff}
-  .forum .fr{display:grid;grid-template-columns:1fr 34px 170px 120px;align-items:center;gap:10px;padding:9px 12px;background:#dfe8f7;border-left:6px solid #1E5BB5;cursor:pointer;border-bottom:2px solid #fff}
-  .forum .fr:nth-child(1){background:#d3e0f5}
-  .forum .fr.frep{background:#f1f5fc;border-left-color:#8fb0e0;padding-left:34px}
+  .forum .fr{display:grid;grid-template-columns:1fr 34px 170px 120px;align-items:center;gap:10px;padding:9px 12px;background:#c6d7f2;border-left:6px solid #1E5BB5;cursor:pointer;border-bottom:2px solid #fff}
+  .forum .fr.frep{background:#f8faff;border-left:6px solid #c6d7f2;padding-left:34px}
   .forum .fr.moi{border-left-color:#e0a800}
   .forum .ftx{font-weight:600;color:#0e2a5c;word-break:break-word;white-space:pre-wrap}
   .forum .frep .ftx{font-weight:500}
