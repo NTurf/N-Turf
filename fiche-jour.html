@@ -30,6 +30,7 @@
 .bil{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;text-align:center;margin:8px 0 0}
 .bil div{background:#f4f7fc;border-radius:8px;padding:6px 2px}.bil span{display:block;font-size:12px;color:#5b6b85}.bil b{font-size:16px}
 .ongm{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 10px}.ongm .pill{white-space:nowrap}
+.stj{width:100%;border-collapse:collapse;font-size:14px;margin-top:4px}.stj th{background:#0e2a5c;color:#fff;padding:5px 3px;font-size:12px}.stj td{padding:5px 3px;border-bottom:1px solid #e3eaf5;text-align:center}.stj td:first-child{text-align:left;font-weight:700}
 .lock{background:#fff6e5;border:1px solid #e0b450;border-radius:8px;padding:8px 10px;margin:8px 0}
 </style>
 </head>
@@ -108,17 +109,21 @@ function dessiner(d){
   if (d.verrou) h += '<p class="lock">🔒 Les fiches des autres membres sont réservées à ceux qui participent : au moins ' + d.verrou.min + ' pronos par jour. Aujourd\'hui, tu en as donné ' + d.verrou.n + '.</p>';
   else if (!d.jeux.length) h += '<p class="note2">Pas de prono course par course ce jour-là.</p>';
   else {
-    var M = 0, G = 0, nb = 0, fin = 0;
+    var M = 0, G = 0, nb = 0, fin = 0, ST = {};
     d.jeux.forEach(function(j){
       var arr = j.arrivee || [], ha = arr.slice(0, j.paris.some(function(x){ return x.t === 'M4' || x.t === 'S4'; }) ? 4 : 3);
       h += '<div class="jeu"><div class="crs">R' + j.r + 'C' + j.c + (j.heure ? ' · ' + hm(j.heure) : '') + ' · ' + E(j.hippo) + (j.libelle ? ' — ' + E(j.libelle) : '') + (arr.length ? '<br><span class="arr">Arrivée' + (j.definitive ? '' : ' (provisoire)') + ' : <b>' + arr.slice(0, 4).join(' - ') + '</b></span>' : '') + '</div>' +
         chevaux(j.chevaux, j.noms, ha) + (j.mot ? '<p class="mot">« ' + E(j.mot) + ' »</p>' : '') +
         (j.statut === 'calcule' && j.detail.length ? resultat(j.detail) : jeuPrevu(j.paris)) + '</div>';
-      nb++; if (j.statut === 'calcule') { fin++; M += j.mise || 0; G += j.gains || 0; }
+      nb++; if (j.statut === 'calcule') { fin++; M += j.mise || 0; G += j.gains || 0; j.detail.forEach(function(x){ if (x.np) return; var k = ST[x.t] || (ST[x.t] = {n:0, g:0, m:0, r:0}); k.n++; k.m += 1; k.r += x.r || 0; if (x.r > 0) k.g++; }); }
     });
     var n = Math.round((G - M) * 100) / 100;
     h += '<h2 style="margin-top:10px">Bilan du jour</h2><p class="note2">' + nb + ' prono' + (nb > 1 ? 's' : '') + (fin < nb ? ', dont ' + fin + ' course' + (fin > 1 ? 's' : '') + ' courue' + (fin > 1 ? 's' : '') + ' et calculée' + (fin > 1 ? 's' : '') : '') + '. Paris à 1 €, aux vrais rapports PMU.</p>' +
       '<div class="bil"><div><span>Pronos</span><b>' + nb + '</b></div><div><span>Mise</span><b>' + Fe(M) + '</b></div><div><span>Retour</span><b>' + Fe(G) + '</b></div><div><span>Net</span><b class="' + cl(n) + '">' + Fn(n) + '</b></div></div>';
+    // les stats de la journée, jeu par jeu (courses courues)
+    var TL = ORDRE.filter(function(t){ return ST[t]; });
+    if (TL.length) h += '<h2 style="margin-top:12px">Ses jeux de la journée</h2><table class="stj"><tr><th>Jeu</th><th>Paris</th><th>Gagnés</th><th>Mise</th><th>Net</th></tr>' +
+      TL.map(function(t){ var k = ST[t], nt = Math.round((k.r - k.m) * 100) / 100; return '<tr><td>' + TYPES[t] + '</td><td>' + k.n + '</td><td>' + k.g + '</td><td>' + Fe(k.m) + '</td><td class="' + cl(nt) + '"><b>' + Fn(nt) + '</b></td></tr>'; }).join('') + '</table>';
   }
   h += '</div></section>';
   $('rendu').innerHTML = h;
