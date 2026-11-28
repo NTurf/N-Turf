@@ -609,3 +609,31 @@ main > h1:not(.nlogo), main h1#titre{display:inline-block;font-family:'Barlow Co
   .chatpage .fil{height:calc(100vh - 380px);min-height:380px}
   .chatpage .cm{max-width:96%}
 }
+/* Tchat façon forum (ordinateur) : une ligne par message, les réponses sous leur message */
+@media (min-width:900px){
+  .forum #zone{display:flex;flex-direction:column}
+  .forum #zone .charte{order:-6}.forum #salons,.forum #eqNote,.forum #bSig,.forum #pSig{order:-5}
+  .forum #bSig{align-self:flex-start}.forum #salons[hidden]{display:none}
+  .forum #repBar{order:-4}.forum #fEnv{order:-3;margin:0 0 8px}.forum #msg{order:-2}
+  .forum .fil{background:#fff;padding:0;border-radius:8px}
+  .forum .fth{border-bottom:3px solid #fff}
+  .forum .fr{display:grid;grid-template-columns:1fr 34px 170px 120px;align-items:center;gap:10px;padding:9px 12px;background:#dfe8f7;border-left:6px solid #1E5BB5;cursor:pointer;border-bottom:2px solid #fff}
+  .forum .fr:nth-child(1){background:#d3e0f5}
+  .forum .fr.frep{background:#f1f5fc;border-left-color:#8fb0e0;padding-left:34px}
+  .forum .fr.moi{border-left-color:#e0a800}
+  .forum .ftx{font-weight:600;color:#0e2a5c;word-break:break-word;white-space:pre-wrap}
+  .forum .frep .ftx{font-weight:500}
+  .forum .fsub{color:#8fb0e0;font-weight:900}
+  .forum .fplus{width:30px;height:30px;border-radius:50%;border:0;background:#1E5BB5;color:#fff;font:900 18px Arial;cursor:pointer;line-height:30px;padding:0}
+  .forum .fps{justify-self:start;background:#fff;border-radius:6px;padding:3px 10px;font-weight:800;color:#1E5BB5;text-decoration:none;max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .forum .fps.modo{color:#d8232f}
+  .forum .fdt{justify-self:end;background:#fff;border-radius:16px;padding:4px 12px;font-weight:700;font-size:13px;color:#0e2a5c;white-space:nowrap}
+  .forum .fr.flash{outline:2px solid #f0be3c}
+}
+/* Emplacement des futures publicités : colonne de droite sur grand écran, invisible tant qu'il est vide */
+.pubslot:empty{display:none}
+@media (min-width:1300px){
+  .chatpage main:has(.pubslot:not(:empty)){display:grid;grid-template-columns:1fr 300px;column-gap:18px;align-items:start;max-width:min(1800px,98vw)}
+  .chatpage main>h1,.chatpage main>#refus{grid-column:1/-1}
+  .chatpage .pubslot{position:sticky;top:12px}
+}

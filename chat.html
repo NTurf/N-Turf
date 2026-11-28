@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#0D1E3D">
 <link rel="manifest" href="/manifest.webmanifest?v=2">
 <link rel="icon" href="/icone-nturf-192.png">
-<link rel="stylesheet" href="/style.css?v=20261128c">
+<link rel="stylesheet" href="/style.css?v=20261128d">
 </head>
 <body data-page="membres" class="chatpage">
 <main>
@@ -29,6 +29,8 @@
 </form>
 <p class="msg" id="msg"></p>
 </div>
+<!-- emplacement réservé aux futures bannières publicitaires (colonne de droite sur ordinateur) -->
+<aside id="pubChat" class="pubslot" aria-label="Publicité"></aside>
 </main>
 <script src="/site.js?v=20261128a"></script>
 <script>
@@ -38,7 +40,29 @@ function $(i){ return document.getElementById(i); }
 function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
 function heure(t){ var d = new Date(t), j = new Date(); var h = d.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'}); return d.toDateString() === j.toDateString() ? h : d.toLocaleDateString('fr-FR', {day:'2-digit', month:'2-digit'}) + ' ' + h; }
 function enBas(){ var f = $('fil'); return f.scrollHeight - f.scrollTop - f.clientHeight < 60; }
+// Sur ordinateur : présentation façon forum (comme ZEturf) — une ligne par message, les plus récents en haut,
+// les réponses rangées sous leur message, pseudo et heure à droite, « + » pour répondre
+var FORUM = window.matchMedia('(min-width:900px)').matches;
+if (FORUM) document.body.classList.add('forum');
+function dh(t){ var d = new Date(t); return d.toLocaleDateString('fr-FR', {day:'2-digit', month:'2-digit'}) + ' ' + d.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'}).replace(':', 'h'); }
+function dessinerForum(){
+  var f = $('fil'), vis = S.ordre.filter(function(id){ return !S.msgs[id].supprime; });
+  var racine = function(id){ var m = S.msgs[id], n = 0; while (m && m.rep && S.msgs[m.rep.id] && !S.msgs[m.rep.id].supprime && n++ < 50) { id = m.rep.id; m = S.msgs[id]; } return id; };
+  var fils = {}, tetes = [];
+  vis.forEach(function(id){ var r = racine(id); if (r === id) tetes.push(id); else (fils[r] = fils[r] || []).push(id); });
+  // le fil le plus récemment animé en haut
+  var dernier = function(id){ var L = fils[id] || []; return L.length ? Math.max(id, L[L.length - 1]) : id; };
+  tetes.sort(function(a, b){ return dernier(b) - dernier(a); });
+  var ligne = function(id, rep){ var m = S.msgs[id], moi = S.moi && m.uid === S.moi.id;
+    return '<div class="fr'+(rep?' frep':'')+(moi?' moi':'')+'" id="m'+id+'" data-id="'+id+'"><div class="ftx">'+(rep?'<span class="fsub">↳</span> ':'')+esc(m.texte)+'</div>' +
+      '<button type="button" class="fplus crep" data-r="'+id+'" title="Répondre" aria-label="Répondre">+</button>' +
+      '<a class="fps'+(m.modo?' modo':'')+'" href="/fiche.html?p='+encodeURIComponent(m.pseudo)+'" onclick="event.stopPropagation()">'+esc(m.pseudo)+'</a><span class="fdt">'+dh(m.cree)+'</span></div>'; };
+  f.innerHTML = tetes.length ? tetes.map(function(id){ return '<div class="fth">' + ligne(id, false) + (fils[id] || []).map(function(x){ return ligne(x, true); }).join('') + '</div>'; }).join('') : '<p class="empty">Aucun message pour l\'instant. Lance la discussion !</p>';
+  f.querySelectorAll('.fr').forEach(function(el){ el.onclick = function(){ menu(+el.getAttribute('data-id'), el); }; });
+  f.querySelectorAll('.crep').forEach(function(b){ b.onclick = function(e){ e.stopPropagation(); repondre(+b.getAttribute('data-r')); }; });
+}
 function dessiner(garderBas){
+  if (FORUM) return dessinerForum();
   var f = $('fil'), bas = garderBas || enBas();
   var vis = S.ordre.filter(function(id){ return !S.msgs[id].supprime; });
   f.innerHTML = vis.length ? vis.map(function(id){
@@ -126,7 +150,7 @@ $('fEnv').onsubmit = function(e){
   fetch('/api/chat/messages', { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({ salon: S.salon, texte: t, reponse: S.rep }) })
     .then(function(r){ return r.json().then(function(d){ return {ok:r.ok, d:d}; }); })
     .then(function(x){
-      if (x.ok) { finRep(); $('txt').value = ''; $('txt').style.height = 'auto'; $('msg').textContent = ''; charger(); setTimeout(function(){ $('fil').scrollTop = $('fil').scrollHeight; }, 400); }
+      if (x.ok) { finRep(); $('txt').value = ''; $('txt').style.height = 'auto'; $('msg').textContent = ''; charger(); setTimeout(function(){ $('fil').scrollTop = FORUM ? 0 : $('fil').scrollHeight; }, 400); }
       else { $('msg').className = 'msg err'; $('msg').textContent = x.d.erreur || 'Erreur.'; }
     }).catch(function(){ $('msg').className = 'msg err'; $('msg').textContent = 'Connexion impossible, réessaie.'; })
     .then(function(){ bt.disabled = false; });
