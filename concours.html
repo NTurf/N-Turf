@@ -29,7 +29,7 @@
     <div class="partants" id="partants"></div>
     <div class="sectit petit"><span>Mes jeux</span></div>
     <div class="pal" id="pal"></div>
-    <div class="misebar"><span>💰</span><div><small>Mise du jour</small><b id="miseJ">241,50 fers</b></div><div class="cap"><small>Capital du mois</small><b id="cap">—</b></div></div>
+    <div class="misebar"><span>💰</span><div><small>Mise du jour</small><b id="miseJ">370 fers</b></div><div class="cap"><small>Capital du mois</small><b id="cap">—</b></div></div>
     <button class="valider" id="valider" type="button">✓ Valider mon pronostic</button>
     <p class="msg" id="msg"></p>
   </section>
@@ -52,19 +52,19 @@
 <li><b>Pronostic verrouillé</b> : une fois validé, ton pronostic ne peut plus être modifié. La date et l'heure de validation sont enregistrées et affichées. Seul l'administrateur peut, en cas exceptionnel, corriger un pronostic : la correction est enregistrée et signalée à côté du pronostic.</li>
 <li><b>Chacun s'engage avant de voir les autres</b> : dès que tu as validé ton pronostic, tu vois ceux des autres joueurs et la synthèse collective (brute et pondérée). Tant que tu n'as pas validé, tu ne vois rien. Une fois l'arrivée validée, tout le monde voit les pronostics, les gains et le classement.</li>
 <li><b>Non-partant</b> : il est simplement retiré de ton classement (il n'y a pas de cheval de complément). Les chevaux suivants remontent d'un rang.</li>
-<li><b>Tes jeux</b>, à chaque course (241,50 fers) :
+<li><b>Tes jeux</b>, à chaque course (370 fers) :
   <ul>
   <li>Simple gagnant-placé sur tes chevaux 1 et 2 : 4 fers gagnant + 16 fers placé chacun (40 fers).</li>
   <li>Couplé sur tes chevaux 1 à 3 (3 paires) : 2 fers gagnant + 2 fers placé par paire (12 fers).</li>
-  <li>Tiercé combiné sur tes chevaux 1 à 5 : 10 combinaisons à 1 fer (10 fers).</li>
-  <li>Quarté+ combiné sur tes chevaux 1 à 6 : 15 combinaisons à 1,50 fer (22,50 fers), avec le bonus 3.</li>
+  <li>Tiercé combiné sur tes 8 chevaux : 56 combinaisons à 1 fer (56 fers).</li>
+  <li>Quarté+ combiné sur tes 8 chevaux : 70 combinaisons à 1,50 fer (105 fers), avec le bonus 3.</li>
   <li>Multi en 4 sur tes chevaux 1 à 6 : 15 combinaisons à 3 fers (45 fers).</li>
   <li>Quinté+ combiné sur tes 8 chevaux : 56 combinaisons à 2 fers (112 fers), avec les bonus 4, 4 sur 5 et 3.</li>
   </ul></li>
 <li><b>Gains</b> : exactement les rapports officiels du PMU pour 1 €, multipliés par la mise d'une combinaison. Exemple : Quarté+ désordre à 80 pour 1 € = 80 × 1,50 = 120 fers.</li>
 <li><b>Ordre ou désordre</b> : c'est l'ordre si les chevaux arrivés sont dans le même ordre que dans ton classement, même avec des chevaux sautés entre eux (tu classes 4-11-7-2-9, arrivée 4-7-9 : Tiercé ordre). Sinon c'est le désordre. Jamais les deux.</li>
-<li><b>Mises</b> : à partir de ton premier pronostic, 241,50 fers sont retirés pour chaque jour de Quinté+, que tu joues ou non. Celui qui joue tous les jours n'est donc jamais pénalisé.</li>
-<li><b>Ancien format</b> : jusqu'au 27 novembre 2026, le concours se jouait sur 7 chevaux plus un complément (Quinté+ sur 7 chevaux, 42 fers, mise du jour 171,50 fers). Ces journées gardent leurs règles, leurs gains et leurs mises d'origine : rien n'est recalculé ni mélangé.</li>
+<li><b>Mises</b> : à partir de ton premier pronostic, la mise du jour (370 fers) est retirée pour chaque jour de Quinté+, que tu joues ou non. Celui qui joue tous les jours n'est donc jamais pénalisé.</li>
+<li><b>Ancien format</b> : jusqu'au 27 novembre 2026, le concours se jouait sur 7 chevaux plus un complément (Tiercé sur 5 chevaux, Quarté+ et Multi sur 6, Quinté+ sur 7, mise du jour 171,50 fers). Ces journées gardent leurs règles, leurs gains et leurs mises d'origine : rien n'est recalculé ni mélangé.</li>
 <li><b>Les pronostics du site jouent aussi</b> : TCR, ALGO, PERSO, Études Quinté et Formule du membre (les jours de Quinté au trot) jouent chaque jour avec les mêmes règles et la même mise. Ils sont affichés en tête des classements pour que chacun sache s'il fait mieux qu'eux, mais ils ne montent jamais sur le podium : seuls les membres sont récompensés.</li>
 <li><b>Trois podiums</b> : celui du jour, celui de la semaine (du lundi au dimanche) et le Globe de Cristal du mois. Tous se classent en gains moins mises.</li>
 <li>Tout est calculé automatiquement dès que le PMU publie les rapports définitifs.</li>
@@ -122,7 +122,7 @@
     document.getElementById('aide').hidden = !ok;
     document.getElementById('valider').hidden = !ok;
     var L = choix.filter(Boolean);
-    var pal = [['Simple', 'chevaux 1-2', 40], ['Couplé', 'chevaux 1 à 3', 12], ['Tiercé', 'chevaux 1 à 5', 10], ['Quarté+', 'chevaux 1 à 6', 22.5], ['Multi en 4', 'chevaux 1 à 6', 45], ['Quinté+', F7() ? 'chevaux 1 à 7' : 'les 8 chevaux', D.mises.quinte]];
+    var pal = [['Simple', 'chevaux 1-2', D.mises.sgp], ['Couplé', 'chevaux 1 à 3', D.mises.couple], ['Tiercé', F7() ? 'chevaux 1 à 5' : 'les 8 chevaux', D.mises.tierce], ['Quarté+', F7() ? 'chevaux 1 à 6' : 'les 8 chevaux', D.mises.quarte], ['Multi en 4', 'chevaux 1 à 6', D.mises.multi], ['Quinté+', F7() ? 'chevaux 1 à 7' : 'les 8 chevaux', D.mises.quinte]];
     document.getElementById('pal').innerHTML = pal.map(function(p){ return '<div><small>' + p[1] + '</small><b>' + p[0] + ' <i>' + F(p[2]) + '</i></b></div>'; }).join('');
     if (!ok) {
       var m = document.getElementById('msg');
@@ -260,7 +260,7 @@
     h += '<div class="podium">' + pod(L[1], 2) + pod(L[0], 1) + pod(L[2], 3) + '</div>';
     if (L.length) h += '<table class="st bil cl"><tr><th>#</th><th>Joueur</th><th>Mises</th><th>Gains</th><th>Net</th></tr>' + L.map(function(x, i){
       return '<tr><td>' + (i + 1) + '</td><td><b>' + E(x.pseudo) + '</b><small>' + x.joues + ' joué' + (x.joues > 1 ? 's' : '') + ' sur ' + x.jours + ' j.</small></td><td>' + F(x.mises) + '</td><td>' + F(x.gains) + '</td><td class="' + (x.net >= 0 ? 'pos' : 'neg') + '">' + (x.net >= 0 ? '+' : '') + F(x.net) + '</td></tr>';
-    }).join('') + '</table><p class="note2">En fers à cheval. Les mises comptent la mise du jour (241,50 fers, 171,50 avant le 28/11) pour chaque jour depuis le premier pronostic du joueur, qu\'il ait joué ou non.</p>';
+    }).join('') + '</table><p class="note2">En fers à cheval. Les mises comptent la mise du jour (370 fers, 171,50 avant le 28/11) pour chaque jour depuis le premier pronostic du joueur, qu\'il ait joué ou non.</p>';
     else h += '<p class="empty">Aucun joueur classé pour l\'instant.</p>';
     z.innerHTML = h;
   }

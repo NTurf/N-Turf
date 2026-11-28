@@ -7,13 +7,14 @@ import ETUDES from './_etude_liste.js';
 
 // Deux formats, l'historique de l'ancien est gardé tel quel :
 //  - jusqu'au 27/11/2026 : 7 chevaux + 1 complément (Quinté+ sur les 7 : 21 combinaisons, 42 fers) → 171,50 fers par jour
-//  - à partir du 28/11/2026 : 8 chevaux, pas de complément (Quinté+ sur les 8 : 56 combinaisons, 112 fers) → 241,50 fers par jour
+//  - à partir du 28/11/2026 : 8 chevaux, pas de complément ; Tiercé, Quarté+ et Quinté+ combinés sur les 8 (demande des membres)
+//    Tiercé 56 combinaisons à 1 fer (56), Quarté+ 70 à 1,50 (105), Quinté+ 56 à 2 (112) → 370 fers par jour
 export const DEBUT_8 = '2026-11-28';
 export const formatDu = (iso) => (String(iso) >= DEBUT_8 ? 8 : 7);
 export const misesDu = (iso) => formatDu(iso) === 8
-  ? { sgp: 40, couple: 12, tierce: 10, quarte: 22.5, multi: 45, quinte: 112 }
+  ? { sgp: 40, couple: 12, tierce: 56, quarte: 105, multi: 45, quinte: 112 }
   : { sgp: 40, couple: 12, tierce: 10, quarte: 22.5, multi: 45, quinte: 42 };
-export const miseDu = (iso) => formatDu(iso) === 8 ? 241.5 : 171.5;
+export const miseDu = (iso) => formatDu(iso) === 8 ? 370 : 171.5;
 export const MISE = misesDu(DEBUT_8);
 export const MISE_JOUR = 171.5; // ancien format (gardé pour l'historique)
 const r2 = (x) => Math.round(x * 100) / 100;
@@ -124,12 +125,12 @@ export function calculer(liste, arr, R, fmt) {
       }
     });
   };
-  // Tiercé : chevaux 1 à 5 combiné, 1 fer la combinaison
-  odr('Tiercé', liste.slice(0, 5), 3, 1, R.t);
-  // Quarté+ : chevaux 1 à 6 combiné, 1,50 fer la combinaison, + bonus 3
-  const s6 = liste.slice(0, 6);
-  odr('Quarté+', s6, 4, 1.5, R.qa);
-  if (R.qa.b3 && arr.length >= 4) combis(s6, 4).forEach((c) => {
+  // Tiercé : chevaux 1 à 5 (ancien format) ou les 8, combiné, 1 fer la combinaison
+  odr('Tiercé', liste.slice(0, fmt === 8 ? 8 : 5), 3, 1, R.t);
+  // Quarté+ : chevaux 1 à 6 (ancien format) ou les 8, combiné, 1,50 fer la combinaison, + bonus 3
+  const s6 = liste.slice(0, 6), sQa = liste.slice(0, fmt === 8 ? 8 : 6);
+  odr('Quarté+', sQa, 4, 1.5, R.qa);
+  if (R.qa.b3 && arr.length >= 4) combis(sQa, 4).forEach((c) => {
     if (top(3).every((h) => c.includes(h)) && !c.includes(arr[3])) add('Quarté+', 'Bonus 3', R.qa.b3 * 1.5);
   });
   // Multi en 4 : chevaux 1 à 6, 3 fers la combinaison
@@ -267,7 +268,7 @@ export async function calculerSiPret(db, iso) {
 }
 
 // ---------- Classements : gains moins mises ----------
-// À partir de son premier pronostic (du mois pour le Globe), la mise du jour (171,50 ou 241,50 fers selon le format) est retirée chaque jour de Quinté+ calculé, joué ou non.
+// À partir de son premier pronostic (du mois pour le Globe), la mise du jour (171,50 ou 370 fers selon le format) est retirée chaque jour de Quinté+ calculé, joué ou non.
 function ajoute(iso, k) { const t = new Date(iso + 'T12:00:00Z'); t.setUTCDate(t.getUTCDate() + k); return t.toISOString().slice(0, 10); }
 export function bornesSemaine(iso) { const t = new Date(iso + 'T12:00:00Z'); const j = (t.getUTCDay() + 6) % 7; return [ajoute(iso, -j), ajoute(iso, 6 - j)]; }
 export function bornesMois(iso) { const [a, m] = iso.split('-').map(Number); const fin = new Date(Date.UTC(a, m, 0)).getUTCDate(); return [`${a}-${String(m).padStart(2, '0')}-01`, `${a}-${String(m).padStart(2, '0')}-${String(fin).padStart(2, '0')}`]; }
